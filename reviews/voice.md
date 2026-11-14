@@ -1,9 +1,88 @@
 # Voice review
 
-A review of the wording on screen, done on main at `2705f8e` (Sun 15.11., 00:50). Nothing in the app was changed.
+Two parts. Part 1 is what the team means by "agent voice": text that over-justifies, over-explains, or should not be in the product at all. Part 2 is the earlier pass on names and wording.
+Nothing in the app was changed. Read on main at `ad9219f` (Sun 15.11., 01:00): every text string in `app/src/steps`, `app/src/frame`, `app/src/ui`, `app/src/core` (values, sources, places, plan) and `app/index.html`, including the explanations inside the info markers and the Sources page.
+Not covered: text from work not merged yet (sky, beacon, transitions part 2), and the repo's own documents (README files, code comments, `research/`, `reviews/`).
 
-How it was done: every text string in `app/src/steps`, `app/src/frame`, `app/src/ui`, `app/src/core/places.js`, `app/src/core/plan.js` and `app/index.html` was read, about 450 strings.
-Not covered: the long explanations inside the info markers (`core/values.js`, `core/sources.js`, the long `text:` entries), and text from work not merged yet (rover, several stops in Walk and Debrief, transitions).
+# Part 1: agent voice
+
+Almost all of it sits in the info marker explanations and on the Sources page, not in the headlines. Six kinds:
+
+## 1. Repo and file names shown to the visitor
+A visitor cannot open these and should never see them.
+- Source titles: "Suit model (src/core/suit.js)" (7 times in the Walk), "Suit model (src/core/suit.js), planner (src/core/planner.js)", "Team research: sample candidates in the walk square (research/walk-targets.md)".
+- Sources page: "(public/models/sev.glb)", "(public/models/mars.glb; mesh smoothed at load time, texture unchanged)", "(public/sky/milky-way.jpg)", "(public/data/missions/)", "(public/egress/egress.mp4)", "(docs/design/egress/README.md)", "(source docs/design/helm-source.webp)", "(scripts/preprocess/build_helmet.py)", "(scripts/preprocess/README.md)".
+- "Access Mars public/index.html, murray_buttes_markers".
+- Step numbers instead of names: "in step 1", "you walk in step 4", "The visor frame in step 4".
+
+Suggested: name the thing, not the file. "Our suit model", "Our route planner", "The rover in the walk". The file paths belong in `docs/` and the project description.
+
+## 2. Build details nobody asked for
+- "A point counts as standing on a closed cell only once it is this far inside the cell. A planned diagonal step between two open cells touches the corner of the cells beside it; this tolerance lets the planner and the Walk agree that such a step keeps the slope rule." (a value on the Sources page)
+- "textures reduced to 1024 px, mesh simplified to 85,062 triangles and compressed, otherwise unedited; scaled to 4.5 m length at load time"
+- "Shrinking the rover model offline (texture resize, mesh simplification, meshopt compression …) and decoding it in the app"
+- "converting its heights to metres (fit correlation 0.999)"
+- "the green was keyed out and 'AI-generated image' written into the image pixels by our script"
+- "Outline smoothed for display; the warnings use the planner's exact slope test on the 0.5 m walk grid."
+- "the 0.5 m walk grid" appears in 12 explanations; "walk square" in 4; "terrain grid" in 6. One explanation of the grid on the Sources page is enough; elsewhere "measured on the terrain" says it.
+
+Suggested: one plain sentence each ("NASA's model, made smaller for the web"). The rules require listing tools and edits, so the edit stays named, the parameters go.
+
+## 3. The same disclaimer again and again
+Each is right once. Repeated, it reads as defensive.
+- "no radio physics" / "Geometric only, no radio physics": 6 times (Plan, Go, Walk twice, values twice).
+- "not this exact spot": 4 times (Walk sample card twice, Debrief twice).
+- "A caution, not a rule" / "Not a rule: the walk may go on.": 3 times.
+- "in demo time" / "Shown in demo time (76×)": 9 times.
+- "No Curiosity target lies in this square.", "Not a sample spot.", "this is a simulation", "there is no suit to read".
+- "The question is real; the message from Earth is part of the demo." (visible text in step 1, not in a marker)
+- "The real scene has a gap there where Access Mars cut out Curiosity." (also out of date: the rover is now NASA's model)
+
+Suggested: keep each disclaimer in one place (the explanation of the value it belongs to, or the Sources page) and drop the copies. The label kind (model, simulated, assumption) already says most of it.
+
+## 4. Justifying our own choices
+- "…run this many times faster than reality, so turning back becomes a real decision inside the 128 m site."
+- "Our sources give no standing rate; the closest is the Apollo planning rate for riding the rover (700 BTU/h), used here as a stand-in."
+- "No value for Mars regolith exists." / "The capacity is not confirmed by a NASA document."
+- "NASA's Mars backpack study sizes the primary supply for 2, 4, 6 or 8 hours; we use 8 hours."
+- "There is no base on Mars. We place the crew's base at Bradbury Landing, where Curiosity landed in August 2012. The position is real (Curiosity's first waypoint), and the line is Curiosity's real drive from there to Murray Buttes, 12 km as drawn."
+- "The idea, its direction and every product decision come from the team." (Sources, Use of AI)
+
+Suggested: state the value and its source; the label "assumption" carries the rest. "Standing still: about 205 W, taken from the Apollo rate for riding the rover." The AI line is a disclosure the rules ask for; its wording is the team's call.
+
+## 5. Explaining how the app works
+- "Shown as a backdrop; it turns slowly."
+- "The debrief shows the same clock."
+- "counted from the rover itself like the plan"
+- "It is added to the clock when you end the excursion."
+- "its time, work rate, radio shadow and warnings go into the walk log as if walked."
+- "It is the same ground you walk in step 4."
+- "Length of the route calculated in your browser on the terrain grid"
+- Debrief stops explanation: "Taken: a sample at that stop; skipped: left out by 'Turn back now'; not taken: not visited or passed without a sample."
+
+Suggested: cut. If the screen needs the sentence to be understood, the screen is the problem, not the explanation.
+
+## 6. Formula and note style
+- "Reserve on return = time left minus the way home from here, if you continue as planned."
+- "Dose during the walk = this rate times the time outside (model)."
+- "where = distance from the rover and time into the excursion."
+- "Astronaut 80 kg + load 23 kg", "limit > 0 min, home ×1.2"
+
+Suggested: sentences. "Reserve on return is the time left in the suit once you are back at the rover."
+
+## A rule of thumb for the rewrite
+An explanation has at most two sentences: what the value is, and where it comes from. No file names, no step numbers, no grid or cell talk, no "we chose this because". A caveat appears once.
+
+## What must not be lost
+- Every value keeps its label kind and its source; the rules and the judging (Validity) rest on them.
+- The lunar-rule note ("from NASA's planning for the Moon") stays.
+- Edits to NASA material stay named (made smaller, colour changed), without parameters.
+- The AI disclosure stays.
+
+## How to apply it safely
+One builder rewrites, a second agent checks every changed text against the old one: same meaning, same number, same label kind, same source, no claim added. The same pair does the renames from part 2. Best done after the last walk feature is merged, because three builders are editing these files now.
+
+# Part 2: names and wording
 
 ## The voice the app already has, where it is good
 - Short headlines with a full stop: "Choose your mission.", "Plan your mission.", "Back home.", "Sources."
