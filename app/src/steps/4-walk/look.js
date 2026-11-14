@@ -23,8 +23,8 @@ export function rayHit(t, eye, dir, maxM = D.lookMaxM) {
   for (let m = 0.5; m <= maxM; m += t.cell) {
     const x = eye.x + dir.x * m, z = eye.z + dir.z * m, y = eye.y + dir.y * m;
     if (!t.inside(x, z)) return null;
-    // the rover model blocks the view
-    if (Math.hypot(x - ROVER.x, z - ROVER.z) < D.roverClearM - 0.8 && y < t.heightAt(x, z) + 2.7) return null;
+    // the rover blocks the view
+    if (inRoverBox(t, x, y, z)) return null;
     if (y <= t.heightAt(x, z)) return { x, z, m };
   }
   return null;
@@ -69,14 +69,13 @@ export function lookAt(t, eye, dir, vis) {
   return { title: 'Butte', text: firstSentence(ACCESS_MARS_POINTS[0].text), size: fmt(r, Math.hypot(hit.x - eye.x, hit.z - eye.z)) };
 }
 
-// the rover model's box (scene3d.js roverModel: footprint as in sim.js, about ROVER_TOP_M high)
-const ROVER_TOP_M = 2.7;
+// the rover's box (scene3d.js, the SEV model: footprint as in sim.js, D.roverTopM high)
 const RY = (D.roverHeadingDeg * Math.PI) / 180;
 const R_FWD = { x: Math.sin(RY), z: Math.cos(RY) }, R_SIDE = { x: Math.cos(RY), z: -Math.sin(RY) };
 const R_C = { x: ROVER.x + R_FWD.x * D.roverShiftM, z: ROVER.z + R_FWD.z * D.roverShiftM };
 function inRoverBox(t, x, y, z) {
   const a = (x - R_C.x) * R_FWD.x + (z - R_C.z) * R_FWD.z, b = (x - R_C.x) * R_SIDE.x + (z - R_C.z) * R_SIDE.z;
-  return Math.abs(a) < D.roverHalfLenM && Math.abs(b) < D.roverHalfWidthM && y < t.heightAt(R_C.x, R_C.z) + ROVER_TOP_M;
+  return Math.abs(a) < D.roverHalfLenM && Math.abs(b) < D.roverHalfWidthM && y < t.heightAt(R_C.x, R_C.z) + D.roverTopM;
 }
 /** The view ray meets the rover model before `maxM` (the rover wins over anything behind it). */
 function rayBlockedByRover(t, eye, dir, maxM = D.lookMaxM) {

@@ -31,10 +31,15 @@ describe('intro: stepping out of the rover', () => {
       expect(points.at(-1)).toEqual({ x: sim.s.x, z: sim.s.z });
       for (const p of samples(points)) {
         const q = local(p);
-        // the rover model: body 1.9 x 2.6 m, deck 2.1 m wide, arm and power unit to 2.3 m along the axis
-        expect(Math.abs(q.b) >= 1.2 || Math.abs(q.a) > D.roverHalfLenM).toBe(true);
+        // the rover model (SEV): 4.5 m nose to tail, 3.08 m wheel to wheel
+        expect(Math.abs(q.b) > D.roverHalfWidthM || Math.abs(q.a) > D.roverHalfLenM).toBe(true);
         expect(isClosedAt(t, p.x, p.z)).toBe(false);
       }
+      // it starts at the side hatch, just outside the hull
+      const q0 = local(points[0]);
+      expect(Math.abs(q0.a - D.roverHatchAlongM)).toBeLessThan(1e-6);
+      expect(Math.abs(q0.b)).toBeGreaterThan(D.roverHalfWidthM);
+      expect(Math.abs(q0.b)).toBeLessThan(D.roverHalfWidthM + 0.2);
       // a few metres from the hatch to the start
       const len = points.slice(1).reduce((s, b, i) => s + Math.hypot(b.x - points[i].x, b.z - points[i].z), 0);
       expect(len).toBeGreaterThan(1.5);
