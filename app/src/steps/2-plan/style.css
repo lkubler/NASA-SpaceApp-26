@@ -1,7 +1,14 @@
 /* Styles of step 2-plan only. Prefix classes with .step--plan. */
 
-/* room for a two-line legend below the map */
-.step--plan .split__map { height: calc(100vh - var(--header-h) - var(--gutter) - 4.6em); }
+/* map fills the left column (wide, as in mockup 02), legend below it; panel on the right */
+.step--plan .split { grid-template-columns: minmax(0, 1fr) clamp(340px, 30vw, 520px); }
+.step--plan .split__map { height: auto; aspect-ratio: auto; max-width: none; width: 100%; }
+.step--plan .split__map > .map { flex: 1 1 auto; height: auto; width: 100%; aspect-ratio: auto; min-height: 0; }
+.step--plan .split__map .map__canvas { object-fit: cover; }
+.step--plan .split__side { max-width: none; }
+.step--plan .plan-req { border-left: 2px solid var(--accent); padding: 0.1em 0 0.1em 0.8em; }
+.step--plan .plan-req__kicker { font-size: var(--fs-tag); color: var(--text-2); }
+.step--plan .plan-req__title { font-size: var(--fs-small); margin-top: 0.15em; }
 .step--plan .legend { gap: 0.45em 1.2em; margin-top: 0.7em; }
 .step--plan .legend__note { margin-left: 0; }
 .step--plan .legend .vlabel { margin-left: -0.3em; }

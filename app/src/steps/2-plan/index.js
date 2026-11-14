@@ -26,6 +26,10 @@ const L = {
 };
 
 const SPOT_WORK = () => fmtDuration(DEMO.spotWorkMin.value * 60);
+/** What the spot is, from its terrain description (walk-targets.md): beside a butte wall or at the foot of a butte. */
+const spotPlace = (c) => (/wall/i.test(c.name) && /beside/i.test(c.name) ? 'Beside a butte wall' : 'At the foot of a butte');
+/** The task of the chosen request (step 1). */
+const taskOf = (r) => (!r ? 'Work at the spot' : r.kind === 'measurement' ? 'One radiation measurement' : 'One sample');
 
 function cheapestId(cands) {
   const pool = cands.some((c) => c.plan.keepsRules) ? cands.filter((c) => c.plan.keepsRules) : cands;
@@ -61,6 +65,8 @@ export default {
     const map = mapPanel(terrain, { steep: false, shadow: false });
     const tip = h('div.plan-tip', { hidden: true });
     map.el.append(tip);
+    // wide map, cropped north and south (slice) only as far as every marker and route stays in view
+    map.svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
     const steepMask = closedMask(terrain);
     const shadowMask = radioShadowMask(terrain);
     const cv = map.canvas.getContext('2d');
@@ -90,7 +96,11 @@ export default {
     const totals = h('div.plan-totals');
     const demo = h('div.plan-demo', 'Demo time: clock and suit run ', String(DEMO.timeFactor.value), DEMO.timeFactor.unit, ' faster ', labelTag(DEMO.timeFactor));
     const btn = pillButton({ text: 'Confirm route', onClick: () => ctx.next(), disabled: !ctx.state.route });
-    Lay.panel.append(headline('Plan your mission.'), cards, legs, h('div.plan-spacer'), totals, demo);
+    const req = ctx.state.request;
+    const reqBox = req ? h('div.plan-req',
+      h('div.plan-req__kicker.mono', 'Request from Earth · ', req.from || ''),
+      h('div.plan-req__title', req.title)) : null;
+    Lay.panel.append(headline('Plan your mission.'), reqBox, cards, legs, h('div.plan-spacer'), totals, demo);
     Lay.action.append(btn);
 
     cards.append(card({ title: 'Calculating routes…', sub: 'Fastest route to every spot that keeps every rule.' }));
@@ -103,14 +113,36 @@ export default {
     const cheapest = cheapestId(cands);
     let pinned = null; // Access Mars point whose card is pinned open
 
+    // the widest the map may be: north and south of the rover it must still show every marker and route
+    const reach = Math.max(...cands.map(({ candidate: c, route }) => Math.max(Math.abs(c.z),
+      ...route.out.points.map((p) => Math.abs(p.z)), ...route.back.points.map((p) => Math.abs(p.z)))),
+      ...ACCESS_MARS_POINTS.map((p) => Math.abs(p.z)));
+    const maxAspect = (terrain.extent / 2) / Math.min(terrain.extent / 2, reach + 8);
+    const fitMap = () => {
+      const H = map.el.clientHeight;
+      map.el.style.maxWidth = H ? `${Math.round(H * maxAspect)}px` : '';
+      map.fitScale();
+      // markers keep about the size they have on a square map of this height
+      const W = map.el.clientWidth;
+      if (W && H) map.setMarkerScale(Math.min(1, H / Math.max(W, H) * 1.15));
+    };
+    if (typeof ResizeObserver !== 'undefined') {
+      const ro = new ResizeObserver(fitMap); ro.observe(Lay.map);
+      cleanup.push(() => ro.disconnect());
+    }
+    fitMap();
+
     const showTip = (x, z, content, { wide = false } = {}) => {
       const { px, py } = map.project(x, z);
       tip.replaceChildren(...content.filter(Boolean));
       tip.classList.toggle('plan-tip--wide', wide);
-      tip.classList.toggle('plan-tip--below', py / terrain.n < 0.3);
-      const fx = px / terrain.n;
-      tip.style.left = `${(fx * 100).toFixed(2)}%`;
-      tip.style.top = `${((py / terrain.n) * 100).toFixed(2)}%`;
+      // map units -> pixels inside the map box (the map is cropped, so use the SVG's screen transform)
+      const ctm = map.svg.getScreenCTM(), box = map.el.getBoundingClientRect();
+      const lx = ctm.a * px + ctm.e - box.left, ly = ctm.d * py + ctm.f - box.top;
+      const fx = lx / box.width;
+      tip.classList.toggle('plan-tip--below', ly / box.height < 0.3);
+      tip.style.left = `${lx.toFixed(1)}px`;
+      tip.style.top = `${ly.toFixed(1)}px`;
       tip.style.setProperty('--shift', fx < 0.3 ? '-8%' : fx > 0.7 ? '-96%' : '-50%');
       tip.classList.toggle('is-pinned', !!pinned);
       tip.hidden = false;
@@ -205,7 +237,7 @@ export default {
         cards.append(card({
           lead: marker(k + 1, { selected: true }),
           title: [c.name, ' ', labelTag(L.spot)],
-          sub: ['Rock type not in our data · ', SPOT_WORK(), ' work at the spot ', labelTag(DEMO.spotWorkMin),
+          sub: [spotPlace(c), ' · ', taskOf(ctx.state.request), ', ', SPOT_WORK(), ' ', labelTag(DEMO.spotWorkMin),
             c.id === cheapest ? h('span.tone-accent', ' · cheapest') : null],
           right: [fmtDistance(plan.distanceM), ' ', labelTag(L.distance)],
           selected: true,
