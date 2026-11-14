@@ -181,6 +181,9 @@
 .walk-aim.is-free .walk-aim__ring { display: none; }
 .walk-aim.is-quiet .walk-aim__label { visibility: hidden; }
 
+/* ?mousedebug=1 only: mouse look readout (dev) */
+.walk-mdebug { position: fixed; left: 8px; bottom: 44px; z-index: 50; margin: 0; padding: 0.5em 0.7em; pointer-events: none; font-family: var(--font-mono); font-size: 12px; line-height: 1.35; color: #fff; background: rgba(0, 0, 0, 0.75); border-radius: 6px; white-space: pre; }
+
 /* ---------- intro (specs/x-intro.md, intro.js): film, stepping out, then the display fades in ---------- */
 /* black layer between the 3D view and the helmet: holds the film (part A), fades out in part B, takes every click */
 .walk-intro { position: absolute; inset: 0; background: #000; pointer-events: auto; cursor: default; }

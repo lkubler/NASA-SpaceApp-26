@@ -4,7 +4,8 @@
 //   scene3d.js  terrain, real skyline and haze, rover model, route band
 //   hud.js      helmet frame and display
 //   look.js     what the reticle points at
-// Controls: click for mouse look (pointer lock; without it, hold the button and drag), W A S D to walk, arrow
+// Controls: click for mouse look (pointer lock; without it, free look: the cursor turns the view, resting at an edge
+// keeps turning, and holding the button and dragging turns it too), W A S D to walk, arrow
 // keys to turn and look, Shift held fast walk, Shift twice demo speed, F aim and click to jump, E to act,
 // esc twice to end the mission.
 import './style.css';
@@ -14,15 +15,10 @@ import { createScene3d } from './scene3d.js';
 import { createHud } from './hud.js';
 import { lookAt, visiblePoints, rayHit } from './look.js';
 import { DISPLAY as D } from './display.js';
+import { createTapHold } from './taphold.js';
 import { createIntro } from './intro.js'; // x-intro
 
 let cleanup = null;
-
-// Firefox on Linux keeps the pointer locked by moving the hidden cursor back to the lock point after every
-// move; where it cannot (seen under Wayland, and in headless Firefox) movementX/Y come as the offset from the
-// lock point, so the view turns one way only. There the view turns by dragging, without a pointer lock.
-const UA = typeof navigator === 'undefined' ? '' : navigator.userAgent;
-const LOCK_OK = !(/Firefox\//.test(UA) && /Linux/.test(UA) && !/Android/.test(UA));
 
 export default {
   n: 4, id: 'walk', title: 'Walk',
@@ -59,46 +55,74 @@ export default {
     v3.placeRover((D.roverHeadingDeg * Math.PI) / 180, D.roverShiftM);
 
     // ---------- input ----------
-    // Mouse look: every movement is added up, none is dropped. With the pointer captured (pointer lock) the
-    // movementX/Y of each event; without it (lock refused, not yet granted, or lost) holding the button and
-    // dragging turns the view by the cursor's own way (clientX/Y), so the view always turns both ways.
+    // Mouse look, three modes; every movement is added up, none is dropped for being large.
+    //   locked     pointer lock held: the movementX/Y of each event turn the view, no button held
+    //   free look  no lock (not clicked yet, refused, released with esc, or the lock check below tripped): the
+    //              plain cursor movement over the walk view (clientX/Y differences) turns it, no button held;
+    //              while the cursor rests in an edge zone the view keeps turning that way at a steady rate, so
+    //              it turns all the way round both ways although the cursor stops at the screen edge
+    //   drag       no lock, button held: the cursor's way turns the view, also beyond the walk view
     const keys = new Set();
-    let escArmedUntil = 0, unlockedAt = 0, lastShiftAt = 0, shiftDownAt = 0;
+    let escArmedUntil = 0, unlockedAt = 0;
+    const shift = createTapHold({ tapMaxMs: D.tapMaxMs, doubleTapMs: D.doubleTapMs, repeatGapMs: D.repeatGapMs });
     const mouse = { dx: 0, dy: 0 };
     const mode = { demo: false, aim: false, landing: null, jumped: null, jumpedAt: 0 };
-    const drag = { on: false, x: 0, y: 0, moved: 0 };
+    const drag = { on: false, moved: 0 };
+    // free look: the last cursor point over the view (null: the next move only records it); the edge zone the
+    // cursor rests in (-1 / 0 / 1); edge turning only once the cursor has been away from the edges, so a cursor
+    // left at the edge by the step before does not spin the view on its own
+    const free = { last: null, edgeX: 0, edgeY: 0, armed: false };
+    // A real lock holds the cursor still (clientX/Y stay put). Where the cursor keeps moving under the lock, the
+    // browser does not hold it (movementX/Y may then come as the offset from the lock point, so the view turns
+    // one way only, and the hidden cursor stops at the screen edge): the lock is released for this walk and the
+    // free look takes over. The offsets are not turned back into steps by differencing: they stop at the
+    // screen edge as well, so only a visible cursor with edge zones turns the view all the way round.
+    // A second check: movementX/Y that look like offsets, not steps (lockOffsetEvents events in a row, all the
+    // same way and each at least lockOffsetPx) also release the lock. Between the lock request and the lock the
+    // cursor's own way does not turn the view (the cursor may be moved there by the browser, not the visitor).
+    const lk = { last: null, moved: 0, run: 0, runX: 0, runY: 0, broken: '', refused: false, selfExit: false, pendingUntil: 0 };
     const isLocked = () => document.pointerLockElement === view;
+    const lookMode = () => (isLocked() ? 'locked' : drag.on ? 'drag' : 'free look');
+
+    // ?mousedebug=1: a dev readout of the mouse look (never shown without the parameter)
+    const dbg = ctx.params && ctx.params.get('mousedebug') === '1'
+      ? { el: el.appendChild(Object.assign(document.createElement('pre'), { className: 'walk-mdebug' })), mx: null, my: null, cx: null, cy: null, n: 0, t0: performance.now(), eps: 0, yawMouse: 0, yawEdge: 0 }
+      : null;
+
+    // when the key event happened (not when it was handled: a slow frame may hand several over at once)
+    const evTime = (e) => (e.timeStamp > 0 && e.timeStamp <= performance.now() ? e.timeStamp : performance.now());
     const onKeyDown = (e) => {
       if (e.code === 'Escape') { if (mode.aim) { setAim(false); return; } onEsc(); return; }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
-      if (e.repeat && (e.code === 'KeyE' || e.code === 'KeyF' || e.key === 'Shift')) return;
+      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { shift.keyDown(evTime(e), e.repeat); return; }
+      if (e.repeat && (e.code === 'KeyE' || e.code === 'KeyF')) return;
       if (e.code === 'KeyE' || e.code === 'Enter') { act(); return; }
       if (e.code === 'KeyF') { if (!log.ended && !sim.s.modal) setAim(!mode.aim); return; }
-      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shiftDownAt = performance.now();
       keys.add(e.code);
       if (sim.s.modal === 'sample' && ['KeyW', 'KeyA', 'KeyS', 'KeyD'].includes(e.code)) closeSample();
     };
     const onKeyUp = (e) => {
+      // Shift held: fast walk; tapped twice (two short presses): demo speed on / off (taphold.js)
+      if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') { shift.keyUp(evTime(e)); return; }
       keys.delete(e.code);
-      if (e.code !== 'ShiftLeft' && e.code !== 'ShiftRight') return;
-      // Shift tapped twice (two short presses, not a hold for fast walk): demo speed on / off
-      const now = performance.now();
-      if (now - shiftDownAt > D.tapMaxMs) { lastShiftAt = 0; return; }
-      if (now - lastShiftAt < D.doubleTapMs) { mode.demo = !mode.demo; lastShiftAt = 0; } else lastShiftAt = now;
     };
-    const onBlur = () => { keys.clear(); drag.on = false; };
-    // A real lock holds the cursor still (clientX/Y stay put). Where the cursor keeps moving under the lock, the
-    // browser does not hold it (seen in Firefox: movementX/Y then come as the offset from the lock point, so
-    // the view turns one way only, and the hidden cursor can stop at the screen edge): the lock is released for
-    // this walk and the drag look takes over.
-    const lk = { last: null, moved: 0, broken: false };
+    const freeOut = () => { free.last = null; free.edgeX = free.edgeY = 0; };
+    const onBlur = () => { keys.clear(); shift.reset(); drag.on = false; freeOut(); };
     const onMouseMove = (e) => {
+      if (dbg) { dbg.mx = e.movementX; dbg.my = e.movementY; dbg.cx = e.clientX; dbg.cy = e.clientY; dbg.n++; }
       if (isLocked()) {
         if (lk.last && (e.clientX !== lk.last.x || e.clientY !== lk.last.y)) lk.moved++;
         lk.last = { x: e.clientX, y: e.clientY };
-        if (lk.moved >= D.lockDriftEvents) {
-          lk.broken = true;
-          drag.x = e.clientX; drag.y = e.clientY;
+        const ox = e.movementX || 0, oy = e.movementY || 0;
+        if (Math.abs(ox) < D.lockOffsetPx) { lk.run = 0; lk.runX = lk.runY = 0; }
+        else if (Math.sign(ox) === Math.sign(lk.run)) lk.run += Math.sign(ox);
+        else { lk.run = Math.sign(ox); lk.runX = lk.runY = 0; }
+        if (lk.run) { lk.runX += ox; lk.runY += oy; }
+        if (lk.moved >= D.lockDriftEvents || Math.abs(lk.run) >= D.lockOffsetEvents) {
+          lk.broken = lk.moved >= D.lockDriftEvents ? 'cursor moved under the lock' : 'offsets, not steps'; lk.selfExit = true;
+          // offsets: the turn of that run was not the visitor's, take it back (this event was not added yet)
+          if (lk.run) { mouse.dx -= lk.runX - ox; mouse.dy -= lk.runY - oy; }
+          freeOut(); free.armed = false;
           document.exitPointerLock();
           return;
         }
@@ -107,27 +131,46 @@ export default {
         if (drag.on) drag.moved += Math.abs(mx) + Math.abs(my);
         return;
       }
-      if (!drag.on) return;
-      if (!(e.buttons & 1)) { drag.on = false; return; } // released outside the window
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      drag.x = e.clientX; drag.y = e.clientY;
-      mouse.dx += dx; mouse.dy += dy;
-      drag.moved += Math.abs(dx) + Math.abs(dy);
+      if (drag.on && !(e.buttons & 1)) drag.on = false; // released outside the window
+      const r = view.getBoundingClientRect();
+      // over the walk view: the 3D view or the helmet display (not the intro layer, a dialog or the step bar)
+      const over = (view.contains(e.target) || hudRoot.contains(e.target)) && e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom;
+      if (!over && !drag.on) { freeOut(); return; }
+      if (free.last && performance.now() >= lk.pendingUntil) {
+        const dx = e.clientX - free.last.x, dy = e.clientY - free.last.y;
+        mouse.dx += dx; mouse.dy += dy;
+        if (drag.on) drag.moved += Math.abs(dx) + Math.abs(dy);
+      }
+      free.last = { x: e.clientX, y: e.clientY };
+      const zx = Math.max(D.edgeZoneMinPx, r.width * D.edgeZoneFrac), zy = Math.max(D.edgeZoneMinPx, r.height * D.edgeZoneFrac);
+      const ex = e.clientX < r.left + zx ? -1 : e.clientX >= r.right - zx ? 1 : 0;
+      const ey = e.clientY < r.top + zy ? -1 : e.clientY >= r.bottom - zy ? 1 : 0;
+      if (!ex && !ey) free.armed = true;
+      free.edgeX = over && free.armed ? ex : 0;
+      free.edgeY = over && free.armed ? ey : 0;
     };
+    // the error event of a request whose promise is still out (Chromium: the raw movement option refused, plain
+    // request follows) is not a refusal; the promise says so itself
+    const onLockError = () => { if (performance.now() >= lk.pendingUntil) lk.refused = true; };
+    const refused = () => { lk.refused = true; lk.pendingUntil = 0; };
     function requestLock() {
-      if (isLocked() || log.ended || lk.broken || !LOCK_OK || !view.requestPointerLock) return;
-      // a refused lock (browser setting, too soon after esc, option not supported) leaves the drag look
-      const plain = () => { try { const p = view.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch { /* not allowed */ } };
+      if (isLocked() || log.ended || lk.broken || !view.requestPointerLock) return;
+      lk.pendingUntil = performance.now() + D.lockPendingMs;
+      // a refused lock (browser setting, too soon after esc, option not supported) leaves the free look
+      const plain = () => {
+        try { const p = view.requestPointerLock(); if (p && p.catch) p.catch(refused); } catch { refused(); }
+      };
       try {
         // raw mouse movement where the browser supports it (Chromium); elsewhere the option is ignored or refused
         const p = view.requestPointerLock({ unadjustedMovement: true });
-        if (p && p.catch) p.catch((err) => { if (err && err.name === 'NotSupportedError') plain(); });
+        if (p && p.catch) p.catch((err) => { if (err && err.name === 'NotSupportedError') plain(); else refused(); });
       } catch { plain(); }
     }
     const onMouseDown = (e) => {
       if (e.button !== 0) return;
       e.preventDefault();
-      drag.on = true; drag.x = e.clientX; drag.y = e.clientY; drag.moved = 0;
+      drag.on = true; drag.moved = 0;
+      if (!isLocked()) free.last = { x: e.clientX, y: e.clientY };
       if (!mode.aim) requestLock(); // in aim mode the click jumps: no lock request on it
     };
     const onMouseUp = (e) => {
@@ -136,27 +179,50 @@ export default {
       if (mode.aim && drag.moved < D.clickMaxPx) jump();
     };
     const onLockChange = () => {
-      if (isLocked()) { lk.last = null; lk.moved = 0; return; }
+      if (isLocked()) { lk.last = null; lk.moved = 0; lk.run = 0; lk.runX = lk.runY = 0; lk.refused = false; lk.pendingUntil = 0; free.edgeX = free.edgeY = 0; return; }
       unlockedAt = performance.now();
+      free.last = null; // the cursor comes back elsewhere: no jump of the view
       // esc while captured: the browser takes the key to release the pointer; in aim mode that esc cancels the aim
-      if (mode.aim) setAim(false);
+      // (not when the lock check released the lock itself)
+      if (mode.aim && !lk.selfExit) setAim(false);
+      lk.selfExit = false;
     };
+    const root = document.documentElement;
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
     document.addEventListener('mousemove', onMouseMove);
+    root.addEventListener('mouseleave', freeOut);
     window.addEventListener('mouseup', onMouseUp);
     document.addEventListener('pointerlockchange', onLockChange);
+    document.addEventListener('pointerlockerror', onLockError);
     view.addEventListener('mousedown', onMouseDown);
     disposers.push(() => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('mousemove', onMouseMove);
+      root.removeEventListener('mouseleave', freeOut);
       window.removeEventListener('mouseup', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
+      document.removeEventListener('pointerlockerror', onLockError);
       if (document.pointerLockElement) document.exitPointerLock();
     });
+    function showDebug() {
+      if (!dbg) return;
+      const now = performance.now();
+      if (now - dbg.t0 >= 1000) { dbg.eps = Math.round((dbg.n * 1000) / (now - dbg.t0)); dbg.n = 0; dbg.t0 = now; }
+      const deg = (r) => ((r * 180) / Math.PI).toFixed(1);
+      dbg.el.textContent = [
+        `mouse look   ${lookMode()}`,
+        `lock check   ${lk.broken ? `TRIPPED (${lk.broken})` : 'ok'}${lk.refused ? ' · lock refused' : ''}`,
+        `movementX/Y  ${dbg.mx} / ${dbg.my}`,
+        `clientX/Y    ${dbg.cx} / ${dbg.cy}`,
+        `events/s     ${dbg.eps}`,
+        `yaw mouse    ${deg(dbg.yawMouse)}°   edge ${deg(dbg.yawEdge)}°`,
+        `edge zone    x ${free.edgeX} y ${free.edgeY}${free.armed ? '' : ' (not armed)'}`,
+      ].join('\n');
+    }
 
     function setAim(on) {
       mode.aim = !!on && !log.ended;
@@ -218,7 +284,7 @@ export default {
         r: k('KeyD') - k('KeyA'),
         turn: k('ArrowRight') - k('ArrowLeft'),
         pitch: k('ArrowUp') - k('ArrowDown'),
-        fast: !!(k('ShiftLeft') || k('ShiftRight')),
+        fast: shift.held(performance.now()),
         demo: mode.demo,
       };
     }
@@ -229,12 +295,23 @@ export default {
       if (mouse.dx || mouse.dy) {
         if (!sim.s.modal && !log.ended) {
           sim.s.yaw += mouse.dx * D.mouseRadPerPx;
+          if (dbg) dbg.yawMouse += mouse.dx * D.mouseRadPerPx;
           const pm = (D.pitchMaxDeg * Math.PI) / 180;
           sim.s.pitch = Math.max(-pm, Math.min(pm, sim.s.pitch - mouse.dy * D.mouseRadPerPx));
         }
         mouse.dx = mouse.dy = 0;
       }
+      // free look: the cursor rests in an edge zone, the view keeps turning that way
+      if ((free.edgeX || free.edgeY) && !isLocked() && !sim.s.modal && !sim.s.paused && !log.ended) {
+        const dt = Math.min(dtReal, D.maxFrameS), rad = Math.PI / 180;
+        const dyaw = free.edgeX * D.edgeTurnDegS * rad * dt;
+        sim.s.yaw += dyaw;
+        if (dbg) dbg.yawEdge += dyaw;
+        const pm = D.pitchMaxDeg * rad;
+        sim.s.pitch = Math.max(-pm, Math.min(pm, sim.s.pitch - free.edgeY * D.edgePitchDegS * rad * dt));
+      }
       acc += Math.min(dtReal, D.maxFrameS);
+      if (shift.takeToggles(performance.now()) % 2) mode.demo = !mode.demo;
       const inp = input();
       while (acc >= D.tickS) {
         sim.step(D.tickS, inp);
@@ -266,7 +343,10 @@ export default {
         hud.setAim({ p: L ? v3.project(L.x, t.heightAt(L.x, L.z), L.z) : null, ok: !!(L && L.ok), m: L ? L.m : null });
       }
       const jumpedOn = mode.jumped && performance.now() - mode.jumpedAt < D.jumpNoteS * 1000;
-      hud.setMode({ fast: s.fast, workW: s.workW, demo: mode.demo, aim: mode.aim, jumped: jumpedOn ? mode.jumped : null });
+      hud.setLookMode(isLocked() ? 'locked' : lk.broken || lk.refused ? 'free' : 'click');
+      if (dbg && frameNo % 4 === 0) showDebug();
+      // the fast walk chip shows for as long as Shift is held (fast walk does nothing at demo speed)
+      hud.setMode({ fast: shift.held(performance.now()) && !mode.demo, workW: s.workW, demo: mode.demo, aim: mode.aim, jumped: jumpedOn ? mode.jumped : null });
       // the helmet text first (alert, prompt), so the look card and the markers give way to it in this frame
       hud.update(sim, heading);
       hud.setLook(look);
@@ -308,7 +388,7 @@ export default {
         alert: sim.s.alert, active: Object.keys(sim.s.active).filter((k) => sim.s.active[k]),
         reserveS: sim.s.reserve.seconds, timeLeftS: sim.s.timeLeft.seconds, radio: sim.s.radio, phase: log.phase,
         atTarget: sim.atTarget(), atRover: sim.atRover(), modal: sim.s.modal, ended: log.ended, started: sim.s.started, tS: log.tS,
-        distanceM: log.distanceM, lockBroken: lk.broken, demo: mode.demo, aim: mode.aim, landing: mode.landing, locked: isLocked(), workW: sim.s.workW,
+        distanceM: log.distanceM, lockBroken: !!lk.broken, lockWhy: lk.broken, fastHeld: shift.held(performance.now()), lookMode: lookMode(), edge: [free.edgeX, free.edgeY], demo: mode.demo, aim: mode.aim, landing: mode.landing, locked: isLocked(), workW: sim.s.workW,
         target: sim.target(),
       }),
     };

@@ -29,7 +29,7 @@ const LAST_S_TAG = { label: 'model', text: 'Walking time of the last metres at p
 const RESERVE_TAG = { label: 'model', moon: true, text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the suit model (Pandolf effort equation under Mars gravity): faster walking costs more per metre. ' + ASTRONAUT.fastPaceFactor.text, source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Suit model (src/core/suit.js), planner (src/core/planner.js)', url: '', where: '' } };
-const STEEP_CUE_TAG = MODEL_TAG(`Thin lines rising from the edge of ground steeper than ${RULES.slopeMaxDeg.value}° (closed to the route), shown within about ${D.cueFadeMaxM} m of you. The edge is the planner's slope test on the 0.5 m walk grid.`);
+const STEEP_CUE_TAG = MODEL_TAG(`A low border along the edge of ground steeper than ${RULES.slopeMaxDeg.value}° (closed to the route), shown within about ${D.cueFadeMaxM} m of you. Outline smoothed for display; the warnings use the planner's exact slope test on the 0.5 m walk grid.`);
 const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your eye to the rover antenna), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
@@ -92,10 +92,13 @@ export function createHud(el) {
   const reticle = h('div.walk-reticle');
   const lookCard = h('div.walk-look');
   const prompt = h('div.walk-prompt');
-  const hint = h('div.walk-hint', h('span', 'Drag the mouse to look around'), h('i', '·'), h('span', h('kbd', 'W A S D'), ' walk'), h('i', '·'), h('span', h('kbd', '← →'), ' turn'),
+  // the mouse look text follows the look mode (setLookMode): click for the lock, locked, or free look
+  const hintLook = h('span', 'Click, then move the mouse to look');
+  const hint = h('div.walk-hint', hintLook, h('i', '·'), h('span', h('kbd', 'W A S D'), ' walk'), h('i', '·'), h('span', h('kbd', '← →'), ' turn'),
     h('i', '·'), h('span', h('kbd', 'Shift'), ' fast'), h('i', '·'), h('span', h('kbd', 'F'), ' jump'));
   // key hints on the frame bottom, always shown; esc last (its text changes when armed)
-  const escHint = h('div.walk-esc', h('kbd', 'Shift'), h('span', 'fast'), h('kbd', 'Shift Shift'), h('span', 'demo speed'), h('kbd', 'F'), h('span', 'jump'),
+  const escLookKey = h('kbd', 'click'), escLookText = h('span', 'mouse look');
+  const escHint = h('div.walk-esc', escLookKey, escLookText, h('kbd', 'Shift'), h('span', 'fast'), h('kbd', 'Shift Shift'), h('span', 'demo speed'), h('kbd', 'F'), h('span', 'jump'),
     h('kbd', 'esc'), h('span', 'End mission'));
   // walking mode (fast walk, demo speed, aim, jump), above the frame bottom
   const modeEl = h('div.walk-mode');
@@ -444,25 +447,44 @@ export function createHud(el) {
     mVals.plan.textContent = names.join(', ');
     mVals.plan.className = 'walk-row__v mono tone-warning';
   }
-  // ---------- controls: walking mode and aim ----------
-  let lastMode = '';
+  // ---------- controls: mouse look, walking mode and aim ----------
+  let lastLookHint = 'click';
+  /** 'click' (lock not taken yet: a click captures the mouse), 'locked', or 'free' (free look, no lock) */
+  function setLookMode(m) {
+    if (m === lastLookHint) return;
+    lastLookHint = m;
+    hintLook.textContent = m === 'click' ? 'Click, then move the mouse to look' : m === 'locked' ? 'Move the mouse to look' : 'Move the mouse to look around';
+    escLookKey.textContent = m === 'click' ? 'click' : 'mouse';
+    escLookText.textContent = m === 'free' ? 'look · rest at an edge to keep turning' : m === 'locked' ? 'look' : 'mouse look';
+  }
+  // Each chip is built once when its mode comes on and stays in place (no rebuild, so its fade-in plays once)
+  // for as long as the mode is on; only its numbers change. Order from top: aim, jumped, demo, fast.
+  const chips = {};
+  const CHIP_ORDER = ['aim', 'jumped', 'demo', 'fast'];
+  function chip(k) {
+    if (chips[k]) return chips[k];
+    const val = h('span');
+    let el;
+    if (k === 'aim') el = h('div.walk-mode__chip.is-aim', h('kbd', 'click'), h('span', 'Jump: counted as walked '), tag(JUMP_TAG), h('i', '·'), h('kbd', 'F'), h('span', 'cancel'));
+    else if (k === 'jumped') el = h('div.walk-mode__chip.is-aim', val, tag(JUMP_TAG));
+    else if (k === 'demo') el = h('div.walk-mode__chip', h('span', `Demo speed: movement only · ${DEMO.screenSpeedFactor.value}${DEMO.screenSpeedFactor.unit} `), tag(DEMO.screenSpeedFactor));
+    else el = h('div.walk-mode__chip', h('span', `Fast walk ${ASTRONAUT.fastPaceFactor.value}${ASTRONAUT.fastPaceFactor.unit} `), tag(ASTRONAUT.fastPaceFactor), val, tag(FAST_TAG));
+    chips[k] = { el, val, text: '' };
+    return chips[k];
+  }
   /** { fast, workW, demo, aim, jumped: null | { metres, seconds } } */
   function setMode(m) {
-    const parts = [];
-    if (m.aim) parts.push('aim');
-    if (m.jumped) parts.push(`jumped|${fmtDistance(m.jumped.metres)}|${fmtDuration(m.jumped.seconds)}`);
-    if (m.demo) parts.push('demo');
-    if (m.fast) parts.push(`fast|${Math.round(m.workW / 10) * 10}`);
-    const key = parts.join('/');
-    if (key === lastMode) return;
-    lastMode = key;
-    modeEl.replaceChildren(...parts.map((p) => {
-      const [k, a, b] = p.split('|');
-      if (k === 'aim') return h('div.walk-mode__chip.is-aim', h('kbd', 'click'), h('span', 'Jump: counted as walked '), tag(JUMP_TAG), h('i', '·'), h('kbd', 'F'), h('span', 'cancel'));
-      if (k === 'jumped') return h('div.walk-mode__chip.is-aim', h('span', `Jump: counted as walked · ${a} · ${b} `), tag(JUMP_TAG));
-      if (k === 'demo') return h('div.walk-mode__chip', h('span', `Demo speed: movement only · ${DEMO.screenSpeedFactor.value}${DEMO.screenSpeedFactor.unit} `), tag(DEMO.screenSpeedFactor));
-      return h('div.walk-mode__chip', h('span', `Fast walk ${ASTRONAUT.fastPaceFactor.value}${ASTRONAUT.fastPaceFactor.unit} `), tag(ASTRONAUT.fastPaceFactor), h('span', ` · ${a} W `), tag(FAST_TAG));
-    }));
+    const on = { aim: m.aim, jumped: !!m.jumped, demo: m.demo, fast: m.fast };
+    let after = null; // the chip placed last, in order
+    for (const k of CHIP_ORDER) {
+      if (!on[k]) { if (chips[k]) { chips[k].el.remove(); delete chips[k]; } continue; }
+      const c = chip(k);
+      const text = k === 'jumped' ? `Jump: counted as walked · ${fmtDistance(m.jumped.metres)} · ${fmtDuration(m.jumped.seconds)} `
+        : k === 'fast' ? ` · ${Math.round(m.workW / 10) * 10} W ` : '';
+      if (text !== c.text) { c.text = text; c.val.textContent = text; }
+      if (!c.el.isConnected) modeEl.insertBefore(c.el, after ? after.nextSibling : modeEl.firstChild);
+      after = c.el;
+    }
   }
   let lastAim = '';
   /** null: aim off; else { p: projected landing point or null, ok, m } */
@@ -477,6 +499,6 @@ export function createHud(el) {
     if (txt !== lastAim) { lastAim = txt; aimLabel.textContent = txt; }
   }
 
-  return { setPlanBroken, setTerrain, update, setLook, setMarks, showSample, showEmpty, hideModal, setEscArmed, setLoading, setMode, setAim, hud };
+  return { setPlanBroken, setTerrain, update, setLook, setMarks, showSample, showEmpty, hideModal, setEscArmed, setLoading, setMode, setAim, setLookMode, hud };
 }
 

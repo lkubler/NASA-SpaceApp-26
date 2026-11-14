@@ -37,15 +37,21 @@ over. The sim, the suit clock and the walk log stand still until then. Skip butt
 once. Test hook: `window.__intro` (`phase`: a, hold, b, hud, done; `path`; `skip()`).
 
 ## Walk keys
-Hold the mouse button and drag to look around; Chromium also captures the mouse on that press (pointer lock), so
-moving it alone turns the view. Firefox on Linux gets no pointer lock (its lock reports movement as the offset
-from the lock point where it cannot re-centre the cursor, e.g. under Wayland: the view turned one way only), nor
-does a browser that refuses the lock: there the drag turns the view. W A S D walk, arrow keys turn and look, Shift held fast walk (`ASTRONAUT.fastPaceFactor`), Shift tapped twice
+Mouse look in every browser: a click captures the mouse (pointer lock), then moving it turns the view, no button
+held. Without a lock (before the first click, lock refused or released with esc) free look applies: the plain
+cursor movement over the walk view turns it, and resting the cursor near the left / right (top / bottom) edge keeps
+turning that way (`DISPLAY.edgeZoneFrac`, `edgeTurnDegS`), so it turns all the way round both ways; holding the
+button and dragging turns it too. A runtime check releases the lock for the rest of the walk and falls back to
+free look when the lock does not hold the cursor (clientX/Y move under the lock) or movementX/Y look like offsets
+from the lock point, not steps (`DISPLAY.lockOffsetPx`, `lockOffsetEvents`). W A S D walk, arrow keys turn and look, Shift held fast walk (`ASTRONAUT.fastPaceFactor`), Shift tapped twice
 demo speed on / off (`DEMO.screenSpeedFactor`, movement only), F aim mode (click jumps to the marker, counted as
 walked on the `findRoute` way; F or esc cancels), E take sample / end excursion, esc twice end the mission.
 Test hook: `window.__walk` (`advance`, `hold`, `info`).
 
 ## Dev jump and test states (URL parameters; never reached by a visitor)
+- `?mousedebug=1` (Walk) shows a small mouse look readout in the bottom-left corner: mode (locked / free look /
+  drag), whether the lock check tripped and why, lock refused, last raw movementX/Y, last clientX/Y, mouse events
+  per second, summed yaw from the mouse and from the edge zones, edge zone. Example: `?step=4&mousedebug=1`.
 - `?step=N` opens step N with the state the earlier steps would have produced (each step's `devFixture`).
 - `?step=4` opens the walk without the intro (`specs/x-intro.md`); `?step=4&intro=1` plays it anyway. Go / no-go is
   skipped there, so the film is not preloaded and only part B (stepping out) plays; for the full intro open
