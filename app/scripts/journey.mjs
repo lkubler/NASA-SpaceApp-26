@@ -96,7 +96,7 @@ for (const run of runs) {
     for (const b of await page.locator('.go__nums .bignum').all()) {
       goTxt[(await b.locator('.bignum__label').innerText()).replace(/\s*(model|real|assumption|simulated)( · lunar rule)?$/, '').trim()] = await b.locator('.bignum__value').innerText();
     }
-    const radioLine = await page.locator('.gocheck', { hasText: 'Radio shadow' }).first().innerText();
+    const radioLine = await page.locator('.gocaution', { hasText: 'Radio shadow' }).first().innerText();
     goTxt.radio = (/longest ([^\n]*?)\s*model/.exec(radioLine) || [])[1] || null;
     console.log('  go', JSON.stringify(goTxt));
     if (goTxt.Distance !== planTxt.dist) fail(run, `distance Plan ${planTxt.dist} vs Go ${goTxt.Distance}`);
@@ -122,8 +122,9 @@ for (const run of runs) {
     await shot('walk-start');
     const hudTarget = await text('.walk-target__name');
     if (hudTarget !== planTxt.label) fail(run, `walk target "${hudTarget}" vs plan "${planTxt.label}"`);
-    const backOk = await page.evaluate(() => document.querySelector('.stepbar__item:nth-of-type(1)')?.disabled ?? true);
-    if (!backOk) fail(run, 'back to Mission possible after the walk started');
+    // specs/feedback-1.md Frame: the top menu leads back from the walk (after a question)
+    const backOff = await page.evaluate(() => document.querySelector('.stepbar__item:nth-of-type(1)')?.disabled ?? true);
+    if (backOff) fail(run, 'no way back to Mission from the walk');
     await page.evaluate(() => window.__walk.hold(true));
     const st = await S();
     const walkLeg = async (points, until, label, shots) => {
