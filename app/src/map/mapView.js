@@ -521,7 +521,7 @@ export function mountMap(el) {
     const clk = tile({ label: 'EVA length', value: last ? (P.at(-1).elapsed_s / 3600).toFixed(1) : '--', unit: 'h', prov: 'modelled', state: night && (night.afterSunset || night.beforeSunrise) ? 'warn' : undefined });
     // reserve at the lander, coloured by margin against the 20 % buffer; the sentence below says why (same numbers)
     const endFrac = last ? last.remainingFraction : 0;
-    const res = tile({ label: 'Reserve at lander', value: last ? Math.round(endFrac * 100) : '--', unit: '% (buffer ' + Math.round(buf * 100) + ')', prov: 'modelled', state: tb || endFrac < buf ? 'danger' : endFrac < buf + 0.05 ? 'warn' : 'ok' });
+    const res = tile({ label: 'Reserve at lander', value: last ? Math.round(endFrac * 100) : '--', unit: '% (buffer ' + Math.round(buf * 100) + ')', prov: 'modelled', state: tb || endFrac < buf ? 'danger' : endFrac < buf + 0.015 ? 'warn' : 'ok' });
     const worst = sh.reduce((m, s) => Math.max(m, s.duration_s), 0);
     const cm = tile({ label: 'Comms shadow', value: sh.length ? Math.round(worst / 60) : 0, unit: sh.length ? 'min longest' : 'min', prov: 'modelled', state: sh.some((s) => s.exceedsLimit) ? 'danger' : sh.length ? 'warn' : undefined });
     tiles.append(dist, clk, res, cm); tilesBox.append(tiles);
