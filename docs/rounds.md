@@ -56,3 +56,9 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Result: 44 tests pass. Default scenario: 1.5 km loop, 5 named stations, best-path-home turn-back ("leave station 5 by 14:31"), relay fix button 277 → 3 min shadow, shadow + TB inside walk square, one speed model, sunset warning.
 - Open: walk home only 1–7 min inside 1 km DTM → data-scout preparing 4 km regional layer. Humans: pitch/video owner, AI 009 minimal scope, cut 011.
 - Next: 018+019 (science map + panel fold), 020 (walk HUD time-lapse), regional layer; then UX pass 2.
+
+## Round 11 — Sat 14.11. 14:50–15:10 (BUILD)
+- Did: merged 018 (science map: ortho, Curiosity track, photo cards, validation fold), 019 (panel fold), 020/021 (walk HUD time-lapse, sync polish), 023 (walk station cards + source links), 022 (regional 4 km layer, lander site B 2.5 km out).
+- Result: 54 tests pass, build OK. Default: 5.9 km loop, EVA 7.3 h, walk home 47–54 min, A* 0.2 s; 1 m ortho fades in on zoom; walk view uses translated route.
+- Found: reserve at lander 0 % (below 20 % buffer), comms shadow covers nearly the whole route (434 → 124 min with relay), labels crowd near Quela / clip under panel → 024.
+- Next: 024 builder (running); then UX pass 2 + jury re-check before Sun 10:30 freeze; minimap; humans: pitch owner, AI 009 scope, cut 011.

@@ -14,3 +14,4 @@ For the submission's "Use of Super Intelligence" field and for labeling. One lin
 - Wave 1 code (Claude Code agents builder/designer): app shell, terrain preprocessing, reserve model, comms shadow, UI components. Files: `app/`, `scripts/preprocess/`.
 - Wave 2 code (Claude Code agents builder/designer): planner, route in 3D, sun/dust (Mars24), briefing/sources, autonomy clock, RAD dose. Files: `app/src/`.
 - Review and data (Claude Code agents jury/ux-tester/data-scout): prototype scoring, UX pass, HiRISE ortho, Curiosity track and photos. Files: `research/jury-prototype.md`, `research/ux-1.md`, `app/public/data/murray/`.
+- Wave 3 code (Claude Code agents builder/designer/data-scout): science map layers, walk time-lapse and station cards, regional 4 km terrain layer and walkback planning. Files: `app/src/`, `scripts/preprocess/build_regional.py`, `app/public/data/murray/regional*`.
