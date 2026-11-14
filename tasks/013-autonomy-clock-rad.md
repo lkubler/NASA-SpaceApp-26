@@ -1,6 +1,6 @@
 # 013 Autonomy clock and radiation dose counter
 owner: builder
-state: open
+state: done
 area: app/src/model/rad.js, app/src/ui/autonomy.js, app/src/walk/hud.js
 
 ## Goal
@@ -11,3 +11,9 @@ Pure model in app/src/model/rad.js with node --test tests. UI with app/src/ui/co
 
 ## Done when
 Both visible in Walk HUD (and light-time also in the planner panel if app/src/map is not being edited by another agent — otherwise leave a hook), tests pass, build passes, 0 console errors, screenshot docs/ui-013.png.
+
+## Result
+- Models: app/src/model/rad.js (Keplerian light time, evaDose, doseRate, SPE) + rad.test.js. UI: app/src/ui/autonomy.js. HUD: walk/hud.js (no walkView.js edit needed). Light time at demo sol 1440 = 7.1 min one way.
+- **Planner hook (not wired, app/src/map was off limits):** `import { autonomyBar } from "../ui/autonomy.js"; panelBody.append(autonomyBar());` optional arg = scenario date in ms. Styles `.auto-bar` are in styles/app.css.
+- EVA dose counts walking wall-clock time in Walk view; route total (route.points[last].time_s) shown as "route N mSv" projection.
+- Test: `cd app && node --test src/model/*.test.js src/map/*.test.js`; `npm run build`; open #/walk, click SPE replay toggle. Screenshot docs/ui-013.png.

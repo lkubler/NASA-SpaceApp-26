@@ -46,3 +46,19 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .walk-toast[hidden] { display: none; }
 .walk-guide { position: absolute; top: var(--s-5); right: var(--s-5); z-index: 6; padding: var(--s-2) var(--s-4); background: var(--scrim); color: var(--hud-text); border: 1px solid var(--hud-line); border-radius: var(--radius); font: 600 13px var(--font-display); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 .walk-guide[hidden] { display: none; }
+
+/* Task 013: autonomy clock + RAD dose counter */
+.auto-bar { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-3); font: 500 14px/1.4 var(--font-mono); color: var(--hud-text); }
+.auto-s { opacity: .75; text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
+.auto-hud { position: absolute; left: var(--s-5); top: var(--s-5); max-width: 56%; flex-wrap: nowrap; padding: var(--s-2) var(--s-4); background: var(--scrim);
+  border: 1px solid var(--hud-line); border-radius: var(--radius); backdrop-filter: blur(6px); white-space: nowrap; }
+.rad-cell { background: var(--scrim); min-width: 170px; padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: 2px; color: var(--hud-text); }
+.rad-cell .hud-v { font-size: 28px; line-height: 40px; }
+.rad-cell .chip { align-self: flex-start; background-color: rgba(0,0,0,.25); }
+.rad-cell[data-state="warn"] .hud-v, .rad-warn { color: var(--warn); }
+.rad-warn { font: 600 12px/14px var(--font-mono); }
+.rad-toggle { align-self: flex-start; background: transparent; color: var(--hud-text); border: 1px solid var(--hud-line); border-radius: var(--radius);
+  font: 500 12px var(--font-mono); padding: 2px 8px; cursor: pointer; margin: 2px 0; pointer-events: auto; }
+.rad-toggle[aria-pressed="true"] { border-color: var(--warn); }
+.rad-cell [hidden], .rad-cell .chip[hidden] { display: none !important; }
+#hud { z-index: 6; }
