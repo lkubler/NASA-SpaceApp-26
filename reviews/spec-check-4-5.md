@@ -144,3 +144,69 @@ Known and already being fixed (not counted again below): the eastern terrain ren
 | "AI-generated image" mark on the helmet frame | met | | `walk-start-F7-1280.jpg` |
 | Sky is the real Access Mars background | met, with a note | See Sky and horizon under Walk. | `walk-start-F7-1920.jpg` |
 | No German text | met | None in any captured text, and no German strings in `app/src/steps/4-walk` or `5-debrief`. | — |
+
+## Round 2
+
+Checked Sat 14.11. about 20:30 to 21:30 (BUILD), `main` at 23ff958, served from `app/` on port 5182 (vite dev). Playwright 1.46 headless Chromium (SwiftShader), 1280x720 and 1920x1080, real key presses (W, arrows, E, esc) with the walk loop paused and stepped through `window.__walk` as in `app/scripts/journey.mjs`. Entry points: `?step=4&spot=F1|F7`, `?step=4&spot=F7&broken=1`, `?step=5&outcome=home|broken|lost&spot=F7`. Real walks: spot 01 and spot 06 along the band, spot 01 with the walker held 0.8 m and 1.5 m to either side of the band, spot 06 3 m beside the band, five approaches to the rover, a walk to the site edge, a suit-empty walk, an esc end. No console errors in any run. Screenshots: `reviews/spec-check/4-5/r2-*.jpg` (JPEG q70).
+Left out as the team decided: Debrief map on the right, no headline in the Walk, the tinted eastern ground ("Ground colour model").
+
+### Not met
+
+| Spec line | Result | What I saw | Screenshot |
+|---|---|---|---|
+| 5 End => "New mission" leads to step 1; the finished request is marked done | not met (unfinished request) | Walk ended with esc 5 m from the rover: Debrief says "Not returned." and "Sample not taken". After "New mission" the request "One sample" shows "✓ Done" and `requestsDone` = ["crossbeds"]. The request is marked done whether or not the sample was taken. | `r2-esc-debrief-1920.jpg`, `r2-esc-new-mission-requests-1280.jpg` |
+| 4 Same spots => each warning appears where the plan marked it | not met (one caution) | Rule-keeping route to spot 06 (plan: every rule kept, no steep stretch marked). On the way back, at (57.5, 0.9), 0.99 m from the band, the yellow caution "Steep stretch ahead / Ground over 20° in 4 m. Closed to the route." appeared. Seen in two runs at 1920 (the 1280 run passed a little further from that point and got none). The Debrief lists it as warning 02 "57 m east of the rover". No red warning and no broken rule. | `r2-F7-steep-on-band-1920.jpg`, `r2-F7-1920-debrief.jpg` |
+| Rules: Labels => every value is real, model, simulated or assumption | not met (small remainder) | Fixed since round 1: Time outside, target distance and time, marker distances, sample card distance, Debrief scale bar. Still untagged: the E prompts ("Take sample · 20 min of work", "End excursion · last 4 m to the rover, 9 min"), the numbers in the helmet alerts ("26° here", "in 4 m", "−6 min"), the "where" lines in the Debrief warnings and checks ("57 m east of the rover · 2 h 52 in"). | `r2-F7-1280-rover.jpg`, `r2-turnback-1280.jpg`, `r2-F7-1920-debrief.jpg` |
+
+### Round 1 not-met lines and first-visitor items, checked again
+
+| Item | Result | What I saw | Screenshot |
+|---|---|---|---|
+| 4 Layout (1280 target label ran into the minimap line) | met | The minimap target name now wraps onto two lines; the marker label no longer touches it at 1280 or 1920. Other overlaps are listed under Visual cleanliness. | `r2-F7-1280-start.jpg`, `r2-F7-1920-start.jpg` |
+| 5 Outcome (broken rule repeated per crossing) | met | Real walk on the `broken=1` route: "…but broke a rule: Slope on foot (2×)." (out and back over the same stretch). Fixture: "broke 2 rules: Slope on foot (4×), Way home." | `r2-broken-debrief-1280.jpg`, `r2-debrief-broken-1280.jpg` |
+| 5 Layout, checks row (rule repeated) | met | Each rule once, with "· 4×" or "· 2×" after it. | `r2-debrief-broken-1920.jpg` |
+| 5 Report to Earth (photo cut at 1280, not returned) | met | Photo fits and the Spot line sits below it. | `r2-debrief-lost-1280.jpg` |
+| 5 Closest moment (label covered markers) | met, with a note | Label no longer covers warning markers at 1920 or in the fixture. Note: in the suit-empty walk at 1280 the "Rover" and "Suit empty" labels touch. | `r2-debrief-broken-1920.jpg`, `r2-suitempty-debrief-1280.jpg` |
+| Rules: Moon values | met, with a note | Walk reserve chip "model · lunar rule"; Debrief planned Time and Reserve "model · lunar rule". Note: "Closest moment" (the lowest reserve on return, also counted with the 20 % way-home factor) is tagged "model" only. | `r2-F7-1280-debrief.jpg` |
+| Slope warning on a rule-keeping route, walking on the band | met | Spot 01 and spot 06 walked along the band, and spot 01 with the walker 0.8 m left and right of the band: no "Ground over 20° underfoot", no broken rule, "kept every rule" in the Debrief. (Exception: the one caution at 0.99 m on route 06, see Not met.) | `r2-F1-1280-debrief.jpg`, `r2-F1o0.8-1280-debrief.jpg`, `r2-F1o-0.8-1280-debrief.jpg`, `r2-F7-1280-debrief.jpg` |
+| Slope warning, walking near the band (1.2-1.5 m beside it) | observed | Spot 01, 1.2-1.5 m beside the band: yellow "Steep stretch ahead / Ground over 20° in 5 m. Closed to the route." on both sides. On one run 1.4 m beside the band near the spot, the red "Ground over 20° underfoot" fired and "Slope on foot" was broken; that walk kept crossing the edge of the closed ground and the Debrief reads "Slope on foot (83×)". The ground there is over 20°, so the warning itself follows spec line "Ground over 20° underfoot". | `r2-near-1.5-F1-steepAhead-1280.jpg`, `r2-F1o1.5-1280-debrief.jpg`, `r2-F1o-1.5-1280-debrief.jpg` |
+| Numbers Walk vs Debrief, real walk to spot 01 | met | Helmet at the rover: Time outside 01:06:23, reserve 6 h 35, prompt "last 4 m to the rover, 9 min". Debrief: Time 1 h 16, Reserve 6 h 36. Time = 1:06 + 9 min. The reserve is 1 min higher because the last metres are walked at the normal work rate, not at the planned +20 %, which the Debrief sentence explains. | `r2-F1-1280-rover.jpg`, `r2-F1-1280-debrief.jpg` |
+| Numbers Walk vs Debrief, real walk to spot 06 | met | 1280: helmet 05:13:45, reserve 1 h 57, "last 4 m, 9 min"; Debrief 5 h 23, 1 h 59. 1920: helmet 05:11:49, 1 h 58; Debrief 5 h 21, 2 h 01. Time matches with the last metres added; the reserve differs by 2-3 min for the reason above. | `r2-F7-1280-rover.jpg`, `r2-F7-1280-debrief.jpg`, `r2-F7-1920-debrief.jpg` |
+| Reserve jumps across the sample | observed | Spot 01: reserve 6 h 17 at the spot, 6 h 36 right after the 20-minute sample, while time left fell from 7 h 24 to 7 h 06. Spot 06 (1920): 1 h 15 before, 1 h 30 after. The first visitor reported the same jump. | `r2-F1-1280-sample.jpg`, `r2-F7-1920-target.jpg`, `r2-F7-1920-sample.jpg` |
+| Reserve a few metres off the path | met | Spot 06 with the walker 3 m beside the band: reserve logged every second stayed between 1 h 04 and 1 h 14 with no jumps, and fell steadily near the spot. No off-path caution (it starts at 6 m). | `r2-offpath3-F7-1280.jpg` |
+| Rover cannot be walked through | met | Walked straight at the rover from north, east, south, west and north-east: stopped at 1.85 m from the centre line on the sides, 3.5 m from the north. Never inside the model. | `r2-rover-0-1280.jpg`, `r2-rover-90-1280.jpg`, `r2-rover-180-1280.jpg` |
+| "Click to look around" turns the view to empty sky | met | A real click took the pointer lock; heading and pitch stayed the same (099.5°, −6°). | `r2-mouse-look-1280.jpg` |
+
+### Full pass for regressions
+
+| Spec line | Result | What I saw | Screenshot |
+|---|---|---|---|
+| 4 View / Sky / Rover | met | As in round 1: first person, helmet frame, start beside the rover facing the band; haze sky with the background skyline; "Rover simulated". | `r2-F7-1920-start.jpg`, `r2-rover-180-1280.jpg` |
+| 4 Moving => keys and mouse, at walking pace | met for keys; mouse could not be checked | Keys work. In headless Chromium the pointer-lock mouse events carry jumps of ±640-940 px each, which the app now ignores as jumps (`mouseJumpPx` 300), so the view does not turn. A real mouse cannot be tested here. | `r2-mouse-look-1280.jpg` |
+| 4 Route, Compass, Minimap, Reserve, Suit and body, Mission, Demo time, End | met | All present at both sizes. "esc" arms, the second press ends. | `r2-F7-1920-start.jpg`, `r2-esc-armed-1920.jpg` |
+| 4 Steep ahead / underfoot (broken route) | met | Caution "Ground over 20° in 6 m", then warning "26° here, on the planned route. Rule broken". | `r2-broken-steepAhead-1280.jpg`, `r2-broken-steepUnder-1280.jpg` |
+| 4 Radio shadow ahead | met | Advisory "No line of sight to the rover in 5 m", radio line changes to "No line of sight". | `r2-offpath3-F7-1280.jpg`, `r2-F7-1280-out.jpg` |
+| 4 Turn back now | met | "Reserve on return −6 min if you go on to the spot and back. Head for the rover." | `r2-turnback-1280.jpg` |
+| 4 Edge of the site | met | Caution "The mapped terrain ends here" at z −60; stopped at z −63.75. | `r2-edge-1280.jpg` |
+| 4 Look card | met | "Butte · real", one sentence, "≈ 7 m high · 7 m model". | `r2-F7-1280-start.jpg` |
+| 4 At the target / Suit empty / Back at the rover | met | Sample modal with PIA21042 (real); suit-empty modal "Battery ran out 6 m from the rover" (simulated); "E End excursion" opens the Debrief. | `r2-F1-1280-sample.jpg`, `r2-suitempty-1280.jpg`, `r2-F7-1280-rover.jpg` |
+| 5 Headline, Table, Warnings, Map, Send report, Not returned | met | As in round 1 on every outcome seen (home, broken, lost, suit empty, esc). | `r2-F7-1280-debrief.jpg`, `r2-F7-1920-sent.jpg`, `r2-suitempty-debrief-1280.jpg` |
+| 5 Not in this spec: learning from the result | finding (unchanged) | "The plan counts the way home at a 20 % higher work rate, so you can reach the rover with more reserve than planned." It is also shown on the "Not returned." screens. | `r2-debrief-lost-1280.jpg`, `r2-esc-debrief-1920.jpg` |
+| 4 Not in this spec | finding (new) | Mission card row "Plan breaks: Slope on foot" on the broken route; no spec line names it. | `r2-broken-steepUnder-1280.jpg` |
+| Design lines (black background, fonts, cards, markers, warning colours, AI mark, main button) | met | No change from round 1. | `r2-F7-1920-debrief.jpg` |
+
+### Visual cleanliness
+
+| Where | What I saw | Screenshot |
+|---|---|---|
+| Walk, 1280 | The look card ("Butte") runs under the Mission card; its size line touches the "Time outside" row. | `r2-F7-1280-out.jpg` |
+| Walk, both sizes | The E prompt sits on top of the look card and hides its size line. | `r2-F7-1920-target.jpg`, `r2-rover-0-1280.jpg` |
+| Walk, broken route | The alert box covers the target diamond and its label. | `r2-broken-steepAhead-1280.jpg` |
+| Walk, near the rover | A "Butte" look card shows while the reticle is on the rover model. | `r2-rover-0-1280.jpg` |
+| Walk, Mission card | "Plan breaks: Slope on foot" (red mono) is barely legible on the light translucent card. The blue "No line of sight" and cyan "Rover · ok" are also low contrast against a bright sky. | `r2-broken-steepUnder-1280.jpg`, `r2-edge-1280.jpg` |
+| Walk, minimap near spot 06 | The right half of the round minimap is flat black (outside the mapped square). | `r2-F7-1920-target.jpg`, `r2-F7-steep-on-band-1920.jpg` |
+| Debrief map, 1920 | Spot marker "06" is cut by the right edge of the map panel, and warning marker 2 covers its "0". | `r2-F7-1920-debrief.jpg`, `r2-debrief-broken-1920.jpg` |
+| Debrief map, suit empty 1280 | "Rover" and "Suit empty" labels touch. | `r2-suitempty-debrief-1280.jpg` |
+| Debrief table, 1920 | "Time in radio shadow" runs right up to "3 h 16" with almost no gap. | `r2-F7-1920-debrief.jpg` |
+| Debrief, esc end, 1920 | Large empty bands above and below the "Mission ended before the rover" card. | `r2-esc-debrief-1920.jpg` |
+| Leftover debug text | None seen. The dev route name "TEST-BROKEN" / "Test point up the east butte wall" appears only with `?broken=1`. | `r2-broken-debrief-1280.jpg` |
