@@ -2,9 +2,9 @@
 // Every number comes from the core (rules, suit model, terrain, cost fields, radio shadow); the
 // thresholds in display.js only decide when the display speaks.
 import {
-  RULES, WORK, ASTRONAUT, ROVER,
+  RULES, WORK, ASTRONAUT, DEMO, ROVER,
   logMove, logPath, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, walkSeconds, hasRadio,
-  radioShadowMask, roverField, spotField, isClosedAt,
+  radioShadowMask, roverField, spotField, isClosedAt, isClosed, findRoute,
 } from '../../core/index.js';
 import { DISPLAY as D } from './display.js';
 
@@ -62,7 +62,7 @@ export function createSim(t, route, log) {
     workW: WORK.restW.value, radio: true,
     reserve: null, timeLeft: null,
     active: {}, alert: null, alertInfo: {},
-    tb: null, leftRover: false, atEdge: false,
+    tb: null, leftRover: false, atEdge: false, fast: false,
     homeAtSample: null,
   };
   log.track.length || log.track.push({ x: ROVER.x, z: ROVER.z, tS: log.tS, reserveS: NaN, radio: true });
@@ -81,7 +81,15 @@ export function createSim(t, route, log) {
 
   const ground = (x, z) => t.heightAt(x, z);
 
-  /** Advance by dt real seconds with input { f, r, turn, pitch } (each -1..1). */
+  const PACE = ASTRONAUT.paceMS.value;
+  const lo = t.min + t.cell / 2, hi = t.max - t.cell / 2;
+
+  /**
+   * Advance by dt real seconds with input { f, r, turn, pitch, fast, demo }.
+   *   fast: Shift held, fast walk at ASTRONAUT.fastPaceFactor x pace; the work rate comes from the suit model at that speed.
+   *   demo: demo speed, DEMO.screenSpeedFactor x pace on screen; movement only: suit time and consumption count
+   *         as a normal walk over the same distance (time = distance / pace, work rate at pace).
+   */
   function step(dt, inp) {
     if (log.ended || s.paused || s.modal) return;
     s.yaw += inp.turn * D.turnDegS * DEG * dt;
@@ -90,17 +98,18 @@ export function createSim(t, route, log) {
     const len = Math.hypot(f, r);
     if (len > 0 && !s.started) s.started = true;
     if (!s.started) return; // the clock starts with the first step
+    const demo = !!inp.demo, fast = !!inp.fast && !demo;
+    const pace = fast ? PACE * ASTRONAUT.fastPaceFactor.value : PACE;
     const from = { x: s.x, y: ground(s.x, s.z), z: s.z };
     let nx = s.x, nz = s.z;
     s.atEdge = false;
     if (len > 0) {
       f /= len; r /= len;
-      const d = ASTRONAUT.paceMS.value * dt; // walking pace, real time on screen
+      const d = (demo ? PACE * DEMO.screenSpeedFactor.value : pace) * dt; // on screen, real time
       const sy = Math.sin(s.yaw), cy = Math.cos(s.yaw);
       nx += (f * sy + r * cy) * d;
       nz += (f * cy - r * sy) * d;
       // edge of the site: stopped
-      const lo = t.min + t.cell / 2, hi = t.max - t.cell / 2;
       if (nx < lo || nx > hi || nz < lo || nz > hi) s.atEdge = true;
       nx = Math.max(lo, Math.min(hi, nx)); nz = Math.max(lo, Math.min(hi, nz));
       // the rover model is solid
@@ -109,22 +118,98 @@ export function createSim(t, route, log) {
     const to = { x: nx, y: ground(nx, nz), z: nz };
     const horiz = Math.hypot(to.x - from.x, to.z - from.z);
     s.moving = horiz > 1e-6;
+    s.fast = fast && s.moving;
+    let dtS = dt * demoFactor(), workW;
     if (s.moving) {
       s.moveDir = { x: (to.x - from.x) / horiz, z: (to.z - from.z) / horiz };
       s.sinceMoveS = 0;
-      s.workW = workRate(Math.atan2(to.y - from.y, horiz) / DEG);
+      const slopeDeg = Math.atan2(to.y - from.y, horiz) / DEG;
+      if (demo) { dtS = (horiz / PACE) * demoFactor(); workW = workRate(slopeDeg); } // counted as a normal walk
+      else workW = workRate(slopeDeg, pace);
     } else {
       s.sinceMoveS += dt;
-      s.workW = WORK.restW.value; // standing still: resting work rate (core, label assumption)
+      workW = WORK.restW.value; // standing still: resting work rate (core, label assumption)
     }
-    s.x = nx; s.z = nz;
+    record(from, to, dtS, workW);
+  }
+
+  /** One move into the walk log (the one path for walking, fast walk, demo speed and jumps). */
+  function record(from, to, dtS, workW) {
+    s.workW = workW;
+    s.x = to.x; s.z = to.z;
     s.radio = hasRadio(t, s.x, s.z);
-    const dtS = dt * demoFactor();
-    s.reserve = logMove(log, t, { from, to, dtS, workW: s.workW, radio: s.radio, spot: route.spot });
+    s.reserve = logMove(log, t, { from, to, dtS, workW, radio: s.radio, spot: route.spot });
     s.timeLeft = timeLeft(log.levels);
     if (Math.hypot(s.x - ROVER.x, s.z - ROVER.z) > D.leftRoverM) s.leftRover = true;
     evaluate();
     if (s.timeLeft.seconds <= 0) suitEmpty();
+  }
+
+  // ---------- jump (F) ----------
+  // open ground connected to where the visitor stands by a rule-keeping way: one flood fill over the
+  // planner's step rule (a step is closed when either cell is over the slope rule)
+  let comp = null;
+  function components() {
+    if (comp) return comp;
+    const n = t.n, N = t.size;
+    comp = new Int32Array(N).fill(-1);
+    const stack = new Int32Array(N);
+    let id = 0;
+    for (let i0 = 0; i0 < N; i0++) {
+      if (comp[i0] !== -1 || isClosed(t, i0)) continue;
+      let sp = 0; stack[sp++] = i0; comp[i0] = id;
+      while (sp) {
+        const u = stack[--sp], uc = u % n, ur = (u / n) | 0;
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+          const c = uc + dc, rr = ur + dr;
+          if ((!dc && !dr) || c < 0 || rr < 0 || c >= n || rr >= n) continue;
+          const w = rr * n + c;
+          if (comp[w] !== -1 || isClosed(t, w)) continue;
+          comp[w] = id; stack[sp++] = w;
+        }
+      }
+      id++;
+    }
+    return comp;
+  }
+
+  /** Can the visitor jump to (x, z)? Only ground they could walk to: inside the site, not over the slope rule, with a rule-keeping way from here. */
+  function canLand(x, z) {
+    if (!(x >= lo && x <= hi && z >= lo && z <= hi)) return false;
+    if (insideRover(x, z)) return false;
+    const c = components(), a = c[t.indexOf(s.x, s.z)], b = c[t.indexOf(x, z)];
+    return a !== -1 && a === b && !isClosedAt(t, x, z);
+  }
+
+  /**
+   * Jump to (x, z): counted as a normal walk from here to there on the best rule-keeping way (core findRoute),
+   * logged in small steps through the same path as walking, so warnings, radio time and the debrief stay correct.
+   * @returns {null | { metres, seconds }}
+   */
+  function jumpTo(x, z) {
+    if (log.ended || s.paused || s.modal || !canLand(x, z)) return null;
+    const way = findRoute(t, { x: s.x, z: s.z }, { x, z });
+    if (!way.keepsRules) return null;
+    s.started = true;
+    const pts = [{ x: s.x, z: s.z }, ...way.points, { x, z }];
+    const t0 = log.tS, m0 = log.distanceM;
+    for (let k = 1; k < pts.length && !log.ended; k++) {
+      const a = pts[k - 1], b = pts[k];
+      const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / D.jumpStepM));
+      for (let j = 1; j <= n && !log.ended; j++) {
+        const from = { x: s.x, y: ground(s.x, s.z), z: s.z };
+        const tx = a.x + ((b.x - a.x) * j) / n, tz = a.z + ((b.z - a.z) * j) / n;
+        const to = { x: tx, y: ground(tx, tz), z: tz };
+        const horiz = Math.hypot(to.x - from.x, to.z - from.z);
+        if (horiz < 1e-6) continue;
+        s.moveDir = { x: (to.x - from.x) / horiz, z: (to.z - from.z) / horiz };
+        s.sinceMoveS = 0;
+        const slopeDeg = Math.atan2(to.y - from.y, horiz) / DEG;
+        record(from, to, (horiz / PACE) * demoFactor(), workRate(slopeDeg));
+      }
+    }
+    s.moving = false;
+    return { metres: log.distanceM - m0, seconds: log.tS - t0 };
   }
 
   // ---------- warnings ----------
@@ -328,5 +413,5 @@ export function createSim(t, route, log) {
     return { ...base, metres: c.metres, seconds: c.seconds, done: Math.max(0, Math.min(1, 1 - c.metres / legStart.m)) };
   }
 
-  return { s, log, route, lastLeg, step, takeSample, endExcursion, endMission, atTarget, atRover, target, refreshReserve, home, toSpot };
+  return { s, log, route, lastLeg, step, canLand, jumpTo, takeSample, endExcursion, endMission, atTarget, atRover, target, refreshReserve, home, toSpot };
 }

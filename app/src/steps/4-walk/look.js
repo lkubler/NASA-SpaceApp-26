@@ -18,9 +18,9 @@ function relief(t, x, z, R = D.butteRadiusM) {
   return hi - lo;
 }
 
-/** Point where the view ray meets the ground, or null (beyond the walk square or the look range). */
-export function rayHit(t, eye, dir) {
-  for (let m = 0.5; m <= D.lookMaxM; m += t.cell) {
+/** Point where the view ray meets the ground, or null (beyond the walk square or maxM). */
+export function rayHit(t, eye, dir, maxM = D.lookMaxM) {
+  for (let m = 0.5; m <= maxM; m += t.cell) {
     const x = eye.x + dir.x * m, z = eye.z + dir.z * m, y = eye.y + dir.y * m;
     if (!t.inside(x, z)) return null;
     // the rover model blocks the view

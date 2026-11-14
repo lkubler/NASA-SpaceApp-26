@@ -5,7 +5,7 @@
 .walk-layer { position: absolute; inset: 0; pointer-events: none; }
 .walk-layer button, .walk-layer .vlabel { pointer-events: auto; }
 
-/* helmet frame over the view: the keyed image (docs/design/helmet-frame.png, green removed);
+/* helmet frame over the view: the keyed image (docs/design/helm-source.webp, green removed by scripts/preprocess/build_helmet.py);
    "AI-generated image" is drawn into its pixels, bottom left; object-fit: fill never crops it */
 .walk-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; }
 .walk-groundmark { position: absolute; right: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
@@ -143,3 +143,19 @@
 
 .walk-loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--text-2); font-size: var(--fs-mono); }
 .walk-loading.is-off { display: none; }
+
+/* walking mode (fast walk, demo speed, aim, jump): chips above the frame bottom */
+.walk-mode { position: absolute; left: 50%; bottom: 15%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0.4em; }
+.walk-mode__chip { display: flex; align-items: center; gap: 0.45em; white-space: nowrap; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--helmet-line); border-radius: var(--radius-pill); padding: 0.3em 0.95em; font-size: var(--fs-small); text-shadow: none; animation: fade-in var(--fade) both; }
+.walk-mode__chip.is-aim { border-color: var(--accent); }
+.walk-mode__chip i { font-style: normal; color: var(--text-2); }
+.walk-esc span + kbd { margin-left: 0.9em; }
+
+/* aim mode: landing point on the ground */
+.walk-aim { position: absolute; left: 0; top: 0; display: none; pointer-events: none; will-change: transform; }
+.walk-aim.is-on { display: block; }
+.walk-aim__ring { position: absolute; left: -14px; top: -7px; width: 28px; height: 14px; border: 2px solid var(--accent); border-radius: 50%; box-shadow: 0 0 10px rgba(79, 203, 255, 0.6); }
+.walk-aim__label { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); white-space: nowrap; font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--accent); background: rgba(0, 0, 0, 0.5); border-radius: 6px; padding: 0.1em 0.5em; }
+.walk-aim.is-bad .walk-aim__ring { border-color: var(--text-2); border-style: dashed; box-shadow: none; }
+.walk-aim.is-bad .walk-aim__label { color: var(--text); }
+.walk-aim.is-free .walk-aim__ring { display: none; }

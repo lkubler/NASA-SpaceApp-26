@@ -2,7 +2,7 @@
 // look-at card, target marker, prompts. DOM only; values come in from the sim (core numbers).
 import { h, labelTag, fmtDuration, fmtClock, fmtDistance, fmtMSv } from '../../ui/index.js';
 import {
-  RULES, DEMO, ENVIRONMENT, SUIT, ROVER, ACCESS_MARS_POINTS,
+  RULES, DEMO, ENVIRONMENT, SUIT, ROVER, ACCESS_MARS_POINTS, ASTRONAUT,
   bodyReadings, outsideTempC, fractions, fullLevels, timeLeft, spotSeconds, spotLabel,
 } from '../../core/index.js';
 import { ALERTS } from './sim.js';
@@ -27,6 +27,8 @@ const OFF_TAG = MODEL_TAG('Distance from you to the nearest point of the planned
 const LAST_M_TAG = MODEL_TAG('Straight-line distance from here to the rover, measured on the 0.5 m walk grid.');
 const LAST_S_TAG = { label: 'model', text: 'Walking time of the last metres at planning pace, from the suit model, in demo time. It is added to the clock when you end the excursion.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const RESERVE_TAG = { label: 'model', moon: true, text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
+const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the suit model (Pandolf effort equation under Mars gravity): faster walking costs more per metre. ' + ASTRONAUT.fastPaceFactor.text, source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
+const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Suit model (src/core/suit.js), planner (src/core/planner.js)', url: '', where: '' } };
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
 export function createHud(el) {
@@ -84,8 +86,16 @@ export function createHud(el) {
   const reticle = h('div.walk-reticle');
   const lookCard = h('div.walk-look');
   const prompt = h('div.walk-prompt');
-  const hint = h('div.walk-hint', h('span', 'Click to look around'), h('i', '·'), h('span', h('kbd', 'W A S D'), ' walk'), h('i', '·'), h('span', h('kbd', '← →'), ' turn'));
-  const escHint = h('div.walk-esc', h('kbd', 'esc'), h('span', 'End mission'));
+  const hint = h('div.walk-hint', h('span', 'Drag the mouse to look around'), h('i', '·'), h('span', h('kbd', 'W A S D'), ' walk'), h('i', '·'), h('span', h('kbd', '← →'), ' turn'),
+    h('i', '·'), h('span', h('kbd', 'Shift'), ' fast'), h('i', '·'), h('span', h('kbd', 'F'), ' jump'));
+  // key hints on the frame bottom, always shown; esc last (its text changes when armed)
+  const escHint = h('div.walk-esc', h('kbd', 'Shift'), h('span', 'fast'), h('kbd', 'Shift Shift'), h('span', 'demo speed'), h('kbd', 'F'), h('span', 'jump'),
+    h('kbd', 'esc'), h('span', 'End mission'));
+  // walking mode (fast walk, demo speed, aim, jump), above the frame bottom
+  const modeEl = h('div.walk-mode');
+  // aim mode: the landing point on the ground
+  const aimLabel = h('span.walk-aim__label');
+  const aimMark = h('div.walk-aim', h('span.walk-aim__ring'), aimLabel);
 
   // markers projected from 3D
   const tgtMark = h('div.walk-mark.walk-mark--target', h('span.walk-mark__label'), h('span.walk-mark__dia'));
@@ -99,8 +109,8 @@ export function createHud(el) {
   const modal = h('div.walk-modal');
   const loading = h('div.walk-loading.mono', 'Loading terrain…');
 
-  const hud = h('div.walk-hud', compass, mini, bodyCard, reserve, missionCard, alertEl, reticle, lookCard, prompt, hint);
-  el.append(marks, frame, groundMark, hud, escHint, modal, loading);
+  const hud = h('div.walk-hud', compass, mini, bodyCard, reserve, missionCard, alertEl, reticle, lookCard, prompt, hint, modeEl);
+  el.append(marks, aimMark, frame, groundMark, hud, escHint, modal, loading);
 
   // ---------- minimap background (once): shaded relief, closed ground darker ----------
   let reliefCv = null, terr = null;
@@ -403,6 +413,39 @@ export function createHud(el) {
     mVals.plan.textContent = names.join(', ');
     mVals.plan.className = 'walk-row__v mono tone-warning';
   }
-  return { setPlanBroken, setTerrain, update, setLook, setMarks, showSample, showEmpty, hideModal, setEscArmed, setLoading, hud };
+  // ---------- controls: walking mode and aim ----------
+  let lastMode = '';
+  /** { fast, workW, demo, aim, jumped: null | { metres, seconds } } */
+  function setMode(m) {
+    const parts = [];
+    if (m.aim) parts.push('aim');
+    if (m.jumped) parts.push(`jumped|${fmtDistance(m.jumped.metres)}|${fmtDuration(m.jumped.seconds)}`);
+    if (m.demo) parts.push('demo');
+    if (m.fast) parts.push(`fast|${Math.round(m.workW / 10) * 10}`);
+    const key = parts.join('/');
+    if (key === lastMode) return;
+    lastMode = key;
+    modeEl.replaceChildren(...parts.map((p) => {
+      const [k, a, b] = p.split('|');
+      if (k === 'aim') return h('div.walk-mode__chip.is-aim', h('kbd', 'click'), h('span', 'Jump: counted as walked '), tag(JUMP_TAG), h('i', '·'), h('kbd', 'F'), h('span', 'cancel'));
+      if (k === 'jumped') return h('div.walk-mode__chip.is-aim', h('span', `Jump: counted as walked · ${a} · ${b} `), tag(JUMP_TAG));
+      if (k === 'demo') return h('div.walk-mode__chip', h('span', `Demo speed: movement only · ${DEMO.screenSpeedFactor.value}${DEMO.screenSpeedFactor.unit} `), tag(DEMO.screenSpeedFactor));
+      return h('div.walk-mode__chip', h('span', `Fast walk ${ASTRONAUT.fastPaceFactor.value}${ASTRONAUT.fastPaceFactor.unit} `), tag(ASTRONAUT.fastPaceFactor), h('span', ` · ${a} W `), tag(FAST_TAG));
+    }));
+  }
+  let lastAim = '';
+  /** null: aim off; else { p: projected landing point or null, ok, m } */
+  function setAim(a) {
+    aimMark.classList.toggle('is-on', !!a);
+    if (!a) { lastAim = ''; return; }
+    const at = a.p && a.p.visible ? a.p : { x: window.innerWidth / 2, y: window.innerHeight / 2 + 42 };
+    aimMark.style.transform = `translate(${at.x.toFixed(1)}px, ${at.y.toFixed(1)}px)`;
+    aimMark.classList.toggle('is-bad', !a.ok);
+    aimMark.classList.toggle('is-free', !(a.p && a.p.visible));
+    const txt = a.ok ? fmtDistance(a.m) : 'not reachable';
+    if (txt !== lastAim) { lastAim = txt; aimLabel.textContent = txt; }
+  }
+
+  return { setPlanBroken, setTerrain, update, setLook, setMarks, showSample, showEmpty, hideModal, setEscArmed, setLoading, setMode, setAim, hud };
 }
 

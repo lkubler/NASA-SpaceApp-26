@@ -26,6 +26,15 @@ npm run dev &
 PW=/path/to/node_modules/playwright/index.mjs node scripts/journey.mjs http://localhost:5173/ [near-1280 far-1280 far-1920]
 ```
 
+## Walk keys
+Hold the mouse button and drag to look around; Chromium also captures the mouse on that press (pointer lock), so
+moving it alone turns the view. Firefox on Linux gets no pointer lock (its lock reports movement as the offset
+from the lock point where it cannot re-centre the cursor, e.g. under Wayland: the view turned one way only), nor
+does a browser that refuses the lock: there the drag turns the view. W A S D walk, arrow keys turn and look, Shift held fast walk (`ASTRONAUT.fastPaceFactor`), Shift tapped twice
+demo speed on / off (`DEMO.screenSpeedFactor`, movement only), F aim mode (click jumps to the marker, counted as
+walked on the `findRoute` way; F or esc cancels), E take sample / end excursion, esc twice end the mission.
+Test hook: `window.__walk` (`advance`, `hold`, `info`).
+
 ## Dev jump and test states (URL parameters; never reached by a visitor)
 - `?step=N` opens step N with the state the earlier steps would have produced (each step's `devFixture`).
 - `&spot=F7` picks the spot in step 2 (default F3). Example: `?step=5&spot=F7`.
