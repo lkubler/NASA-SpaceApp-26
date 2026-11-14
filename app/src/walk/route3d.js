@@ -111,7 +111,8 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
       m.position.set(x, y + h / 2, z); group.add(m);
       const sp = labelSprite(label, '#' + new THREE.Color(color).getHexString()); sp.position.set(x, y + h + 0.7, z); group.add(sp);
     };
-    (route.waypoints || []).forEach((w, i) => { const p = ts(w.x, w.y); if (inside(p.x, p.z)) pole(p.x, p.z, 3, colRoute, i === 0 ? 'L' : String(i)); });
+    (route.waypoints || []).forEach((w, i) => { const p = ts(w.x, w.y); if (inside(p.x, p.z)) pole(p.x, p.z, 3, colRoute, String(i + 1)); });
+    if (route.start) { const p = ts(route.start.x, route.start.y); if (inside(p.x, p.z)) pole(p.x, p.z, 3, colRoute, 'L'); } // lander
     const tb = route.turnBackIndex;
     if (Number.isInteger(tb) && tb > 0 && tb < P.length && inside(sc[tb].x, sc[tb].z)) {
       pole(sc[tb].x, sc[tb].z, 4.5, colTurn, 'TB');

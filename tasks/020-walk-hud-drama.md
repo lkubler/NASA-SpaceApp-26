@@ -1,6 +1,6 @@
 # 020 Walk HUD drama, sky and small UI fixes
 owner: designer
-state: open
+state: done
 area: app/src/walk/hud.js, app/src/walk/sky.js, app/src/styles/*, app/src/ui/briefing.js, app/src/ui/loading.js
 
 ## Goal
