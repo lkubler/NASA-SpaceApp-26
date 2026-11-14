@@ -3,7 +3,7 @@
 NASA Space Apps 2026 — "Interplanetary Survival Guide: Martian Map". Humans write ideas into `notes.md` (German is fine), Claude Code agents research, build, design, and test. Rules for agents: `CLAUDE.md`.
 
 ## Setup
-1. Orchestrator (Opus): run `claude` in the repo and say "Read docs/ORCHESTRATOR.md. You are the orchestrator."
+1. Orchestrator (Opus): run `claude` in the repo, then `/loop Read docs/ORCHESTRATOR.md and run the next round.` It runs rounds until submission: critic finds the biggest improvement → agents do and verify it → commit → next round. Log: `docs/rounds.md`.
 2. Watchdog in a separate terminal: `./scripts/watchdog.sh` (scans all worktrees).
 3. Everyone else: own worktree (`git worktree add ../wt-<name> -b <name>`), `claude` with Sonnet. Write ideas into `notes.md`, claim tasks from `tasks/`.
 
@@ -14,6 +14,7 @@ NASA Space Apps 2026 — "Interplanetary Survival Guide: Martian Map". Humans wr
 | scout | sonnet | Prior art, differentiation, novelty checks |
 | data-scout | sonnet | Usable Mars data, validity |
 | triage | sonnet | Evaluate ideas and notes in `notes.md` |
+| critic | opus | Each round: the top 3 improvements and who does them |
 | jury | fable | Checkpoints only: idea, prototype, pitch |
 | designer | sonnet | Visual direction, design system, demo "wow" moments, UI polish |
 | builder | sonnet | Implement tasks |

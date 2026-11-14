@@ -48,6 +48,7 @@ From the 2025 guide; `docs/rules-2026.md` overrides if present.
 ## Rules
 - Heartbeat: keep `status/<agent>.md` current with `state: working|blocked|done`, `task:`, `attempts:` (on the current problem), `updated:`.
 - After 3 failed attempts at the same problem, stop. Write `blocked/<agent>-<topic>.md`, set `state: blocked`.
+- Verify your own work before calling it done: run the tests or the app, open the links, check the sources. Report what you verified and what you couldn't.
 - Write results to files with sources; return a short summary.
 - Humans decide only the big things: idea, stack, major scope cuts, and the overall visual theme (once). Propose them in `DECISIONS.md` as PROPOSED, with a recommendation.
 - Everything else (implementation, UI details, data choices within the stack, task breakdown) is decided by agents. Record notable choices in `DECISIONS.md` or `docs/design.md` instead of asking. The humans don't want to review routine work.
