@@ -21,7 +21,9 @@ Journey test (whole visitor journey in headless Chromium, no dev jump). It fails
 numbers that differ between Plan, Go / no-go, Walk and Debrief, and writes a JPEG (quality 70) of every screen
 to `../reviews/journey/<run>/`. Runs: `near-1280` (spot 01), `far-1280` (spot 06), `far-1920`; default all
 three. `stops-1280` (round 01 -> 02 -> 03: badges, leg rows, stops kept after Edit route, every stop on the Go
-profile) runs only when named. Playwright is not an app dependency: install it anywhere (`npm i playwright@1.46 && npx playwright install chromium`).
+profile, the walk leg by leg with one sample per stop and no reserve jump, Debrief "3 of 3") and
+`stops-turn-1280` (the same round, waiting at stop 2 until "Turn back now" skips stop 3, Debrief "2 of 3") run
+only when named. Playwright is not an app dependency: install it anywhere (`npm i playwright@1.46 && npx playwright install chromium`).
 ```
 npm run dev &
 PW=/path/to/node_modules/playwright/index.mjs node scripts/journey.mjs http://localhost:5173/ [near-1280 far-1280 far-1920]
