@@ -7,7 +7,7 @@ import {
   h, headline, lede, bigNumber, pillButton, mapPanel, legend, checkItem, labelTag, marker,
   fmtDistance, fmtDuration,
 } from '../../ui/index.js';
-import { ROVER, candidateById, ENVIRONMENT, DEMO } from '../../core/index.js';
+import { ROVER, candidateById, ENVIRONMENT, DEMO, RULES } from '../../core/index.js';
 import { fixtureWalk } from './fixtures.js';
 
 const NO_DATA = 'no data';
@@ -37,6 +37,7 @@ const T = {
   spot: { label: 'model', src: 'WALK_TARGETS', text: 'Sample spot at the foot of a butte; its position is derived from the terrain.' },
   warnings: { label: 'model', src: 'WALK_TERRAIN', text: 'Warnings the helmet raised during the walk from the NASA rules; where = distance from the rover and time into the excursion.' },
   suitEmpty: { label: 'simulated', src: 'NONE', text: 'The suit ran out before the rover. The walk ended there; this is a simulation.' },
+  ended: { label: 'model', src: 'WALK_TERRAIN', text: 'You ended the mission with esc before reaching the rover; where = the point you stopped, measured on the terrain grid.' },
 };
 const tag = (k) => labelTag(T[k]);
 
@@ -97,14 +98,7 @@ function zoomToWalk(map, terrain, pts) {
   map.svg.querySelectorAll('.map-marker').forEach((g) => {
     g.setAttribute('transform', `${g.getAttribute('transform')} scale(${(1.25 / k).toFixed(4)})`);
   });
-  // scale bar: the label says how many metres; size the bar for this zoom, in map width
-  const box = map.el.querySelector('.map__scale'), bar = map.el.querySelector('.map__scale-bar');
-  const label = box && box.querySelector('.mono');
-  const metres = label ? parseFloat(label.textContent) : NaN;
-  if (box && bar && num(metres)) {
-    box.style.width = `${((100 * k * metres) / ext).toFixed(2)}%`;
-    bar.style.width = '100%';
-  }
+  map.fitScale(k); // scale bar sized for this zoom
 }
 
 let _photos = null;
@@ -138,6 +132,9 @@ export default {
     const wCount = walk && Array.isArray(walk.warnings) ? String(warnings.length) : NO_DATA;
     const min = walk && walk.minReserve;
     const empty = walk && walk.suitEmpty;
+    // not returned: where the suit ran out, or where the visitor ended the mission (esc)
+    const stopAt = empty || (walk && walk.end) || null;
+    const stopTag = empty ? 'suitEmpty' : 'ended';
 
     // ----- map: planned route and walked path together -----
     const map = mapPanel(terrain, { steep: true });
@@ -172,13 +169,14 @@ export default {
     if (!walk) sentence = ['No walk log: ', NO_DATA, '.'];
     else if (outcome === 'home') sentence = [`${reached} and kept every rule. `, tag('walkReserve')];
     else if (outcome === 'home-broken') sentence = [`${reached}, but broke ${broken.length > 1 ? broken.length + ' rules' : 'a rule'}: ${broken.map((b) => b.name).join(', ') || NO_DATA}. `, tag('walkReserve')];
-    else if (outcome === 'not-returned') sentence = [empty ? `The suit ran out ${fromRover(empty)}. ` : `The suit ran out before the rover (where: ${NO_DATA}). `, tag('suitEmpty')];
+    else if (outcome === 'not-returned' && empty) sentence = [`The suit ran out ${fromRover(empty)}. `, tag('suitEmpty')];
+    else if (outcome === 'not-returned') sentence = [stopAt ? `You ended the mission ${fromRover(stopAt)}, before reaching it. ` : `You did not reach the rover (where: ${NO_DATA}). `, tag('ended')];
     else sentence = ['The walk has not ended: ', NO_DATA, '.'];
 
     // ----- big numbers -----
     const nums = h('div.dbf__nums');
     if (outcome === 'not-returned') {
-      nums.append(bigNumber({ label: 'Rover was', value: empty ? dist(empty.roverDistanceM) : NO_DATA, unit: empty ? 'away' : '', tone: 'warning', tag: T.suitEmpty }));
+      nums.append(bigNumber({ label: 'Rover was', value: stopAt ? dist(stopAt.roverDistanceM) : NO_DATA, unit: stopAt ? 'away' : '', tone: 'warning', tag: T[stopTag] }));
     } else {
       nums.append(bigNumber({ label: 'Reserve on return', value: dur(reserveHome), tag: T.walkReserve, tone: num(reserveHome) && reserveHome <= 0 ? 'warning' : null }));
     }
@@ -189,10 +187,10 @@ export default {
 
     // ----- not returned: where and how far -----
     const lostBox = outcome === 'not-returned' ? h('div.dbf__lost',
-      h('div.dbf__lost-title', 'Suit empty before the rover'),
+      h('div.dbf__lost-title', empty ? 'Suit empty before the rover' : 'Mission ended before the rover'),
       h('div.dbf__lost-text',
-        empty ? `${fromRover(empty)}, ${dur(empty.tS)} into the excursion; the rover was ${dist(empty.roverDistanceM)} away. ` : `Where: ${NO_DATA}. `,
-        tag('suitEmpty'))) : null;
+        stopAt ? `${fromRover(stopAt)}, ${dur(stopAt.tS)} into the excursion; the rover was ${dist(stopAt.roverDistanceM)} away. ` : `Where: ${NO_DATA}. `,
+        tag(stopTag))) : null;
 
     // ----- planned next to actual -----
     const sample = walk && walk.sample;
@@ -205,9 +203,11 @@ export default {
         tr('Distance', cell(dist(plan && plan.distanceM), 'planDistance'), cell(dist(walk && walk.distanceM), 'walkDistance')),
         tr('Time', cell(dur(plan && plan.timeS), 'planTime'), cell(dur(walk && walk.tS), 'walkTime')),
         tr('Reserve on return', cell(dur(plan && plan.reserveS), 'planReserve'),
-          cell(outcome === 'not-returned' ? 'not returned' : dur(reserveHome), outcome === 'not-returned' ? 'suitEmpty' : 'walkReserve')),
+          cell(outcome === 'not-returned' ? 'not returned' : dur(reserveHome), outcome === 'not-returned' ? stopTag : 'walkReserve')),
         tr('Time in radio shadow', cell(dur(plan && plan.radioShadowS), 'planShadow'), cell(dur(walk && walk.radioShadowS), 'walkShadow')),
       ));
+    const pad = Math.round((RULES.walkBackRateFactor.value - 1) * 100);
+    const why = h('div.dbf__why', `The plan counts the way home at a ${pad} % higher work rate, so you can reach the rover with more reserve than planned. `, labelTag(RULES.walkBackRateFactor));
     const demo = h('div.dbf__demo', `Demo time ${DEMO.timeFactor.value}${DEMO.timeFactor.unit}: times are suit time. `, labelTag(DEMO.timeFactor));
 
     // ----- report to Earth -----
@@ -238,7 +238,7 @@ export default {
       if (b) usedBroken.add(b);
       const lostWay = c.id === 'wayHome' && outcome === 'not-returned';
       const status = b || lostWay ? 'broken' : 'ok';
-      const where = b ? fromRover(b) : lostWay && empty ? fromRover(empty) : '';
+      const where = b ? fromRover(b) : lostWay && stopAt ? fromRover(stopAt) : '';
       checks.append(checkItem({ text: c.name, status, detail: where + (b && b.carried ? ' (planned)' : '') }));
     }
     for (const b of broken) if (!usedBroken.has(b)) checks.append(checkItem({ text: b.name, status: 'broken', detail: fromRover(b) }));
@@ -259,7 +259,7 @@ export default {
         lede(...sentence),
         lostBox,
         nums,
-        h('div.dbf__lower', h('div.dbf__tablewrap', table, demo), report)),
+        h('div.dbf__lower', h('div.dbf__tablewrap', table, why, demo), report)),
       h('aside.dbf__side',
         map.el,
         legend(legendItems),
@@ -302,11 +302,11 @@ function reportCard(ctx, { sample, walk, outcome }) {
   if (sample) {
     const own = sample.photo; // the walk may log the photo it showed at the spot
     loadPhotos().then((data) => {
-      const p = own ? { file: String(own).replace(/^.*photos\//, 'photos/'), title: sample.photoTitle || '', credit: sample.photoCredit || 'NASA/JPL-Caltech' }
+      const p = own ? { file: String(own).replace(/^.*photos\//, 'photos/'), title: sample.photoTitle || '', credit: sample.photoCredit || 'NASA/JPL-Caltech', camera: sample.photoMeta || '', page: sample.photoUrl || '' }
         : data && data.photos && data.photos.find((x) => x.id === REPORT_PHOTO_ID);
       if (!p || /mb2\.jpg$/.test(p.file || '')) return; // no fitting photo: none
       const src = PHOTOS_URL + String(p.file).replace(/^photos\//, '');
-      const caption = own ? p.title : `${p.title}, Murray Buttes, sol ${p.sol}: Curiosity’s own sample nearby, not this exact spot.`;
+      const caption = own ? `${p.title}: this rock in the Murray Buttes as Curiosity saw it, not this exact spot.` : `${p.title}, Murray Buttes, sol ${p.sol}: Curiosity’s own sample nearby, not this exact spot.`;
       photoBox.append(h('img', { src, alt: p.title || 'Curiosity photo', loading: 'lazy' }));
       textBox.append(
         h('div.dbf__cap', h('span.muted', 'Photo '), caption, ' ', h('span.muted', p.credit || ''), ' ',
@@ -315,7 +315,7 @@ function reportCard(ctx, { sample, walk, outcome }) {
     });
   }
 
-  return h('div.dbf__report',
+  return h(sample ? 'div.dbf__report' : 'div.dbf__report.dbf__report--empty',
     h('div.dbf__sec', 'Report to Earth'),
     h('div.dbf__rbody', photoBox, textBox),
     h('div.dbf__ract', sendBtn, status),

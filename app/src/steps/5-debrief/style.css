@@ -5,7 +5,7 @@
 .step--debrief .dbf {
   position: absolute; inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) min(44vh, 34vw);
+  grid-template-columns: minmax(0, 1fr) min(54vh, 36vw);
   grid-template-rows: minmax(0, 1fr) auto;
   grid-template-areas: 'main side' 'foot foot';
   column-gap: calc(var(--gutter) * 0.9);
@@ -30,7 +30,9 @@
 .step--debrief .dbf__lost-text { font-size: var(--fs-small); margin-top: 0.15em; }
 
 /* planned next to actual, and the report */
-.step--debrief .dbf__lower { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: calc(var(--gap) * 1.4); margin-top: calc(var(--gap) * 1.2); align-items: start; }
+.step--debrief .dbf__lower { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: calc(var(--gap) * 1.4); margin-top: calc(var(--gap) * 1.2); align-items: stretch; }
+.step--debrief .dbf__tablewrap { min-height: 0; overflow: auto; }
+.step--debrief .dbf__why { margin-top: 0.7em; font-size: var(--fs-small); color: var(--text); max-width: 46ch; }
 .step--debrief .dbf__table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
 .step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.32em 0.6em 0.32em 0; text-align: left; white-space: nowrap; }
 .step--debrief .dbf__th { font-weight: 400; color: var(--text); }
@@ -39,13 +41,14 @@
 .step--debrief .dbf__demo { margin-top: 0.5em; font-size: var(--fs-tag); color: var(--text-2); }
 
 .step--debrief .dbf__sec { color: var(--text-2); font-size: var(--fs-small); display: flex; align-items: center; gap: 0.4em; margin-bottom: 0.5em; }
-.step--debrief .dbf__report { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 0.8em 1em; }
-.step--debrief .dbf__rbody { display: flex; gap: 0.9em; align-items: flex-start; }
-.step--debrief .dbf__photo { flex: none; width: 34%; }
+.step--debrief .dbf__report { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 0.8em 1em; min-height: 0; display: flex; flex-direction: column; }
+.step--debrief .dbf__rbody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 0.7em; }
+.step--debrief .dbf__report--empty { align-self: start; }
+.step--debrief .dbf__photo { flex: 1 1 auto; min-height: 0; }
 .step--debrief .dbf__photo:empty { display: none; }
-.step--debrief .dbf__photo img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; }
+.step--debrief .dbf__photo img { width: 100%; height: 100%; min-height: 8em; object-fit: cover; border-radius: 8px; display: block; }
 .step--debrief .dbf__cap { font-size: var(--fs-tag); line-height: 1.4; }
-.step--debrief .dbf__rtext { flex: 1; min-width: 0; font-size: var(--fs-small); display: flex; flex-direction: column; gap: 0.4em; }
+.step--debrief .dbf__rtext { flex: none; min-width: 0; font-size: var(--fs-small); display: flex; flex-direction: column; gap: 0.4em; }
 .step--debrief .dbf__ract { margin-top: 0.7em; display: flex; flex-direction: column; gap: 0.45em; align-items: flex-start; }
 .step--debrief .dbf__send {
   border: 1px solid var(--accent); color: var(--accent); border-radius: var(--radius-pill);
