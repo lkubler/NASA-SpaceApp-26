@@ -1,0 +1,6 @@
+/* Styles of step 4-walk only. Prefix classes with .step--walk or walk-. */
+.step--walk { background: #000 center / cover no-repeat; }
+.walk-ph__view { position: absolute; inset: 0; }
+.walk-ph__view canvas { display: block; width: 100%; height: 100%; }
+.walk-ph__panel { position: absolute; right: var(--gutter); bottom: var(--gutter); width: min(380px, 40vw); display: flex; flex-direction: column; gap: 12px; }
+.walk-ph__status { font-size: var(--fs-tag); color: var(--text-2); }
