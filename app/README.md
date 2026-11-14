@@ -2,27 +2,39 @@
 
 Static web app (Vite + Three.js). Builds to `app/dist`, deployed by `.github/workflows/pages.yml`.
 
+Five steps, one excursion on foot at Murray Buttes (Gale crater): 1 Mission (pick a request from Earth),
+2 Plan (pick a sample spot; the planner draws the fastest route that keeps every rule), 3 Go / no-go (every
+rule checked on that route), 4 Walk (first person through the helmet on the Access Mars terrain; the reserve
+on return is recalculated at every step), 5 Debrief (planned next to actual, warnings, report to Earth).
+
 ## Run, test, tune
 ```
 cd app
-npm install
+npm ci             # exact versions from package-lock.json
 npm run dev        # http://localhost:5173
 npm run build      # -> dist/ (relative URLs, works under the Pages sub-path)
 npm test           # core unit tests (vitest, test/*.test.js)
 npm run tune [76]  # per-candidate plan numbers and detours for a demo factor
 ```
 
-Journey test (whole visitor journey in headless Chromium, no dev jump; screenshots to `../reviews/journey/<run>/`;
-fails on any console error or on numbers that differ between Plan, Go / no-go and Debrief). Playwright is not
-an app dependency: install it anywhere (`npm i playwright@1.46 && npx playwright install chromium`).
+Journey test (whole visitor journey in headless Chromium, no dev jump). It fails on any console error or on
+numbers that differ between Plan, Go / no-go, Walk and Debrief, and writes a JPEG (quality 70) of every screen
+to `../reviews/journey/<run>/`. Runs: `near-1280` (spot 01), `far-1280` (spot 06), `far-1920`; default all
+three. Playwright is not an app dependency: install it anywhere (`npm i playwright@1.46 && npx playwright install chromium`).
 ```
 npm run dev &
 PW=/path/to/node_modules/playwright/index.mjs node scripts/journey.mjs http://localhost:5173/ [near-1280 far-1280 far-1920]
 ```
 
-## Dev jump
-`?step=N` opens step N with the state the earlier steps would have produced (each step's `devFixture`).
-`&spot=F7` picks the spot in step 2 (default F3). Example: `?step=5&spot=F7`.
+## Dev jump and test states (URL parameters; never reached by a visitor)
+- `?step=N` opens step N with the state the earlier steps would have produced (each step's `devFixture`).
+- `&spot=F7` picks the spot in step 2 (default F3). Example: `?step=5&spot=F7`.
+- `?step=2&broken=1` adds a test point up the east butte wall as spot 07 (`steps/3-go/dev/broken.js`): no route
+  keeps the slope rule, so the Plan map shows the red broken stretch above the spot markers.
+- `?step=4&broken=1` starts the Walk (and, ended, the Debrief) on that broken route: the rule broken in the plan is carried along.
+- `?step=5&outcome=home|broken|lost` opens the Debrief with a walk log built from the core functions
+  (`steps/5-debrief/fixtures.js`): back home, home with broken rules (slope broken several times, shown once
+  as "(4×)"), or suit empty before the rover. Use with `&spot=F7`.
 
 ## Shared state (`src/frame/state.js`, one object; steps read and write only this)
 ```
