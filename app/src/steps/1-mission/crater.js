@@ -2,8 +2,10 @@
 // Units: km. three.js x = east, z = south (so -z = north), y = up.
 
 import * as THREE from 'three';
+import { DEMO } from '../../core/values.js';
 
-export const VERTICAL_EXAGGERATION = 2.5; // display only; stated on screen
+// display only; stated on screen; the value lives in core/values.js (DEMO.craterHeightFactor)
+export const VERTICAL_EXAGGERATION = DEMO.craterHeightFactor.value;
 
 /** Load gale.json and the height grid. */
 export async function loadGale(base = 'data/gale/') {

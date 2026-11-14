@@ -42,6 +42,7 @@
 .walk-card--mission { right: 9.6%; bottom: 23%; background: var(--helmet-card); min-width: 15.5em; }
 .walk-card__head { display: flex; align-items: center; justify-content: space-between; gap: 1em; color: rgba(255, 255, 255, 0.72); font-size: var(--fs-tag); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35em; }
 .walk-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1.2em; padding: 0.18em 0; }
+.walk-row[hidden] { display: none; }
 .walk-row__l { color: rgba(255, 255, 255, 0.82); white-space: nowrap; }
 .walk-row__l .vlabel { font-size: calc(var(--fs-tag) * 0.9); color: rgba(255, 255, 255, 0.6); }
 .walk-card__head .vlabel { color: rgba(255, 255, 255, 0.7); }

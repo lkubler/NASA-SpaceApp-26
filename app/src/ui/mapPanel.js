@@ -7,6 +7,7 @@ import { h, s } from './dom.js';
 import { closedMask } from '../core/planner.js';
 import { radioShadowMask } from '../core/radio.js';
 import { GROUND_RAMP } from '../core/groundColor.js';
+import { labelTag } from './label.js';
 
 const RES = 4; // canvas pixels per grid cell
 
@@ -22,7 +23,9 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20 } 
   const layers = {};
   for (const name of ['areas', 'routes', 'markers', 'top']) { layers[name] = s('g', { 'data-layer': name }); svg.append(layers[name]); }
   const bar = h('span.map__scale-bar');
-  const scale = h('div.map__scale', bar, h('span.mono', `${scaleM} m`));
+  // the scale is measured on the walk grid the map is drawn from
+  const scaleTag = labelTag({ label: 'model', text: 'Map scale measured on the 0.5 m walk grid built from the Access Mars terrain of Murray Buttes.', source: { title: 'Our walk grid (Access Mars Murray Buttes, NASA/JPL-Caltech imagery)', url: '', where: '' } });
+  const scale = h('div.map__scale', bar, h('span.mono', `${scaleM} m `, scaleTag));
   const north = h('div.map__north.mono', 'N');
   const el = h('div.map', canvas, svg, scale, north);
   // Scale bar in screen pixels, so "20 m" covers 20 m on the map at any size, crop (slice) or zoom.

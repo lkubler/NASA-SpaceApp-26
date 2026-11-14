@@ -128,6 +128,8 @@ export const DEMO = {
     'Demo time: the clock and the suit’s consumption run this many times faster than reality, so turning back becomes a real decision inside the 128 m site.'),
   spotWorkMin: v(20, 'min', 'assumption', 'NONE', '',
     'Fixed time for taking the sample at the spot, counted in time and consumption.'),
+  craterHeightFactor: v(2.5, '×', 'assumption', 'NONE', 'display choice of the team',
+    'Heights in the 3D view of Gale crater (step 1) are drawn this many times taller than they are, so the crater rim and Mount Sharp are easy to see. Distances across the ground are true to scale.'),
 };
 
 // Simulated body readings for the helmet (specs/rules.md: label simulated). No data behind them.

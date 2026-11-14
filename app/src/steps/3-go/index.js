@@ -5,7 +5,7 @@ import {
   h, s, headline, lede, bigNumber, pillButton, textLink, mapPanel, legend, labelTag,
   fmtDistance, fmtDuration, fmtDeg, fmtMSv,
 } from '../../ui/index.js';
-import { ROVER, RULES } from '../../core/index.js';
+import { ROVER, RULES, ASTRONAUT, spotNumber } from '../../core/index.js';
 import { heightProfile, ranges } from './profile.js';
 import { L } from './labels.js';
 import { brokenFixture } from './dev/broken.js';
@@ -102,12 +102,12 @@ export default {
     if (wide) { map.el.classList.add('go-map--wide'); map.svg.setAttribute('preserveAspectRatio', 'xMidYMid slice'); }
     drawRoute(map, plan);
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover' });
-    map.addMarker(route.spot.x, route.spot.z, { kind: 'spot' });
+    map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: spotNumber(route.spotId) || '·', selected: true });
     const hasShadow = plan.radioStretches.length > 0;
     const mapBox = h('section.go__map', map.el, legend([
       { kind: 'rover', text: 'Rover' },
       { kind: 'foot', text: 'On foot' },
-      { kind: 'spot', text: 'Spot' },
+      { kind: 'selected', text: 'Spot' },
       hasShadow ? { kind: 'go-shadow', text: 'Radio shadow' } : null,
       { kind: 'steep', text: `Steeper than ${RULES.slopeMaxDeg.value}${RULES.slopeMaxDeg.unit}` },
       broken ? { kind: 'go-broken', text: 'Breaks a rule' } : null,
@@ -167,6 +167,14 @@ export default {
       ['Oxygen full', 'Suit sealed', 'Radio to rover'].map((t) => h('span.gocheck--ok.gosuit', h('span.check__icon', '✓'), t)),
       labelTag(L.suit));
 
+    // crew and suit as the plan counts them, and the reserve oxygen it never counts (specs/rules.md)
+    const A = ASTRONAUT, O2 = RULES.secondaryO2H;
+    const crew = h('div.go__crew',
+      h('span', `Astronaut ${A.bodyMassKg.value} ${A.bodyMassKg.unit} `), labelTag(A.bodyMassKg),
+      h('span', ` + load ${A.loadKg.value} ${A.loadKg.unit} `), labelTag(A.loadKg),
+      h('i', ' · '), h('span', `Suit ${A.suitMassKg.value} ${A.suitMassKg.unit} `), labelTag(A.suitMassKg),
+      h('i', ' · '), h('span', `Secondary oxygen ${O2.value} ${O2.unit}, never planned with `), labelTag(O2));
+
     const btn = pillButton({
       text: broken ? `Start with ${plural(broken, 'broken rule')}` : 'Start excursion',
       variant: broken ? 'warn' : 'go', arrow: true,
@@ -176,7 +184,7 @@ export default {
       h('div.go__checks',
         h('div.go__checkshead', h('span.go__checkstitle', broken ? `${plural(broken, 'rule')} broken.` : 'Every rule kept.'), h('span.muted', 'Click a check to see where it occurs on the route.')),
         h('div.go__rulechecks', ruleChecks),
-        suitChecks),
+        suitChecks, crew),
       h('div.go__action', textLink('Edit route', () => ctx.back()), btn));
 
     el.append(h(`div.go${broken ? '.is-broken' : ''}`, intro, mapBox, profBox, bottom));

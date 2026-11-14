@@ -45,16 +45,19 @@
 .step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.32em 0.6em 0.32em 0; text-align: left; white-space: nowrap; }
 .step--debrief .dbf__th { font-weight: 400; color: var(--text); }
 .step--debrief .dbf__col { color: var(--text-2); font-weight: 500; font-size: var(--fs-tag); text-transform: uppercase; letter-spacing: 0.06em; }
-.step--debrief .dbf__td .mono { font-size: var(--fs-mono); }
+.step--debrief .dbf__td .mono { font-size: var(--fs-mono); white-space: nowrap; }
+/* "not returned" and its tag wrap onto two lines where the column is narrow, never clipped */
+.step--debrief .dbf__table td.dbf__td--wrap { white-space: normal; }
+.step--debrief .dbf__table tbody tr:first-child td .mono { white-space: normal; }
 .step--debrief .dbf__demo { margin-top: 0.5em; font-size: var(--fs-tag); color: var(--text-2); }
 
 .step--debrief .dbf__sec { color: var(--text-2); font-size: var(--fs-small); display: flex; align-items: center; gap: 0.4em; margin-bottom: 0.5em; }
 .step--debrief .dbf__report { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 0.8em 1em; min-height: 0; display: flex; flex-direction: column; }
 .step--debrief .dbf__rbody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 0.7em; }
 .step--debrief .dbf__report--empty { align-self: start; }
-.step--debrief .dbf__photo { flex: 1 1 auto; min-height: 0; }
+.step--debrief .dbf__photo { flex: 1 1 auto; min-height: 4.5em; }
 .step--debrief .dbf__photo:empty { display: none; }
-.step--debrief .dbf__photo img { width: 100%; height: 100%; min-height: 8em; object-fit: cover; border-radius: 8px; display: block; }
+.step--debrief .dbf__photo img { width: 100%; height: 100%; min-height: 0; object-fit: cover; border-radius: 8px; display: block; }
 .step--debrief .dbf__cap { font-size: var(--fs-tag); line-height: 1.4; }
 .step--debrief .dbf__rtext { flex: none; min-width: 0; font-size: var(--fs-small); display: flex; flex-direction: column; gap: 0.4em; }
 .step--debrief .dbf__ract { margin-top: 0.7em; display: flex; flex-direction: column; gap: 0.45em; align-items: flex-start; }

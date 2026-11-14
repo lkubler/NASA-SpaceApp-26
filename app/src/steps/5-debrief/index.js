@@ -57,19 +57,34 @@ function fromRover(p) {
   const deg = ((Math.atan2(dx, dz) * 180) / Math.PI + 360) % 360;
   return `${fmtDistance(d)} ${DIRS[Math.round(deg / 45) % 8]} of the rover`;
 }
-function outcomeOf(walk) {
+function outcomeOf(walk, broken) {
   if (!walk) return null;
-  if (walk.outcome) return walk.outcome;
-  if (walk.suitEmpty) return 'not-returned';
-  if (walk.ended) return (walk.brokenRules || []).length ? 'home-broken' : 'home';
-  return null;
+  let o = walk.outcome;
+  if (!o && walk.suitEmpty) o = 'not-returned';
+  if (!o && walk.ended) o = 'home';
+  // a rule the plan already broke is carried in (specs/3-go.md): home is then home with a broken rule
+  if (o === 'home' && broken.length) o = 'home-broken';
+  return o || null;
 }
-/** Broken rules of the walk; a rule broken in the plan is carried in when the walk log names none. */
-function brokenOf(walk, plan, outcome) {
-  const w = (walk && walk.brokenRules) || [];
-  if (w.length || outcome !== 'home-broken' || !plan) return w.map((b) => ({ ...b, carried: false }));
-  return (plan.brokenRules || []).map((b) => ({ id: b.id, name: b.name, x: b.where && b.where.x, z: b.where && b.where.z, carried: true }));
+/**
+ * Broken rules, each rule once: the walk's own (count = how often it was broken on the walk, where = the
+ * first time) and any rule the plan broke (carried: true when the walk log does not name it), whatever
+ * way the walk ended.
+ */
+function brokenOf(walk, plan) {
+  const out = [];
+  for (const b of (walk && walk.brokenRules) || []) {
+    const seen = out.find((x) => x.id === b.id);
+    if (seen) seen.count++;
+    else out.push({ ...b, count: 1, carried: false });
+  }
+  for (const b of (plan && plan.brokenRules) || []) {
+    if (out.some((x) => x.id === b.id)) continue;
+    out.push({ id: b.id, name: b.name, x: b.where && b.where.x, z: b.where && b.where.z, count: 0, carried: true });
+  }
+  return out;
 }
+const brokenName = (b) => b.name + (b.count > 1 ? ` (${b.count}×)` : b.carried ? ' (in the plan)' : '');
 function spotName(id) { return (id && spotLabel(id)) || id || NO_DATA; }
 /**
  * Zoom the map panel onto the walk (same terrain, closer view): scale the relief and the vector
@@ -122,9 +137,9 @@ export default {
     }
 
     const { plan, route, walk } = ctx.state;
-    const outcome = outcomeOf(walk);
+    const broken = brokenOf(walk, plan);
+    const outcome = outcomeOf(walk, broken);
     const home = outcome === 'home' || outcome === 'home-broken';
-    const broken = brokenOf(walk, plan, outcome);
     const warnings = (walk && walk.warnings) || [];
     const wCount = walk && Array.isArray(walk.warnings) ? String(warnings.length) : NO_DATA;
     const min = walk && walk.minReserve;
@@ -139,7 +154,7 @@ export default {
     if (walk && walk.track && walk.track.length) map.path(walk.track, { style: 'walked' });
     if (empty && num(empty.x)) map.path([empty, ROVER], { style: 'walked' }).setAttribute('class', 'map-path dbf-gap');
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Rover' });
-    if (route) map.addMarker(route.spot.x, route.spot.z, { kind: 'spot', label: spotNumber(route.spotId) });
+    if (route) map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: spotNumber(route.spotId) || '·', selected: true });
     warnings.forEach((w, i) => {
       if (!num(w.x) || !num(w.z)) return;
       map.addMarker(w.x, w.z, { kind: 'number', text: String(i + 1) }).classList.add('dbf-wm', `dbf-wm--${w.level}`);
@@ -148,7 +163,7 @@ export default {
       const g = map.addMarker(min.x, min.z, { kind: 'dot', label: 'Closest moment', layer: 'top' });
       g.classList.add('dbf-closest');
       const lbl = g.querySelector('.map-marker__label');
-      if (lbl) { lbl.setAttribute('y', '1.6'); lbl.setAttribute('x', '5'); lbl.setAttribute('text-anchor', 'start'); } // label to the right, clear of rover and spot labels
+      if (lbl) requestAnimationFrame(() => placeClear(map.svg, lbl));
     }
     if (empty && num(empty.x)) map.addMarker(empty.x, empty.z, { kind: 'dot', label: 'Suit empty', layer: 'top' }).classList.add('dbf-empty');
     zoomToWalk(map, terrain, [
@@ -156,7 +171,7 @@ export default {
       ...((walk && walk.track) || []), ...warnings, ROVER, min, empty,
     ]);
     const legendItems = [{ kind: 'foot', text: 'Planned' }, { kind: 'walked', text: 'Walked' }, { kind: 'rover', text: 'Rover' },
-      { kind: 'spot', text: 'Spot' }, { kind: 'closest', text: 'Closest moment' }];
+      { kind: 'selected', text: 'Spot' }, { kind: 'closest', text: 'Closest moment' }];
     if (empty) legendItems.push({ kind: 'empty', text: 'Suit empty' });
 
     // ----- headline and outcome sentence -----
@@ -165,10 +180,11 @@ export default {
     const reached = num(reserveHome) ? `You reached the rover with ${fmtDuration(reserveHome)} left in the suit` : `You reached the rover (reserve: ${NO_DATA})`;
     if (!walk) sentence = ['No walk log: ', NO_DATA, '.'];
     else if (outcome === 'home') sentence = [`${reached} and kept every rule. `, tag('walkReserve')];
-    else if (outcome === 'home-broken') sentence = [`${reached}, but broke ${broken.length > 1 ? broken.length + ' rules' : 'a rule'}: ${broken.map((b) => b.name).join(', ') || NO_DATA}. `, tag('walkReserve')];
+    else if (outcome === 'home-broken') sentence = [`${reached}, but broke ${broken.length > 1 ? broken.length + ' rules' : 'a rule'}: ${broken.map(brokenName).join(', ') || NO_DATA}. `, tag('walkReserve')];
     else if (outcome === 'not-returned' && empty) sentence = [`The suit ran out ${fromRover(empty)}. `, tag('suitEmpty')];
     else if (outcome === 'not-returned') sentence = [stopAt ? `You ended the mission ${fromRover(stopAt)}, before reaching it. ` : `You did not reach the rover (where: ${NO_DATA}). `, tag('ended')];
     else sentence = ['The walk has not ended: ', NO_DATA, '.'];
+    if (outcome === 'not-returned' && broken.length) sentence.push(` Broke ${broken.length > 1 ? broken.length + ' rules' : 'a rule'}: ${broken.map(brokenName).join(', ')}.`);
 
     // ----- big numbers -----
     const nums = h('div.dbf__nums');
@@ -192,6 +208,7 @@ export default {
     // ----- planned next to actual -----
     const sample = walk && walk.sample;
     const cell = (value, k) => h('td.dbf__td', h('span.mono', value), ' ', k ? tag(k) : null);
+    const cellWrap = (value, k) => { const c = cell(value, k); c.classList.add('dbf__td--wrap'); return c; };
     const tr = (name, a, b) => h('tr', h('th.dbf__th', name), a, b);
     const table = h('table.dbf__table',
       h('thead', h('tr', h('th'), h('th.dbf__col', 'Planned'), h('th.dbf__col', 'Actual'))),
@@ -200,7 +217,7 @@ export default {
         tr('Distance', cell(dist(plan && plan.distanceM), 'planDistance'), cell(dist(walk && walk.distanceM), 'walkDistance')),
         tr('Time', cell(dur(plan && plan.timeS), 'planTime'), cell(dur(walk && walk.tS), 'walkTime')),
         tr('Reserve on return', cell(dur(plan && plan.reserveS), 'planReserve'),
-          cell(outcome === 'not-returned' ? 'not returned' : dur(reserveHome), outcome === 'not-returned' ? stopTag : 'walkReserve')),
+          outcome === 'not-returned' ? cellWrap('not returned', stopTag) : cell(dur(reserveHome), 'walkReserve')),
         tr('Time in radio shadow', cell(dur(plan && plan.radioShadowS), 'planShadow'), cell(dur(walk && walk.radioShadowS), 'walkShadow')),
       ));
     const pad = Math.round((RULES.walkBackRateFactor.value - 1) * 100);
@@ -239,9 +256,10 @@ export default {
       const endedEarly = c.id === 'wayHome' && outcome === 'not-returned' && !empty;
       const status = b || lostWay ? 'broken' : endedEarly ? 'caution' : 'ok';
       const where = b ? fromRover(b) : lostWay && stopAt ? fromRover(stopAt) : endedEarly ? `ended early, ${stopAt ? fromRover(stopAt) : NO_DATA}` : '';
-      checks.append(checkItem({ text: c.name, status, detail: where + (b && b.carried ? ' (planned)' : '') }));
+      const times = b && b.count > 1 ? ` · ${b.count}×` : '';
+      checks.append(checkItem({ text: c.name, status, detail: where + times + (b && b.carried ? ' (in the plan)' : '') }));
     }
-    for (const b of broken) if (!usedBroken.has(b)) checks.append(checkItem({ text: b.name, status: 'broken', detail: fromRover(b) }));
+    for (const b of broken) if (!usedBroken.has(b)) checks.append(checkItem({ text: b.name, status: 'broken', detail: fromRover(b) + (b.count > 1 ? ` · ${b.count}×` : '') }));
 
     // ----- main button -----
     const btn = pillButton({
@@ -276,6 +294,26 @@ export default {
   // Step 5 is the last step: its fixture is never needed by a later step.
   devFixture() { return null; },
 };
+
+/**
+ * Put a marker label where it covers no other marker or label: right, left, above, below, then further
+ * out. Measured after layout; keeps the first clear position (or the last tried).
+ */
+function placeClear(svg, lbl) {
+  if (!lbl.isConnected) return;
+  const others = [...svg.querySelectorAll('.map-marker')].filter((g) => !g.contains(lbl))
+    .flatMap((g) => [...g.children]).map((c) => c.getBoundingClientRect()).filter((r) => r.width && r.height);
+  const hits = (a) => others.some((b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2);
+  const tries = [];
+  for (const d of [1, 2.2, 3.4]) {
+    tries.push(['start', 5 * d, 1.6], ['end', -5 * d, 1.6], ['middle', 0, -5 * d], ['middle', 0, 7 * d]);
+  }
+  for (const [anchor, x, y] of tries) {
+    lbl.setAttribute('text-anchor', anchor); lbl.setAttribute('x', String(x)); lbl.setAttribute('y', String(y));
+    if (!hits(lbl.getBoundingClientRect())) return;
+  }
+  lbl.setAttribute('text-anchor', 'start'); lbl.setAttribute('x', '5'); lbl.setAttribute('y', '1.6');
+}
 
 function reportCard(ctx, { sample, walk, outcome }) {
   const photoBox = h('div.dbf__photo');

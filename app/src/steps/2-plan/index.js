@@ -169,7 +169,8 @@ export default {
       if (sel) {
         const rs = runs(sel.plan.profile);
         for (const r of rs) if (r.kind === 'shadow') map.path(r.points, { style: 'radio' });
-        for (const r of rs) map.path(r.points, { style: r.kind === 'closed' ? 'broken' : 'foot' });
+        // the stretch that breaks a rule is drawn above the spot markers, so it stays visible
+        for (const r of rs) map.path(r.points, r.kind === 'closed' ? { style: 'broken', layer: 'top' } : { style: 'foot' });
         for (const b of sel.plan.brokenRules) {
           if (!b.where || b.id === 'slope') continue;
           map.addMarker(b.where.x, b.where.z, { kind: 'dot', label: b.name, layer: 'top' }).classList.add('plan-broken');

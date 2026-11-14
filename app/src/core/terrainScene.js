@@ -128,7 +128,9 @@ export function getTerrainScene(onProgress) {
 
 // ---------- ground without colour imagery ----------
 // Where Curiosity's cameras never saw the ground, the Access Mars tile textures are grey (no colour; in
-// the walk square: most of the east, behind the butte mass, the south edge and the north-west corner).
+// the 128 m walk square about half the ground: everything more than about 30 m east of the rover, behind
+// the butte mass; the southern 30 m; patches along the north edge and in the west; measured on the raw
+// top-down render of the textures).
 // There the tiles are tinted with the plain ground colour of the maps (GROUND_RAMP), keeping the grey's
 // own light and dark: no rock detail is invented. Coloured texture is left as it is. The test for grey
 // is the one the Plan map uses (2-plan/ground.js composeGround): saturation 0.07 to 0.19 blends.
