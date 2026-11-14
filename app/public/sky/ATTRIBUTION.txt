@@ -1,0 +1,7 @@
+milky-way.jpg
+Source: NASA/Goddard Space Flight Center Scientific Visualization Studio, "Deep Star Maps 2020",
+https://svs.gsfc.nasa.gov/4851 . Built from the Hipparcos-2, Tycho-2 and Gaia DR2 star catalogs
+(Gaia DR2: ESA/Gaia/DPAC).
+File: starmap_2020_8k_gal.exr (galactic coordinates, 8192 x 4096), converted to 8-bit with macOS sips,
+cropped to 2560 x 1440 around the galactic centre (offset x 2816, y 1616), JPEG quality 82.
+No other edits.

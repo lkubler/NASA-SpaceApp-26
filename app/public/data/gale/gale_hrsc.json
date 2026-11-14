@@ -1,0 +1,88 @@
+{
+ "file": "gale_hrsc.i16.bin",
+ "format": "int16 little-endian, metres above the MOLA areoid (fitted, see fit); row 0 = north edge, col 0 = west edge",
+ "cols": 537,
+ "rows": 713,
+ "pixels_per_degree": 153.17,
+ "km_per_pixel": 0.387,
+ "bounds": {
+  "lon_west": 135.9836,
+  "lon_east": 139.4895,
+  "lat_north": -3.1994,
+  "lat_south": -7.8543
+ },
+ "width_km": 207.8,
+ "height_km": 275.9,
+ "elev_min_m": -4657,
+ "elev_max_m": 1400,
+ "fit": {
+  "method": "Top surface of the STL rasterised at 0.2 mm; scale, offset and orientation searched for the highest height correlation with the MOLA MEGDR grid (gale.json); heights = a * z_mm + b by least squares",
+  "r": 0.9988,
+  "km_per_mm": 1.935,
+  "m_per_mm": 676.2,
+  "offset_m": -5712.2,
+  "vertical_exaggeration_of_print": 2.86,
+  "centre_offset_km": [
+   -4.5,
+   9
+  ],
+  "samples": 51968
+ },
+ "sites": [
+  {
+   "id": "murray",
+   "name": "Murray Buttes",
+   "lon": 137.35562,
+   "lat": -4.69565,
+   "src": "Scene origin of the Access Mars Murray Buttes terrain fitted to the HiRISE DTM (scripts/preprocess/README.md, murray.json)",
+   "col": 210.15,
+   "row": 229.18,
+   "elev_m": -4337
+  },
+  {
+   "id": "marias",
+   "name": "Marias Pass",
+   "lon": 137.3701,
+   "lat": -4.668,
+   "src": "Curiosity waypoints sols 1042-1056, MSL_waypoints.json (research/data-sites.md)",
+   "col": 212.36,
+   "row": 224.95,
+   "elev_m": -4425
+  },
+  {
+   "id": "pahrump",
+   "name": "Pahrump Hills",
+   "lon": 137.3774,
+   "lat": -4.6635,
+   "src": "Curiosity waypoints sols 896-926, MSL_waypoints.json (research/data-sites.md)",
+   "col": 213.49,
+   "row": 224.27,
+   "elev_m": -4420
+  }
+ ],
+ "mount_sharp": {
+  "id": "sharp",
+  "name": "Mount Sharp",
+  "col": 287.5,
+  "row": 331.5,
+  "elev_m": 799,
+  "lon": 137.8606,
+  "lat": -5.3636,
+  "src": "Highest cell of the HRSC model within 15 km of the MOLA summit of the central mound"
+ },
+ "source": {
+  "title": "Gale Crater, NASA Science 3D Resources (STL, from HRSC on ESA Mars Express)",
+  "url": "https://science.nasa.gov/3d-resources/gale-crater/",
+  "credit": "Data: K. Gwinner, J. Oberst, R. Jaumann, G. Neukum, ESA/DLR/FU Berlin; model: NASA",
+  "license": "NASA 3D Resources, free to use with the credit given on the page"
+ },
+ "color": {
+  "file": "gale_color.rgb.bin",
+  "format": "8-bit RGB, row 0 = north edge, same bounds as the height grid",
+  "cols": 192,
+  "rows": 255,
+  "src": "Colour texture of the NASA/JPL-Caltech Mars 3D model (models/mars.glb), sampled over these bounds; about 6 texture pixels per degree",
+  "lon_offset_deg": 88.30000000000001,
+  "lat_offset_deg": 0.1
+ }
+}

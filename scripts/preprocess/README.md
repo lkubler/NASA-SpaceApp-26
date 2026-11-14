@@ -87,3 +87,21 @@ Block mean: cells with under half valid sub-pixels are no-data. Grid cannot be c
 
 # Gale crater (step 1 crater view), `build_gale.py`
 `python3 scripts/preprocess/build_gale.py`: HTTP Range read (~11 MB, cached in `data/raw/gale/`) of MOLA MEGDR 128 px/deg topography `megt00n090hb.img` (NASA PDS Geosciences Node, public domain) -> `app/public/data/gale/gale_height.i16.bin` (464 x 464 int16 m above the MOLA areoid, 463 m/px, lon 136.0-139.625 E, lat -3.5625 to -7.1875, row 0 = north) and `gale.json` (grid, bounds, site pixels of Murray Buttes, Marias Pass, Pahrump Hills, Mount Sharp = highest cell of the central mound, credit).
+
+# Gale crater from the HRSC 3D model (step 1 crater view), `build_gale_hrsc.mjs`
+`node scripts/preprocess/build_gale_hrsc.mjs` (Node, no packages). Input: NASA Science 3D Resources "Gale Crater" STL
+(https://science.nasa.gov/3d-resources/gale-crater/, from HRSC on ESA Mars Express, data K. Gwinner, J. Oberst, R. Jaumann,
+G. Neukum, ESA/DLR/FU Berlin), saved as `data/raw/gale-hrsc-stl/gale-crater-hrsc.stl`. The STL has no map coordinates:
+its top surface is rasterised at 0.2 mm, then scale, offset and orientation are searched for the best height correlation
+with the MOLA grid above (`gale.json`), and heights are converted to metres by a linear fit. Result: north up, 1.935 km/mm,
+676 m/mm (the print's 3x exaggeration), r = 0.999. Writes `app/public/data/gale/gale_hrsc.i16.bin` (537 x 713 int16 m,
+387 m/px) and `gale_hrsc.json` (same format as `gale.json`, plus `fit`, recomputed site pixels and Mount Sharp).
+
+# Gale crater surface colour, `build_gale_color.mjs`
+`node scripts/preprocess/build_gale_color.mjs` (after `build_gale_hrsc.mjs`; Node, no packages). Samples the colour
+texture of the NASA/JPL-Caltech Mars 3D model (`app/public/models/mars.glb`, the opening globe) over the bounds of
+`gale_hrsc.json`, so the crater view has the globe's colours and the zoom from globe to crater has no colour jump.
+Model longitude + 88.3 deg = east longitude (Gale's dark floor and wind streak on the texture; Hellas, Syrtis Major and
+Olympus Mons agree within 2 deg). Writes `app/public/data/gale/gale_color.rgb.bin` (192 x 255 RGB, row 0 = north) and
+adds `color` to `gale_hrsc.json`. The texture holds about 6 pixels per degree, so the colour is coarse; the relief comes
+from the height grid.

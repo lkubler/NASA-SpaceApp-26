@@ -54,10 +54,12 @@ for (const run of runs) {
     await page.waitForSelector('.m1-intro');
     await shot('opening');
     await page.click('.m1-intro .pill');
-    await page.waitForSelector('.m1-pin--murray .m1-pin__name');
+    await page.waitForSelector('.m1-site--murray .m1-site__name');
+    // the globe zoom and crater fly-in run about 5 s
+    await page.waitForFunction(() => !document.querySelector('.m1-intro') && !document.querySelector('.m1--flying'), null, { timeout: 30000 });
     await page.waitForTimeout(500);
     await shot('crater');
-    await page.click('.m1-pin--murray .m1-pin__name');
+    await page.click('.m1-site--murray .m1-site__name');
     await page.waitForSelector('.m1-panel.is-open .m1-req');
     await shot('requests');
     await page.locator('.m1-req').nth(cfg.request).click();
@@ -198,13 +200,13 @@ for (const run of runs) {
 
     // ---------- New mission ----------
     await page.waitForFunction(() => window.__state.step === 1);
-    await page.waitForSelector('.m1-pin--murray .m1-pin__name');
+    await page.waitForSelector('.m1-site--murray .m1-site__name');
     await page.waitForTimeout(500);
     await shot('new-mission');
     const s2 = await S();
     if (s2.route || s2.walk || s2.spotId || s2.request) fail(run, 'mission state not cleared');
     if (!s2.requestsDone.includes(req.id)) fail(run, 'finished request not marked done');
-    await page.click('.m1-pin--murray .m1-pin__name');
+    await page.click('.m1-site--murray .m1-site__name');
     await page.waitForSelector('.m1-panel.is-open .m1-req');
     await shot('new-mission-requests');
     // second mission: the other request, through Plan and Go into the Walk, then end with esc

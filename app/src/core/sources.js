@@ -109,11 +109,32 @@ export const DATA = [
     url: 'https://www.jpl.nasa.gov/imagepolicy',
   },
   {
+    name: 'Gale Crater 3D model (STL, from HRSC on ESA Mars Express)',
+    by: 'NASA Science 3D Resources; data K. Gwinner, J. Oberst, R. Jaumann, G. Neukum, ESA/DLR/FU Berlin',
+    use: 'The 3D view of Gale crater in step 1 (208 x 276 km, 387 m per pixel), with the heights of Murray Buttes, Marias Pass, Pahrump Hills and Mount Sharp; the opening zooms from the globe into it',
+    licence: 'NASA 3D Resources, credit as given',
+    url: 'https://science.nasa.gov/3d-resources/gale-crater/',
+  },
+  {
     name: 'MOLA elevation of Gale crater (MEGDR, 128 pixels per degree, MEGT00N090HB)',
     by: 'NASA/GSFC MOLA Science Team, Mars Global Surveyor; NASA PDS Geosciences Node',
-    use: 'The 3D view of Gale crater in step 1 (a 215 km square, 463 m per pixel), with the heights of Murray Buttes, Marias Pass, Pahrump Hills and Mount Sharp',
+    use: 'Reference for placing the HRSC Gale crater model on the map and converting its heights to metres (fit correlation 0.999)',
     licence: 'NASA PDS, public domain',
     url: 'https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg128/megt00n090hb.img',
+  },
+  {
+    name: 'Planet Mars, 3D Model (glTF)',
+    by: 'NASA/JPL-Caltech, via NASA Science',
+    use: 'The planet on the opening screen (public/models/mars.glb; mesh smoothed at load time, texture unchanged) and the surface colour of the Gale crater view',
+    licence: 'NASA media usage guidelines',
+    url: 'https://science.nasa.gov/resource/planet-mars-3d-model/',
+  },
+  {
+    name: 'Deep Star Maps 2020 (8K, galactic coordinates)',
+    by: 'NASA/Goddard Space Flight Center Scientific Visualization Studio; Hipparcos-2, Tycho-2 and Gaia DR2 catalogs (Gaia DR2: ESA/Gaia/DPAC)',
+    use: 'The star sky on the opening screen: a 2560 x 1440 crop around the core of the Milky Way (public/sky/milky-way.jpg)',
+    licence: 'NASA SVS, credit as given',
+    url: 'https://svs.gsfc.nasa.gov/4851',
   },
   {
     name: 'Curiosity RAD radiation dose rate',
