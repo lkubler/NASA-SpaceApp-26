@@ -1,1 +1,103 @@
-/* Styles of step 3-go only. Prefix classes with .step--go. */
+/* Styles of step 3-go only. Prefix classes with .step--go. Layout as docs/mockups/03-route-overview.png:
+   headline and numbers top left, small map top right, height profile across, checks and button at the bottom. */
+
+.step--go .go {
+  position: absolute; inset: 0; display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 30vw, 580px);
+  grid-template-rows: auto minmax(64px, 1fr) auto;
+  column-gap: calc(var(--gutter) * 0.9); row-gap: calc(var(--gap) * 0.9);
+  padding: calc(var(--header-h) * 1.05) var(--gutter) calc(var(--gutter) * 0.75);
+}
+.step--go .go__intro { grid-column: 1; grid-row: 1; min-width: 0; }
+.step--go .go__map { grid-column: 2; grid-row: 1; min-width: 0; align-self: start; }
+.step--go .go__profile { grid-column: 1 / -1; grid-row: 2; min-height: 0; }
+.step--go .go__bottom { grid-column: 1 / -1; grid-row: 3; }
+
+/* intro */
+.step--go .lede { max-width: 62ch; }
+.step--go .go__demo { white-space: nowrap; color: var(--text-2); }
+.step--go .go__nums {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: clamp(20px, 2.4vw, 48px);
+  row-gap: calc(var(--gap) * 0.8); margin-top: calc(var(--gap) * 1.3); max-width: 920px;
+}
+.step--go .bignum { padding-top: 0.8em; }
+.step--go .bignum.tone-warning .bignum__value { color: var(--warning); }
+.step--go .bignum__label { color: var(--text-2); }
+
+/* small map */
+.step--go .go__map .map { width: min(100%, 34vh); margin-left: auto; }
+.step--go .go__map .map.go-map--wide { width: 100%; aspect-ratio: 1.6 / 1; }
+.step--go .go__map .map__canvas { object-fit: cover; }
+.step--go .go__map .legend { gap: 0.4em 1.1em; margin-top: 0.7em; }
+.step--go .sw--go-shadow { background: radial-gradient(circle, var(--accent) 1.6px, transparent 2px) 0 50% / 0.37em 100% repeat-x; opacity: 0.45; }
+.step--go .sw--go-broken { background: radial-gradient(circle, var(--warning) 1.8px, transparent 2.2px) 0 50% / 0.37em 100% repeat-x; }
+.step--go .go-map__ring { color: var(--accent); }
+.step--go .go-map__ring circle:first-child { fill: none; stroke: currentColor; stroke-width: 1.2; filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
+.step--go .go-map__ring circle:last-child { fill: currentColor; }
+.step--go .map-path.go-map__hl { stroke: currentColor; stroke-dasharray: none; stroke-width: 5; opacity: 0.85; }
+.step--go .tone-accent { color: var(--accent); }
+
+/* height profile */
+.step--go .goprof { height: 100%; display: flex; flex-direction: column; }
+.step--go .goprof__plot { position: relative; flex: 1; min-height: 40px; }
+.step--go .goprof__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.step--go .goprof__area { fill: url(#goprof-fill); stroke: none; }
+.step--go .goprof__line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.step--go .goprof__closed { fill: none; stroke: var(--warning); stroke-width: 4; stroke-linecap: round; }
+.step--go .goprof__shadow { fill: url(#goprof-shadow); }
+.step--go .goprof__spot { stroke: rgba(255, 255, 255, 0.45); stroke-width: 1; stroke-dasharray: 3 4; }
+.step--go .goprof__focus line { stroke: currentColor; stroke-width: 1.5; }
+.step--go .goprof__focusrange { fill: currentColor; opacity: 0.14; }
+.step--go .goprof__marks { position: absolute; inset: 0; pointer-events: none; }
+.step--go .goprof__shadowlabel {
+  position: absolute; top: 0; transform: translateX(-50%); font-family: var(--font-mono); font-size: var(--fs-tag);
+  color: var(--text-2); white-space: nowrap;
+}
+.step--go .goprof.has-focus .goprof__shadowlabel { opacity: 0.35; }
+.step--go .goprof__dot {
+  position: absolute; width: 10px; height: 10px; border-radius: 50%; background: currentColor;
+  transform: translate(-50%, -50%); box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.6), 0 0 12px currentColor;
+}
+.step--go .goprof__callout {
+  position: absolute; top: 1.3em; font-size: var(--fs-mono); white-space: nowrap; pointer-events: none;
+  background: rgba(0, 0, 0, 0.75); padding: 0.15em 0.5em; border-radius: 6px;
+}
+.step--go .goprof__callout:empty { display: none; }
+.step--go .goprof__callout.is-right { transform: translateX(10px); }
+.step--go .goprof__callout.is-left { transform: translateX(calc(-100% - 10px)); }
+.step--go .goprof__labels { position: relative; height: 1.6em; margin-top: 0.5em; font-size: var(--fs-small); }
+.step--go .goprof__label { position: absolute; top: 0; white-space: nowrap; color: var(--text-2); }
+.step--go .goprof__label.is-spot { color: var(--accent); }
+
+/* bottom: checks and main button */
+.step--go .go__bottom {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; column-gap: calc(var(--gutter) * 0.8);
+  border-top: 1px solid var(--line); padding-top: calc(var(--gap) * 0.9);
+}
+.step--go .go__checks { min-width: 0; display: flex; flex-direction: column; gap: 0.5em; }
+.step--go .go__checkshead { display: flex; align-items: baseline; gap: 1em; flex-wrap: wrap; font-size: var(--fs-small); }
+.step--go .go__checkstitle { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); color: var(--text); }
+.step--go .go.is-broken .go__checkstitle { color: var(--warning); }
+.step--go .go__rulechecks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4em; }
+.step--go .gocheck {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.25em; text-align: left; min-width: 0;
+  padding: 0.45em 0.6em; border: 1px solid transparent; border-radius: 10px; transition: border-color var(--fade), background var(--fade);
+}
+.step--go button.gocheck:hover { border-color: var(--line-strong); }
+.step--go .gocheck.is-active { border-color: currentColor; background: var(--surface); }
+.step--go .gocheck--ok { color: var(--accent); }
+.step--go .gocheck--caution { color: var(--caution); }
+.step--go .gocheck--broken { color: var(--warning); }
+.step--go .gocheck__head { display: inline-flex; align-items: center; gap: 0.55em; font-size: var(--fs-text); }
+.step--go .gocheck__name { color: var(--text); font-weight: 500; }
+.step--go .gocheck--broken .gocheck__name { color: var(--warning); font-weight: 600; }
+.step--go .gocheck__why { font-size: var(--fs-small); color: var(--warning); }
+.step--go .gocheck__vals { display: flex; flex-direction: column; gap: 0.05em; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-2); }
+.step--go .gocheck__v { line-height: 1.5; }
+.step--go .gocheck__v .vlabel { font-size: 0.92em; padding: 0 0.25em; }
+.step--go .go__suit { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4em 1.6em; font-size: var(--fs-small); padding-left: 0.6em; }
+.step--go .gosuit { display: inline-flex; align-items: center; gap: 0.55em; color: var(--text); }
+.step--go .gosuit .check__icon { color: var(--accent); }
+.step--go .go__action { display: flex; align-items: center; gap: 1.6em; padding-bottom: 0.2em; }
+.step--go .go__action .pill { min-width: clamp(260px, 22vw, 380px); }
+.step--go .map-path--broken { stroke-width: 5; stroke-dasharray: 0.1 4; }
