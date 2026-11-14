@@ -160,6 +160,8 @@ export const PLANNER = {
   steepPenalty: v(1e5, '×', 'model', 'NONE', '', 'Cost multiplier for closed ground in the fallback route.'),
   edgeToleranceM: v(0.1, 'm', 'assumption', 'NONE', '',
     'A point counts as standing on a closed cell only once it is this far inside the cell. A planned diagonal step between two open cells touches the corner of the cells beside it; this tolerance lets the planner and the Walk agree that such a step keeps the slope rule.'),
+  maxStops: v(3, 'stops', 'assumption', 'TEAM', 'chosen by the team (specs/feedback-1.md, Several stops)',
+    'The most sample stops one excursion may plan: rover, up to three stops in the order chosen, rover. One sample and the fixed work time at every stop.'),
 };
 
 export const ALL = { RULES, ASTRONAUT, WORK, SUIT, RADIO, ENVIRONMENT, DEMO, BODY, HOME, PLANNER };
@@ -193,7 +195,7 @@ const NAMES = {
     coreTempPerW: 'Core temperature per watt of work', suitPressureKPa: 'Suit pressure', co2KPa: 'CO2 in the helmet',
   },
   HOME: { rover: 'Rover position' },
-  PLANNER: { steepPenalty: 'Cost of closed ground in the fallback route', edgeToleranceM: 'Closed-cell edge tolerance' },
+  PLANNER: { steepPenalty: 'Cost of closed ground in the fallback route', edgeToleranceM: 'Closed-cell edge tolerance', maxStops: 'Most stops per excursion' },
 };
 for (const [group, names] of Object.entries(NAMES)) {
   for (const [key, name] of Object.entries(names)) if (ALL[group][key] && !ALL[group][key].name) ALL[group][key].name = name;

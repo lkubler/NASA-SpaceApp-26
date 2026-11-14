@@ -20,16 +20,18 @@ import { labelTag } from './label.js';
 const RES = 4; // source canvas pixels per grid cell
 // view layout only (no physical values): zoom range, step per click / button / key, motion
 const ZOOM_MIN = 1, ZOOM_MAX = 6, ZOOM_STEP = 2, ANIM_MS = 220, DRAG_PX = 4, PATTERN_PX = 0.7;
+const FADE_CAP_MS = 4000; // fade option: longest wait for reveal() before the map is shown anyway
 const NICE_M = [1, 2, 5, 10, 20, 50, 100];
 
 /**
  * @param {Terrain} terrain  from core/terrain.js getTerrain()
- * @param {{ steep?: boolean, shadow?: boolean, scaleM?: number, patterns?: { steep?, shadow? }, patternPx?: number }} opts
+ * @param {{ steep?: boolean, shadow?: boolean, scaleM?: number, patterns?: { steep?, shadow? }, patternPx?: number, fade?: boolean }} opts
+ *   fade: the map content waits hidden for api.reveal() and then fades in (about 0.3 s).
  *   patterns: factories (ctx) => CanvasPattern for the hatching / dots (default: the shared ones);
  *   patternPx: CSS pixels per pattern pixel.
  * @returns {{ el, svg, canvas, project, unproject, layer, path, addMarker, setLayers, clearLayer, ... }}
  */
-export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, patterns = {}, patternPx = PATTERN_PX } = {}) {
+export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, patterns = {}, patternPx = PATTERN_PX, fade = false } = {}) {
   const n = terrain.n;
   // source raster (relief or a step's own ground), one pixel per RES-th of a grid cell; not in the page
   const canvas = document.createElement('canvas');
@@ -56,6 +58,13 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
     btn('out', 'Zoom out (−)', '−', () => zoomBy(1 / ZOOM_STEP)),
     btn('reset', 'Reset view (0)', '<svg viewBox="0 0 16 16" width="1em" height="1em" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>', () => reset()));
   const el = h('div.map', screen, svg, scale, north, controls);
+  // fade: ground, hatching, routes and markers stay hidden (the frame shows the dark ground tone) until
+  // reveal(), then fade in together; revealed anyway after FADE_CAP_MS so a slow ground never hides the map
+  let fadeTimer = 0;
+  if (fade) {
+    el.classList.add('map--fade', 'is-pending');
+    fadeTimer = setTimeout(() => api.reveal(), FADE_CAP_MS);
+  }
 
   const state = { steep, shadow };
   let markerK = 1; // marker size factor (a cropped, larger map keeps its markers at a readable size)
@@ -393,6 +402,13 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
         g.parentNode.insertBefore(g._leader, g);
       }
       place(g);
+    },
+    /** fade option: show ground, hatching, routes and markers, fading in together (no-op once shown). */
+    reveal() {
+      clearTimeout(fadeTimer);
+      if (!el.classList.contains('is-pending')) return;
+      // two frames: the first paint of the hidden content lands before the fade starts
+      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('is-pending')));
     },
     /** Stop listening (the map also stops by itself once it is out of the page). */
     destroy() { off(); if (ro) ro.disconnect(); },
