@@ -152,15 +152,24 @@ export function lineOfSight(hm, a, b, aboveA = 2, aboveB = 1.8) {
 }
 
 /**
- * Pick the relay position that sees the most route points. Candidates [{x,y}] are tried in order; ties go
- * to the earlier one (put the nearest first). Returns {x, y, visible, total}.
+ * Pick the relay position that keeps the route in contact best. samples = [{x, y, from_s, to_s}] along the
+ * route in order (from_s/to_s = clock when the crew arrives at / leaves that point; a station has to_s > from_s).
+ * Score: shortest "longest time out of contact", then least total time out of contact. A candidate must see
+ * `mustSee` (the lander) or it is skipped: the lander cannot sit in its own shadow. Candidates are tried in
+ * order; ties go to the earlier one (put the nearest first). Returns {x, y, longest_s, total_s} or null.
  */
-export function bestRelay(hm, routePoints, candidates, { antennaHeight_m = 2, targetHeight_m = 1.8 } = {}) {
+export function bestRelay(hm, samples, candidates, { antennaHeight_m = 2, targetHeight_m = 1.8, mustSee = null } = {}) {
   let best = null;
   for (const c of candidates) {
-    let v = 0;
-    for (const p of routePoints) if (lineOfSight(hm, c, p, antennaHeight_m, targetHeight_m)) v++;
-    if (!best || v > best.visible) best = { x: c.x, y: c.y, visible: v, total: routePoints.length };
+    if (mustSee && !lineOfSight(hm, c, mustSee, antennaHeight_m, targetHeight_m)) continue;
+    let longest = 0, total = 0, a = null, last = null;
+    const close = () => { const d = last - a; longest = Math.max(longest, d); total += d; a = null; };
+    for (const p of samples) {
+      if (!lineOfSight(hm, c, p, antennaHeight_m, targetHeight_m)) { if (a === null) a = p.from_s; last = p.to_s; }
+      else if (a !== null) close();
+    }
+    if (a !== null) close();
+    if (!best || longest < best.longest_s || (longest === best.longest_s && total < best.total_s)) best = { x: c.x, y: c.y, longest_s: longest, total_s: total };
   }
   return best;
 }

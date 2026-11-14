@@ -6,24 +6,32 @@ import { app } from '../state.js';
 import { loadDtm, makeTransform } from '../terrain/dtm.js';
 import { whenHeightmap, slopeGrid } from '../terrain/heightmap.js';
 import { planRoute, costGrid, SLOPE_HARD_DEG, SLOPE_PREFER_DEG } from './planner.js';
+import { makeHome } from './home.js';
 import { computeReserve, DEFAULTS, STATION_TASKS } from '../model/reserve.js';
-import { viewshed, HIDDEN, DEFAULT_SHADOW_LIMIT_S } from '../model/comms.js';
+import { viewshed, HIDDEN, DEFAULT_SHADOW_LIMIT_S, COMMS_SOURCE_NAME, bestRelay } from '../model/comms.js';
+import { sunAtLtst } from '../model/mars24.js';
 import { tile, chip, badge, button, provLegend } from '../ui/components.js';
 import { autonomyBar } from '../ui/autonomy.js';
 
 const QUELA = { lon: 137.353006, lat: -4.695202 }; // rover waypoint at the Quela drill site (research/)
-// Comms source: a rover parked on the highest nearby ground (about +10 m over the lander, antenna ~2 m [assumption]).
-// Curiosity's real parking spot at the Murray Buttes entrance ('Marimba', 137.35447 E, -4.68718, research/data-science.md
-// section 1) lies on the DTM's north edge in a hollow and sees none of the walk area, so the relay position is
-// picked on the DTM itself (offset from the lander, found by scanning candidates for line of sight to the route).
-const RELAY_OFFSET = { dx: -79, dy: 61 };
+// Comms source: ONE name everywhere (COMMS_SOURCE_NAME in model/comms.js): a relay rover parked on high ground.
+// Geometric line of sight from its 2 m antenna [assumption]. The lander is not the source and must see the relay.
+// Default relay position: parked beside the lander (a plausible first guess; it sees little of the loop).
+// "Move relay to high ground" searches the DTM for the position that keeps the crew in contact best.
+// Marimba (Curiosity parked 137.35447 E, -4.68718, research/data-science.md section 1) lies on the DTM's north edge,
+// ~590 m walk away in a hollow no relay sees together with Quela, so the default loop stays around Quela and the buttes.
+const RELAY_CELL = [504, 541]; // DTM crop col,row of the default relay
 const EVA_START_H = 8.5; // EVA clock start, local true solar time [assumption]
 const fmtClock = (h) => { const m = Math.round(((h % 24) + 24) % 24 * 60); return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
-// Default scenario: six stations between the lander and Quela. Three stations cannot use up an 8 h suit
-// (research/planner-012 numbers), so the plan is a full Apollo-style science EVA. Station minutes: assumptions.
+// Default scenario: a ~1.5 km loop lander -> five science stations -> lander (research/planner-012 numbers: three
+// stations cannot use up an 8 h suit, so this is a full Apollo-style science EVA). Station minutes: assumptions.
+// Positions: Quela from Curiosity's waypoint; the others are placed on flat ground of the DTM (cell = DTM crop col,row).
 const SCENARIO = [
-  { dx: -60, dy: -30, task: 'imaging' }, { dx: -130, dy: 40, task: 'sample' }, { dx: -230, dy: 50, task: 'sample' },
-  { dx: -250, dy: -20, task: 'imaging' }, { dx: -200, dy: -60, task: 'sample' }, { quela: true, task: 'drill' },
+  { cell: [250, 660], task: 'sample', short: 'Mudstone outcrop', maxDeg: 8, R: 30 },
+  { cell: [645, 463], task: 'imaging', short: 'Butte flank', maxDeg: 8, R: 30 },
+  { quela: true, task: 'drill', short: 'Quela drill site' },
+  { fromQuela: [45, 25], task: 'sample', short: 'Murray/Stimson contact' },
+  { fromStart: [-30, 25], task: 'sample', minutes: 90, short: 'Cross-bedding, butte foot' },
 ];
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const hex = (c) => { const v = parseInt(c.replace('#', ''), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
@@ -38,7 +46,9 @@ export function mountMap(el) {
   // ---- data + derived layers ----
   let L = null; // {hm, slope, meta, name, tf, grid, base, shade}
   let waypoints = []; // local metres [{x,y}]
-  let rover = null, start = null; // rover = comms source, start = lander / EVA start (route start)
+  let rover = null, start = null; // rover = comms source (relay), start = lander = EVA start and end (loop)
+  let home = null, homeKey = '', draggingStart = false; // home = best-path-home field (map/home.js)
+  let shadowLimit_s = DEFAULT_SHADOW_LIMIT_S; // assumed mission rule, editable in the panel
   let capacityPct = 100, startH = EVA_START_H;
   let route = null, vis = null, comms = null; // comms = overlay canvas
   let view = { s: 1, ox: 0, oy: 0 }; // screen = cell * s + o   (cells of the DTM grid)
@@ -56,9 +66,17 @@ export function mountMap(el) {
     const c0 = L.tf ? L.tf.sceneToLocal(0, 0) : { x: L.hm.width * L.hm.cellSize_m / 2, y: L.hm.height * L.hm.cellSize_m / 2 };
     start = { x: c0.x, y: c0.y }; // lander starts at the Walk view's origin
     if (L.tf) {
-      rover = { x: start.x + RELAY_OFFSET.dx, y: start.y + RELAY_OFFSET.dy };
-      const Q = L.tf.lonLatToLocal(QUELA.lon, QUELA.lat);
-      waypoints = SCENARIO.map((w) => ({ ...snapFlat(w.quela ? Q : { x: start.x + w.dx, y: start.y + w.dy }), task: w.task, minutes: STATION_TASKS[w.task].minutes }));
+      const rc = RELAY_CELL;
+      rover = { x: (rc[0] + 0.5) * cs(), y: (rc[1] + 0.5) * cs() };
+      const Q = snapFlat(L.tf.lonLatToLocal(QUELA.lon, QUELA.lat), 10, 40);
+      waypoints = SCENARIO.map((w) => {
+        let p;
+        if (w.quela) p = Q;
+        else if (w.cell) p = snapFlat({ x: (w.cell[0] + 0.5) * cs(), y: (w.cell[1] + 0.5) * cs() }, w.maxDeg, w.R);
+        else if (w.fromQuela) p = snapFlat({ x: Q.x + w.fromQuela[0], y: Q.y + w.fromQuela[1] }, 10, 40);
+        else p = snapFlat({ x: start.x + w.fromStart[0], y: start.y + w.fromStart[1] }, 10, 40);
+        return { x: p.x, y: p.y, task: w.task, short: w.short, minutes: w.minutes ?? STATION_TASKS[w.task].minutes };
+      });
     } else rover = { x: c0.x, y: c0.y - 300 };
     fit(); msg = '';
     replan(true); draw(); window.__map = api;
@@ -123,31 +141,60 @@ export function mountMap(el) {
   }
 
   // ---- planning ----
+  function homeFor() {
+    const key = cellOf(start).join(',');
+    if (!home || (homeKey !== key && !draggingStart)) { home = makeHome(L.hm, L.grid, cellOf(start), {}); homeKey = key; }
+    return home;
+  }
+  // Sunrise/sunset on the demo sol (Mars24, local true solar time); the EVA must end before sunset [modelled]
+  let sunHours = null;
+  function sunWindow() {
+    if (sunHours) return sunHours;
+    let rise = 6, set = 18;
+    for (let h = 3; h < 12; h += 0.1) if (sunAtLtst(h).elevation > 0) { rise = h; break; }
+    for (let h = 12; h < 23; h += 0.1) if (sunAtLtst(h).elevation < 0) { set = h; break; }
+    return (sunHours = { rise, set });
+  }
   function replan(commsToo) {
-    const pts = [start, ...waypoints];
+    const pts = [start, ...waypoints, start]; // a loop: the last leg walks home
     const cells = pts.map(cellOf);
     const capKJ = DEFAULTS.capacityKJ * (capacityPct / 100);
     route = null;
-    if (pts.length > 1) {
+    if (waypoints.length) {
+      const hm = homeFor();
       route = planRoute(L.hm, L.slope, cells, { grid: L.grid });
       route.waypoints = waypoints.slice(); route.rover = { ...rover }; route.start = { ...start };
+      route.shadowLimit_s = shadowLimit_s;
       const P = route.points;
-      // stations sit at the end point of each feasible leg
+      // stations sit at the end point of each feasible leg (the last leg is the walk home, no station)
       route.stations = [];
       for (const l of route.legs) {
         const w = waypoints[l.to - 1];
-        if (l.feasible && w.task && w.task !== 'none' && w.minutes > 0) {
+        if (l.feasible && w && w.task && w.task !== 'none' && w.minutes > 0) {
           P[l.endIdx].stationS = w.minutes * 60;
-          route.stations.push({ n: l.to, wp: l.to - 1, idx: l.endIdx, task: w.task, minutes: w.minutes });
+          route.stations.push({ n: l.to, wp: l.to - 1, idx: l.endIdx, task: w.task, short: w.short, minutes: w.minutes });
         }
       }
       if (P.length > 1) {
-        const r = computeReserve(P.map((p) => ({ dist_m: p.dist_m, elev_m: p.elev_m, stationS: p.stationS, time_s: p.time_s })), { capacityKJ: capKJ });
-        route.reserve = r; route.turnBackIndex = r.turnBackIndex;
-        P.forEach((p, i) => { const q = r.points[i]; p.elapsed_s = q.elapsed_s; p.remainingFraction = q.remainingFraction; p.metabolicW = q.metabolicW; });
+        // true return cost: the best path home from each point on the same cost grid, not the outbound path reversed
+        const rin = P.map((p) => { const [c, r] = cellOf(p); return { dist_m: p.dist_m, elev_m: p.elev_m, stationS: p.stationS, time_s: p.time_s, returnKJ: hm.returnKJ(c, r), returnS: hm.returnS(c, r) }; });
+        const r = computeReserve(rin, { capacityKJ: capKJ });
+        route.reserve = r; route.turnBackIndex = r.turnBackIndex; route.turnBack = r.turnBack;
+        P.forEach((p, i) => { const q = r.points[i]; p.elapsed_s = q.elapsed_s; p.remainingFraction = q.remainingFraction; p.metabolicW = q.metabolicW; p.returnKJ = q.returnCostKJ; p.returnS = rin[i].returnS; });
         route.startHour = startH;
-        route.turnBackStation = r.turnBackIndex >= 0 ? route.stations.find((s) => s.idx === r.turnBackIndex) || null : null;
-        for (const st of route.stations) { st.arrive_s = P[st.idx].elapsed_s - st.minutes * 60; st.depart_s = P[st.idx].elapsed_s; st.remainingFraction = P[st.idx].remainingFraction; st.afterTurnBack = r.turnBackIndex >= 0 && st.idx >= r.turnBackIndex; }
+        const tb = r.turnBack;
+        if (tb) {
+          tb.clockH = startH + tb.leaveElapsed_s / 3600;
+          route.turnBackStation = tb.kind === 'station' ? route.stations.find((s) => s.idx === tb.index) || null : route.stations.find((s) => s.idx > tb.index) || null;
+          const [c, rr] = cellOf(P[tb.index]); route.homeFromTurnBack = hm.path(c, rr).map(([cc, r2]) => ({ x: (cc + 0.5) * cs(), y: (r2 + 0.5) * cs() }));
+        } else { route.turnBackStation = null; route.homeFromTurnBack = null; }
+        for (const st of route.stations) {
+          const q = P[st.idx]; st.arrive_s = q.elapsed_s - st.minutes * 60; st.depart_s = q.elapsed_s; st.remainingFraction = q.remainingFraction;
+          st.homeMin = q.returnS / 60; st.homePct = (q.returnKJ / capKJ) * 100;
+          st.afterTurnBack = !!tb && (st.idx > tb.index || (tb.kind === 'station' && st.idx === tb.index));
+        }
+        const end = P[P.length - 1], sw = sunWindow(), endH = startH + end.elapsed_s / 3600;
+        route.night = { rise: sw.rise, set: sw.set, endH, afterSunset: endH > sw.set, beforeSunrise: startH < sw.rise };
       } else route.turnBackIndex = -1;
       route.toScene = L.tf ? (x, y) => L.tf.localToScene(x, y) : null;
       route.layer = L.name;
@@ -211,7 +258,7 @@ export function mountMap(el) {
     let a = -1;
     const close = (i0, i1, endT) => {
       const start_s = arr(P[i0]), duration_s = endT - start_s;
-      const seg = { startIdx: i0, endIdx: i1, start: start_s, end: endT, duration_s, exceedsLimit: duration_s > DEFAULT_SHADOW_LIMIT_S, limit_s: DEFAULT_SHADOW_LIMIT_S };
+      const seg = { startIdx: i0, endIdx: i1, start: start_s, end: endT, duration_s, exceedsLimit: duration_s > shadowLimit_s, limit_s: shadowLimit_s };
       if (duration_s >= 30) { route.shadows.push(seg); route.shadowSegments.push(seg); }
       a = -1;
     };
@@ -267,35 +314,38 @@ export function mountMap(el) {
     // infeasible legs: straight dashed line
     if (route) route.legs.forEach((l) => {
       if (l.feasible) return;
-      const pts = [start, ...waypoints], a = toScreen(pts[l.from]), b = toScreen(pts[l.to]);
+      const pts = [start, ...waypoints, start], a = toScreen(pts[l.from]), b = toScreen(pts[l.to]);
       ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.strokeStyle = css('--danger'); ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.stroke(); ctx.setLineDash([]);
     });
-    // turn-back point
-    if (route && route.turnBackIndex > 0) {
-      const tp = route.points[route.turnBackIndex], [x, y] = toScreen(tp), ts = route.turnBackStation;
+    // way home from the turn-back point (best path on the cost grid), then the turn-back marker on the route
+    if (route && route.turnBack && route.homeFromTurnBack && route.homeFromTurnBack.length > 1) {
+      path(route.homeFromTurnBack, 0, route.homeFromTurnBack.length - 1); ctx.strokeStyle = css('--turnback'); ctx.lineWidth = 2.5; ctx.setLineDash([7, 5]); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (route && route.turnBack) {
+      const tb = route.turnBack, tp = route.points[tb.index], [x, y] = toScreen(tp), ts = route.turnBackStation;
       ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillStyle = css('--turnback'); ctx.strokeStyle = css('--route-casing'); ctx.lineWidth = 2;
       ctx.fillRect(-8, -8, 16, 16); ctx.strokeRect(-8, -8, 16, 16); ctx.restore();
-      label('TURN BACK ' + (ts ? 'before station ' + ts.n + ' ' : '') + fmtClock(startH + tp.elapsed_s / 3600), x + 14, y - 10, { accent: true });
+      label(tb.kind === 'station' ? `LEAVE STATION ${ts ? ts.n : ''} BY ${fmtClock(tb.clockH)}` : `TURN BACK BY ${fmtClock(tb.clockH)}`, x + 14, y - 10, { accent: true });
     }
     // stations / waypoints
     waypoints.forEach((p, i) => {
       const [x, y] = toScreen(p), st = route && route.stations && route.stations.find((q) => q.wp === i), late = st && st.afterTurnBack;
       ctx.beginPath(); ctx.arc(x, y, 9, 0, 7); ctx.fillStyle = late ? css('--ink-muted') : css('--mars'); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.font = '600 11px ' + css('--font-body'); ctx.textAlign = 'center'; ctx.fillText(i + 1, x, y + 4); ctx.textAlign = 'left';
-      if (st) label(STATION_TASKS[st.task].label + ' ' + st.minutes + ' min', x + 12, y + 4 + (i % 2 ? 10 : -4));
+      if (st) label((p.short || STATION_TASKS[st.task].label) + ' ' + st.minutes + ' min', x + 12, y + 4 + (i % 2 ? 10 : -4));
     });
     // lander (route start) and rover (comms source)
     if (start) {
       const [x, y] = toScreen(start);
       ctx.fillStyle = css('--route-casing'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x + 10, y + 8); ctx.lineTo(x - 10, y + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
-      label('Lander (EVA start)', x + 13, y + 5);
+      label('Lander (EVA start and end)', x + 13, y + 5);
     }
     if (rover) {
       const [x, y] = toScreen(rover);
       ctx.fillStyle = css('--comms-shadow'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
       ctx.fillRect(x - 7, y - 7, 14, 14); ctx.strokeRect(x - 7, y - 7, 14, 14);
-      label('Rover on high ground (comms)', x + 12, y + 4);
+      label(COMMS_SOURCE_NAME.charAt(0).toUpperCase() + COMMS_SOURCE_NAME.slice(1) + ' (comms)', x + 12, y + 4);
     }
   }
   // Labels sit on a dark pill and dodge each other: try offsets around the anchor, keep the first free one.
@@ -319,12 +369,15 @@ export function mountMap(el) {
   ctl.innerHTML = `<label>EVA start (local solar time) <input id="mp-clock" type="time" value="${fmtClock(EVA_START_H)}"></label>
     <label>Suit start level <b id="mp-capv">100%</b><input id="mp-cap" type="range" min="1" max="100" step="1" value="100"></label>`;
   const clear = button('Clear stations', { variant: 'secondary', onClick: () => { waypoints = []; replan(false); } });
+  const fixBtn = button('Move relay to high ground', { variant: 'primary', onClick: () => moveRelay() });
+  let relayNote = '';
   const note = h('p', 'mp-note', 'Model estimates (Pandolf load model, geometric radio line of sight, assumed station times). Not flight data.');
   const auto = autonomyBar(); auto.classList.add('auto-panel');
-  panel.append(head, auto, out, ctl, clear, provLegend(), note);
+  panel.append(head, auto, out, ctl, fixBtn, clear, provLegend(), note);
   panel.addEventListener('input', (e) => { if (e.target.id === 'mp-cap') { capacityPct = +e.target.value; panel.querySelector('#mp-capv').textContent = capacityPct + '%'; replan(false); } });
   panel.addEventListener('change', (e) => {
     const t = e.target;
+    if (t.id === 'mp-limit') { shadowLimit_s = Math.max(1, Math.min(240, +t.value || 10)) * 60; replan(false); return; }
     if (t.id === 'mp-clock' && t.value) { const [hh, mm] = t.value.split(':'); startH = +hh + mm / 60; replan(false); }
     if (t.dataset.st !== undefined) {
       const i = +t.dataset.st, w = waypoints[i];
@@ -333,26 +386,57 @@ export function mountMap(el) {
       replan(false);
     }
   });
+  // Search the DTM for the relay position with the least time out of contact (lander must see it) and move it there.
+  function moveRelay() {
+    if (!L || !route) return;
+    const P = route.points, idx = new Set([0, P.length - 1]);
+    for (let i = 0; i < P.length; i += 6) idx.add(i);
+    route.stations.forEach((st) => idx.add(st.idx));
+    const samples = [...idx].sort((p, q) => p - q).map((i) => ({ x: P[i].x, y: P[i].y, from_s: P[i].elapsed_s - (P[i].stationS || 0), to_s: P[i].elapsed_s }));
+    const xs = P.map((p) => p.x), ys = P.map((p) => p.y), pad = 100, step = 20, cands = [], W = L.hm.width;
+    for (let y = Math.max(0, Math.min(...ys) - pad); y <= Math.min(L.hm.height * cs() - 1, Math.max(...ys) + pad); y += step)
+      for (let x = Math.max(0, Math.min(...xs) - pad); x <= Math.min(W * cs() - 1, Math.max(...xs) + pad); x += step) {
+        const [c, r] = cellOf({ x, y }); if (L.slope[r * W + c] <= SLOPE_HARD_DEG) cands.push({ x, y });
+      }
+    cands.sort((p, q) => Math.hypot(p.x - rover.x, p.y - rover.y) - Math.hypot(q.x - rover.x, q.y - rover.y));
+    const was = Math.max(0, ...(route.shadows || []).map((sg) => sg.duration_s));
+    const best = bestRelay(L.hm, samples, cands, { mustSee: start });
+    if (!best) { relayNote = 'No position found that sees the lander.'; panelUpdate(); return; }
+    rover = { x: best.x, y: best.y }; commsKey = ''; replan(true);
+    const now = Math.max(0, ...(route.shadows || []).map((sg) => sg.duration_s));
+    relayNote = `Relay moved ${Math.round(Math.hypot(best.x - start.x, best.y - start.y))} m from the lander: longest time out of contact ${Math.round(was / 60)} min to ${Math.round(now / 60)} min.`;
+    panelUpdate();
+  }
   function panelUpdate() {
     if (!L) return;
     panel.querySelector('.mp-sub').textContent = `${L.name} · slope limit ${SLOPE_HARD_DEG}°, prefer < ${SLOPE_PREFER_DEG}°`;
     out.replaceChildren();
     const t = route && route.total;
     if (!t) { out.append(h('p', null, 'Add at least one station.')); return; }
-    const rs = route.reserve, last = rs && rs.points[rs.points.length - 1], sh = route.shadows || [];
-    const endH = last ? startH + route.points.at(-1).elapsed_s / 3600 : startH;
+    const rs = route.reserve, P = route.points, last = rs && rs.points[rs.points.length - 1], sh = route.shadows || [], tb = route.turnBack, buf = DEFAULTS.bufferFrac;
+    const endH = last ? startH + P.at(-1).elapsed_s / 3600 : startH, night = route.night;
     const tiles = h('div', 'mp-tiles');
-    const dist = tile({ label: 'Walking distance', value: Math.round(t.dist_m), unit: 'm', prov: 'measured' }); dist.querySelector('.chip').title = 'Distance over HiRISE DTM terrain (NASA/UArizona); route choice is modelled.';
-    const clk = tile({ label: 'EVA length', value: last ? (route.points.at(-1).elapsed_s / 3600).toFixed(1) : '--', unit: 'h', prov: 'modelled' });
-    const res = tile({ label: 'Suit reserve at end', value: last ? Math.round(last.remainingFraction * 100) : '--', unit: '%', prov: 'modelled', state: last && last.mustTurnBack ? 'danger' : undefined });
+    const dist = tile({ label: 'Walking distance', value: Math.round(t.dist_m), unit: 'm', prov: 'modelled' }); dist.querySelector('.chip').title = 'Route length computed on measured HiRISE DTM terrain (NASA/UArizona); route choice is modelled.';
+    const clk = tile({ label: 'EVA length', value: last ? (P.at(-1).elapsed_s / 3600).toFixed(1) : '--', unit: 'h', prov: 'modelled', state: night && (night.afterSunset || night.beforeSunrise) ? 'warn' : undefined });
+    // reserve at the lander, coloured by margin against the 20 % buffer (not by the bare number)
+    const endFrac = last ? last.remainingFraction : 0;
+    const res = tile({ label: 'Suit reserve back at lander', value: last ? Math.round(endFrac * 100) : '--', unit: '%', prov: 'modelled', state: tb || endFrac < buf ? 'danger' : endFrac < buf + 0.05 ? 'warn' : undefined });
     const worst = sh.reduce((m, s) => Math.max(m, s.duration_s), 0);
     const cm = tile({ label: 'Comms shadow on route', value: sh.length ? Math.round(worst / 60) : 0, unit: sh.length ? 'min longest' : 'min', prov: 'modelled', state: sh.some((s) => s.exceedsLimit) ? 'danger' : sh.length ? 'warn' : undefined });
     tiles.append(dist, clk, res, cm); out.append(tiles);
-    const tb = route.turnBackIndex, tp = tb > 0 ? route.points[tb] : null;
-    const verdict = h('p', 'mp-res');
-    verdict.innerHTML = tp ? `<b class="bad-t">Turn back at ${fmtClock(startH + tp.elapsed_s / 3600)}</b> after ${Math.round(tp.dist_m)} m` + (route.turnBackStation ? ` (before finishing station ${route.turnBackStation.n})` : '') + `: remaining consumables would no longer cover the walk home plus the 20 % buffer.`
-      : `Whole plan within budget; end margin ${last ? (last.marginKJ / 1000).toFixed(1) : '--'} MJ. EVA clock ${fmtClock(startH)} to ${fmtClock(endH)}.`;
+    const verdict = h('p', 'mp-res'), ts = route.turnBackStation;
+    if (tb && tb.kind === 'station') {
+      verdict.innerHTML = `<b class="bad-t">Leave station ${ts ? ts.n : ''} by ${fmtClock(tb.clockH)}</b>: you can work ${Math.round(tb.workS / 60)} of ${ts ? ts.minutes : '?'} min there. The best way home from that spot is ${Math.round(tb.returnS / 60)} min and ${Math.round((tb.returnKJ / rs.capacityKJ) * 100)} % of the suit; the 20 % buffer stays untouched.`;
+    } else if (tb) {
+      verdict.innerHTML = `<b class="bad-t">Turn back by ${fmtClock(tb.clockH)}</b> after ${Math.round(P[tb.index].dist_m)} m` + (ts ? ` (before station ${ts.n})` : '') + `: past this point the remaining consumables no longer cover the best way home (${Math.round(tb.returnS / 60)} min) plus the 20 % buffer.`;
+    } else {
+      verdict.innerHTML = `Whole loop within budget: back at the lander at ${fmtClock(endH)} with ${Math.round(endFrac * 100)} % of the suit left (buffer ${Math.round(buf * 100)} %). EVA clock ${fmtClock(startH)} to ${fmtClock(endH)}.`;
+    }
     out.append(verdict);
+    if (night && (night.afterSunset || night.beforeSunrise)) {
+      const w = h('p', 'mp-res'); w.innerHTML = `<b class="bad-t">${night.afterSunset ? `Sunset is at ${fmtClock(night.set)}: this EVA ends at ${fmtClock(night.endH)} in the dark.` : `Sunrise is at ${fmtClock(night.rise)}: this EVA starts in the dark.`}</b> <span class="mp-assume">Sun from Mars24, sol 1440 (modelled).</span>`;
+      out.append(w);
+    }
     const sec = h('div', 'mp-sec'); sec.append(h('span', 'label', 'Stations'), chip('modelled', 'Assumption: station durations are ours, plausible analog-EVA scale (research/science.md); editable.'), h('span', 'mp-assume', 'durations assumed'));
     out.append(sec);
     const tbl = h('table', 'mp-st');
@@ -364,12 +448,18 @@ export function mountMap(el) {
       const mins = h('input'); mins.type = 'number'; mins.min = 0; mins.max = 600; mins.value = w.minutes || 0; mins.dataset.st = i; mins.dataset.k = 'min';
       const td = (...n) => { const c = h('td'); c.append(...n); return c; };
       tr.append(td(badge(i + 1)), td(sel), td(mins, document.createTextNode(' min')),
-        leg && leg.feasible ? td(document.createTextNode(`${Math.round(leg.dist_m)} m, ${st ? fmtClock(startH + st.arrive_s / 3600) : fmtT(leg.time_s)}`)) : td(document.createTextNode('infeasible: ' + (leg ? leg.reason : ''))));
+        leg && leg.feasible ? td(document.createTextNode(`${Math.round(leg.dist_m)} m, ${st ? fmtClock(startH + st.arrive_s / 3600) : fmtT(leg.time_s)}` + (st ? `, home ${Math.round(st.homeMin)} min / ${Math.round(st.homePct)} %` : ''))) : td(document.createTextNode('infeasible: ' + (leg ? leg.reason : ''))));
+      if (w.short) tr.title = w.short;
       tbl.append(tr);
     });
     out.append(tbl);
-    const seg = h('p', 'mp-res'); seg.innerHTML = `<span class="sw"></span> Comms shadow on route: ` + (sh.length ? sh.length + ' segment(s), longest ' + fmtT(worst) + (sh.some((s) => s.exceedsLimit) ? ' <b class="bad-t">exceeds 10 min limit</b>' : '') : 'none');
+    const homeLeg = route.legs[route.legs.length - 1];
+    if (homeLeg && homeLeg.feasible && waypoints.length) { const hp = h('p', 'mp-assume', `Last leg home: ${Math.round(homeLeg.dist_m)} m. "home" = best path to the lander from that station, not the outbound path reversed.`); out.append(hp); }
+    const seg = h('p', 'mp-res'); seg.innerHTML = `<span class="sw"></span> Comms shadow on route (${COMMS_SOURCE_NAME}): ` + (sh.length ? sh.length + ' segment(s), longest ' + fmtT(worst) + (sh.some((s) => s.exceedsLimit) ? ` <b class="bad-t">exceeds assumed ${Math.round(shadowLimit_s / 60)} min mission rule</b>` : '') : 'none');
     out.append(seg);
+    const lim = h('label', 'mp-assume'); lim.innerHTML = `Assumed mission rule: max min out of contact <input id="mp-limit" type="number" min="1" max="240" value="${Math.round(shadowLimit_s / 60)}" style="width:4em"> (our assumption, not a NASA figure)`;
+    out.append(lim);
+    if (relayNote) out.append(h('p', 'mp-assume', relayNote));
   }
 
   // ---- input ----
@@ -399,12 +489,13 @@ export function mountMap(el) {
     if (drag.kind === 'pan') { view.ox = drag.ox + sx - drag.sx; view.oy = drag.oy + sy - drag.sy; draw(); return; }
     if (drag.kind === 'new') return;
     drag.moved = true; const p = toLocal(sx, sy);
-    if (drag.kind === 'rover') { rover = p; scheduleReplan(true); } else if (drag.kind === 'start') { start = p; scheduleReplan(false); } else { waypoints[drag.i] = p; scheduleReplan(false); }
+    if (drag.kind === 'rover') { rover = p; scheduleReplan(true); } else if (drag.kind === 'start') { start = p; draggingStart = true; scheduleReplan(false); } else { waypoints[drag.i] = p; scheduleReplan(false); }
   });
   canvas.addEventListener('pointerup', (e) => {
     if (!L || !drag) return; const [sx, sy] = pos(e), d = drag; drag = null;
     if (d.kind === 'new' && Math.hypot(sx - d.sx, sy - d.sy) < 5) { waypoints.push({ ...toLocal(sx, sy), task: 'sample', minutes: STATION_TASKS.sample.minutes }); replan(false); }
     else if (d.moved && d.kind === 'rover') replan(true);
+    else if (d.moved && d.kind === 'start') { draggingStart = false; replan(true); }
   });
   canvas.addEventListener('wheel', (e) => {
     if (!L) return; e.preventDefault(); const [sx, sy] = pos(e), f = Math.exp(-e.deltaY * 0.0015), ns = Math.min(12, Math.max(0.3, view.s * f));
@@ -422,6 +513,9 @@ export function mountMap(el) {
     setClock(h) { startH = h; replan(false); },
     setRover(p) { rover = { ...p }; commsKey = ''; replan(true); },
     setBudget(pct) { capacityPct = pct; replan(false); },
+    moveRelay,
+    setShadowLimitMin(m) { shadowLimit_s = m * 60; replan(false); },
+    get relay() { return rover; },
     route: () => route,
     local: (x, z) => L.tf.sceneToLocal(x, z),
   };
