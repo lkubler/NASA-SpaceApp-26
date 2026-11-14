@@ -20,9 +20,21 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20 } 
   const svg = s('svg', { class: 'map__svg', viewBox: `0 0 ${n} ${n}`, preserveAspectRatio: 'xMidYMid meet' });
   const layers = {};
   for (const name of ['areas', 'routes', 'markers', 'top']) { layers[name] = s('g', { 'data-layer': name }); svg.append(layers[name]); }
-  const scale = h('div.map__scale', h('span.map__scale-bar', { style: { width: `${(100 * scaleM) / terrain.extent}%` } }), h('span.mono', `${scaleM} m`));
+  const bar = h('span.map__scale-bar');
+  const scale = h('div.map__scale', bar, h('span.mono', `${scaleM} m`));
   const north = h('div.map__north.mono', 'N');
   const el = h('div.map', canvas, svg, scale, north);
+  // Scale bar in screen pixels, so "20 m" covers 20 m on the map at any size, crop (slice) or zoom.
+  let zoom = 1;
+  let markerK = 1; // marker size factor (a cropped, larger map keeps its markers at a readable size)
+  function fitScale() {
+    const W = el.clientWidth, H = el.clientHeight;
+    if (!W || !H) return;
+    const slice = /slice/.test(svg.getAttribute('preserveAspectRatio') || '');
+    const pxPerM = ((slice ? Math.max(W, H) : Math.min(W, H)) / terrain.extent) * zoom;
+    bar.style.width = `${(pxPerM * scaleM).toFixed(1)}px`;
+  }
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fitScale).observe(el);
 
   const state = { steep, shadow };
   draw();
@@ -48,6 +60,13 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20 } 
     },
     layer(name) { return layers[name] || (layers[name] = svg.appendChild(s('g', { 'data-layer': name }))); },
     clearLayer(name) { const g = api.layer(name); while (g.firstChild) g.removeChild(g.firstChild); return g; },
+    /** Re-measure the scale bar (after a change of crop); zoom k = extra scale of the map layers. */
+    fitScale(k) { if (k) zoom = k; fitScale(); },
+    /** Size factor for all markers, now and later. */
+    setMarkerScale(k) {
+      markerK = k;
+      svg.querySelectorAll('.map-marker[data-base]').forEach((g) => g.setAttribute('transform', `${g.dataset.base} scale(${k.toFixed(4)})`));
+    },
     /** Toggle the raster layers { steep, shadow }. */
     setLayers(o) { Object.assign(state, o); draw(); },
     /**
@@ -66,7 +85,8 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20 } 
      */
     addMarker(x, z, { kind = 'number', text = '', selected = false, label = '', layer = 'markers' } = {}) {
       const { px, py } = api.project(x, z);
-      const g = s('g', { class: `map-marker map-marker--${kind}${selected ? ' is-selected' : ''}`, transform: `translate(${px.toFixed(2)} ${py.toFixed(2)})` });
+      const base = `translate(${px.toFixed(2)} ${py.toFixed(2)})`;
+      const g = s('g', { class: `map-marker map-marker--${kind}${selected ? ' is-selected' : ''}`, transform: markerK === 1 ? base : `${base} scale(${markerK})`, 'data-base': base });
       const R = 6.5;
       if (kind === 'number') {
         g.append(s('circle', { r: R }), s('text', { 'text-anchor': 'middle', dy: '0.35em' }, text));

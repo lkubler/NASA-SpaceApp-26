@@ -121,7 +121,7 @@ button.check:hover .check__text { text-decoration: underline; text-underline-off
 .map { position: relative; aspect-ratio: 1 / 1; border-radius: var(--radius-map); overflow: hidden; background: #1a0f08; }
 .map__canvas, .map__svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .map__canvas { image-rendering: auto; }
-.map__scale { position: absolute; left: 5%; bottom: 5%; display: flex; flex-direction: column-reverse; gap: 0.3em; font-size: var(--fs-mono); width: 40%; }
+.map__scale { position: absolute; left: 5%; bottom: 5%; display: flex; flex-direction: column-reverse; gap: 0.3em; font-size: var(--fs-mono); align-items: flex-start; }
 .map__scale-bar { display: block; height: 2px; background: #fff; }
 .map__north { position: absolute; right: 4%; top: 3.5%; font-size: var(--fs-mono); color: #fff; opacity: 0.85; }
 .map-path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
