@@ -17,6 +17,7 @@ import { autonomyBar } from '../ui/autonomy.js';
 import { createStationCard } from '../ui/stationCard.js';
 import { loadScience, legGrades, routeGrades, slopeStats } from './science.js';
 import '../styles/science.css';
+import { mountTimeline } from './timeline.js';
 
 // Comms source: ONE name everywhere (COMMS_SOURCE_NAME in model/comms.js): a relay rover parked on high ground.
 // Geometric line of sight from its 2 m antenna [assumption]. The lander is not the source and must see the relay.
@@ -38,6 +39,7 @@ export function mountMap(el) {
   const panel = document.createElement('div'); panel.id = 'map-panel';
   el.append(canvas, panel);
   const card = createStationCard(el);
+  const tl = mountTimeline(el, { onToggle: () => { if (L && !userView) fit(); draw(); } }); // EVA timeline strip (map/timeline.js)
   const ctx = canvas.getContext('2d');
   const loading = document.createElement('div'); loading.className = 'map-loading'; loading.setAttribute('role', 'status'); loading.textContent = 'Loading terrain imagery...';
   Object.assign(loading.style, { position: 'absolute', left: '50%', top: '45%', transform: 'translate(-50%,-50%)', padding: '8px 14px', borderRadius: '6px', background: 'rgba(28,15,12,.85)', color: '#fff', font: '600 13px sans-serif', pointerEvents: 'none', zIndex: 2 });
@@ -158,7 +160,7 @@ export function mountMap(el) {
     const pts = [start, rover, ...waypoints].filter(Boolean);
     if (pts.length < 2) { const s = Math.min(w, h) / L.hm.width * 0.96; view = { s, ox: (w - L.hm.width * s) / 2, oy: (h - L.hm.height * s) / 2 }; return; }
     const pad = 60, x0 = Math.min(...pts.map((p) => p.x)) - pad, x1 = Math.max(...pts.map((p) => p.x)) + pad, y0 = Math.min(...pts.map((p) => p.y)) - pad, y1 = Math.max(...pts.map((p) => p.y)) + pad;
-    const left = w > 800 ? 470 : 0, aw = w - left - (w > 800 ? 170 : 20), ah = h - 60;
+    const left = w > 800 ? 470 : 0, aw = w - left - (w > 800 ? 170 : 20), ah = h - 60 - (w > 800 ? tl.height() : 0);
     let s = Math.min(aw / ((x1 - x0) / cs()), ah / ((y1 - y0) / cs()));
     const place = (k) => ({ s: k, ox: left + (aw - ((x1 - x0) / cs()) * k) / 2 - (x0 / cs()) * k, oy: 30 + (ah - ((y1 - y0) / cs()) * k) / 2 - (y0 / cs()) * k });
     view = place(s);
@@ -231,6 +233,7 @@ export function mountMap(el) {
     }
     if (commsToo) computeComms();
     attachShadows(); renderCommsOverlay();
+    const hadStrip = tl.height(); tl.update(route, startH); if (tl.height() !== hadStrip && !userView && L) fit(); // the strip appears with the first plan: re-frame
     publish();
     panelUpdate(); draw();
   }

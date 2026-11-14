@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import * as comms from '../model/comms.js';
 import { app } from '../state.js';
 import { mountStations } from './stations.js';
+import { buildSeries } from '../model/timeSeries.js';
 
 const LAPSE_S = 24; // guided walk: the whole EVA plays in ~24 s of wall time
 const STEP = 0.5, HALF = 64, INSET = 0.75, LIFT = 0.14, SLOPE_WARN = 20;
@@ -130,7 +131,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     const el = P.map((p) => (typeof p.elapsed_s === 'number' ? p.elapsed_s : typeof p.time_s === 'number' ? p.time_s : null));
     const hasEl = el.every((v) => v != null) && el[el.length - 1] > 0;
     let lastIn = -1; S.forEach((s, i) => { if (s.in) lastIn = i; });
-    R = { sc, S, rf, inSh, el, hasEl, lastIn, startHour: typeof route.startHour === 'number' ? route.startHour : null, tb: Number.isInteger(tb) ? tb : -1, first: S.findIndex((s) => s.in) };
+    R = { ser: buildSeries(route), sc, S, rf, inSh, el, hasEl, lastIn, startHour: typeof route.startHour === 'number' ? route.startHour : null, tb: Number.isInteger(tb) ? tb : -1, first: S.findIndex((s) => s.in) };
     btn.hidden = R.first < 0;
     lastIdx = -1; tbPassed = false;
     spawn();
@@ -165,7 +166,8 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
       let lo = 0, hi = R.el.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (R.el[m] < te) lo = m + 1; else hi = m; }
       i = lo; eva = { elapsed_s: te, startHour: R.startHour, timelapse: true };
     }
-    const f = R.rf[i], sh = R.inSh[i];
+    // reserve by TIME (interpolated, also inside a station dwell), not the first route point at or after the clock
+    const f = eva && R.ser ? R.ser.resFracAt(eva.elapsed_s) : R.rf[i], sh = R.inSh[i];
     const key = (f == null ? 'n' : Math.round(f * 100)) + (sh ? 's' : 'o') + (eva ? 't' + Math.round(eva.elapsed_s / 30) : '');
     if (key !== pubKey) { // HUD feed, published only on change (hud.js reads app state)
       pubKey = key; const patch = { comms: { status: sh ? 'shadow' : 'ok' }, eva };
