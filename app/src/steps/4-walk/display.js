@@ -22,8 +22,13 @@ export const DISPLAY = {
   roverHalfLenM: 2.3,
   roverHalfWidthM: 1.45,
   roverMarginM: 0.4,
-  lockSettleMs: 150,      // after the pointer lock is taken, mouse moves are ignored this long (the first event can carry a jump)
-  mouseJumpPx: 300,       // a single mouse move larger than this is a jump (seen right after the lock), not a look: ignored
+  lockDriftEvents: 2,     // the cursor moved this many times under the pointer lock: the lock does not hold it, drag look instead
+  clickMaxPx: 6,         // a press that moves the mouse less than this is a click (aim mode: jump), more is a drag (look)
+  tapMaxMs: 250,          // a Shift press shorter than this is a tap (longer: a hold for fast walk)
+  doubleTapMs: 400,       // two Shift taps within this time: demo speed on / off
+  jumpMaxM: 40,           // aim mode (F): the crosshair ray meets the ground within this distance
+  jumpStepM: 0.25,        // a jump is logged in steps of at most this length (warnings, radio time as walked)
+  jumpNoteS: 4,           // "Jump: counted as walked" stays this long after a jump
   startClearM: 3.6,       // start this far along the route, beside the rover
   turnDegS: 80,           // arrow keys: turning speed
   pitchDegS: 50,

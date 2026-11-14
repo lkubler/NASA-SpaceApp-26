@@ -52,6 +52,8 @@ export const ASTRONAUT = {
   paceMS: v(2000 / 3600, 'm/s', 'real', 'CON', '§4.2.1.3.1.1, p.40',
     'Planning pace on foot: about 2 km/h over level ground, from NASA’s lunar planning.',
     { moon: true }),
+  fastPaceFactor: v(1.5, '×', 'assumption', 'NONE', 'Walk: Shift held',
+    'Fast walk (Shift held in the Walk): this many times the planning pace, about 3 km/h. The work rate at that speed comes from the effort equation (model), so the suit is used faster per metre.'),
 };
 
 export const WORK = {
@@ -128,6 +130,8 @@ export const DEMO = {
     'Demo time: the clock and the suit’s consumption run this many times faster than reality, so turning back becomes a real decision inside the 128 m site.'),
   spotWorkMin: v(20, 'min', 'assumption', 'NONE', '',
     'Fixed time for taking the sample at the spot, counted in time and consumption.'),
+  screenSpeedFactor: v(5, '×', 'assumption', 'NONE', 'Walk: Shift tapped twice',
+    'Demo speed in the Walk: the visitor moves this many times faster on screen. Movement only: suit time and consumption are counted as a normal walk over the same distance.'),
   craterHeightFactor: v(2.5, '×', 'assumption', 'TEAM', 'vertical exaggeration for readability, chosen by the team',
     'Heights in the 3D view of Gale crater (step 1) are drawn this many times taller than they are, so the crater rim and Mount Sharp are easy to see. Distances across the ground are true to scale.'),
 };
@@ -169,7 +173,7 @@ const NAMES = {
   },
   ASTRONAUT: {
     bodyMassKg: 'Body mass', loadKg: 'Carried load', suitMassKg: 'Suit mass', marsG: 'Mars gravity', earthG: 'Earth gravity',
-    paceMS: 'Walking pace',
+    paceMS: 'Walking pace', fastPaceFactor: 'Fast walk speed factor',
   },
   WORK: {
     walkW: 'Work rate walking', spotW: 'Work rate at the spot', restW: 'Work rate standing', terrainEta: 'Terrain coefficient',
@@ -182,7 +186,8 @@ const NAMES = {
     evaStartLmstH: 'Excursion start, local Mars time', signalDelayMinMin: 'Shortest signal delay Earth to Mars',
     signalDelayMaxMin: 'Longest signal delay Earth to Mars', signalDelayNowMin: 'Signal delay on mission day',
   },
-  DEMO: { timeFactor: 'Demo time factor', spotWorkMin: 'Work time at the spot', craterHeightFactor: 'Crater height factor (step 1 view)' },
+  DEMO: { timeFactor: 'Demo time factor', spotWorkMin: 'Work time at the spot', craterHeightFactor: 'Crater height factor (step 1 view)',
+    screenSpeedFactor: 'Demo speed on screen (movement only)' },
   BODY: {
     heartRestBpm: 'Resting heart rate', heartPerW: 'Heart rate per watt of work', coreTempC: 'Core temperature',
     coreTempPerW: 'Core temperature per watt of work', suitPressureKPa: 'Suit pressure', co2KPa: 'CO2 in the helmet',
