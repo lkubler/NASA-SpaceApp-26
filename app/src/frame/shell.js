@@ -1,6 +1,7 @@
 // The frame: project name, step bar, sources link, and the stage the five steps mount into.
-// Navigation rules (specs/0-frame.md): forward only when the current step is complete; back always
-// possible until the walk starts.
+// Navigation rules (specs/0-frame.md, specs/feedback-1.md "Frame"): forward only when the current step is
+// complete; back always possible. From the walk an earlier step first asks "End this walk and go back?"; yes
+// discards the walk. From the Debrief an earlier step discards the walk. Request, spot, route and plan stay.
 
 import { h, clear } from '../ui/dom.js';
 import { closePop } from '../ui/label.js';
@@ -10,7 +11,7 @@ import { STEPS } from '../steps/index.js';
 import { getTerrain } from '../core/terrain.js';
 import { PROJECT_NAME } from './project.js';
 
-const SHOW_BAR = new Set([1, 2, 3, 5]);
+const SHOW_BAR = new Set([1, 2, 3, 4, 5]); // step 4: the top menu is the way back from the walk
 
 export function startShell(root, { startStep = 1 } = {}) {
   const stage = h('main.stage');
@@ -25,7 +26,8 @@ export function startShell(root, { startStep = 1 } = {}) {
   let overlay = null;
   const overlayListeners = new Set();
 
-  const canBack = () => state.step > 1 && !(state.walk && state.walk.started);
+  let dialog = null;      // the "End this walk and go back?" question
+  const canBack = () => state.step > 1;
   const isComplete = (n) => { const m = STEPS[n - 1]; return !!(m && m.isComplete(state)); };
 
   function allowed(n) {
@@ -41,7 +43,7 @@ export function startShell(root, { startStep = 1 } = {}) {
     set: (patch) => setState(patch),
     /** Go to the next step; ignored while the current step is not complete. */
     next: () => goto(state.step + 1),
-    /** Go one step back; ignored once the walk has started. */
+    /** Go one step back (from the walk: asks first, then discards the walk). */
     back: () => goto(state.step - 1),
     goto: (n) => goto(n),
     canBack,
@@ -55,9 +57,60 @@ export function startShell(root, { startStep = 1 } = {}) {
   };
 
   function goto(n) {
-    if (n < 1 || n > STEPS.length || !allowed(n)) return false;
+    if (n < 1 || n > STEPS.length || !allowed(n) || dialog) return false;
+    if (n < state.step && state.step === 4 && state.walk && state.walk.started && !state.walk.ended) {
+      askEndWalk(n);
+      return false;
+    }
+    // back from the walk or the Debrief: the walk is discarded, request, spot, route and plan stay
+    if (n < state.step && state.step >= 4) {
+      leaveStep();
+      setState({ walk: null });
+    }
     mount(n);
     return true;
+  }
+
+  /** Unmount the current step (pointer lock released, loops stopped by the step's own unmount). */
+  function leaveStep() {
+    if (current && current.unmount) current.unmount();
+    current = null;
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+
+  /** Small dialog in the design's style; the walk is paused while it is open. */
+  function askEndWalk(n) {
+    closePop();
+    if (document.pointerLockElement) document.exitPointerLock();
+    overlayListeners.forEach((fn) => fn(true));
+    // keys go to the dialog only (the walk listens on window in the bubble phase)
+    const onKey = (e) => {
+      e.stopPropagation();
+      if (e.code === 'Escape') { e.preventDefault(); close(false); }
+    };
+    const close = (yes) => {
+      if (!dialog) return;
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('keyup', stopKey, true);
+      dialog.remove(); dialog = null;
+      if (!yes) { overlayListeners.forEach((fn) => fn(false)); return; }
+      leaveStep();
+      setState({ walk: null });
+      mount(n);
+    };
+    const stopKey = (e) => e.stopPropagation();
+    const yesBtn = h('button.pill.confirm__yes', { type: 'button', onclick: () => close(true) }, 'End walk');
+    const noBtn = h('button.textlink.confirm__no', { type: 'button', onclick: () => close(false) }, 'Keep walking');
+    dialog = h('div.confirm', { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'confirm-q' },
+      h('div.confirm__card',
+        h('div.confirm__q', { id: 'confirm-q' }, 'End this walk and go back?'),
+        h('p.confirm__text', `The walk so far is discarded. ${STEPS[n - 1].title} opens with your plan kept.`),
+        h('div.confirm__actions', noBtn, yesBtn)));
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) close(false); });
+    window.addEventListener('keydown', onKey, true);
+    window.addEventListener('keyup', stopKey, true);
+    root.append(dialog);
+    noBtn.focus();
   }
 
   function mount(n) {
@@ -81,7 +134,7 @@ export function startShell(root, { startStep = 1 } = {}) {
       const b = h(`button.stepbar__item.is-${status}`, { type: 'button', 'aria-current': status === 'current' ? 'step' : null },
         h('span.stepbar__n', String(n)), h('span.stepbar__t', m.title));
       b.disabled = !allowed(n);
-      b.addEventListener('click', () => goto(n));
+      b.addEventListener('click', () => { b.blur(); goto(n); }); // blur: walk keys (Enter) must not re-click it
       bar.append(b);
       if (n < STEPS.length) bar.append(h('span.stepbar__sep', '—'));
     });

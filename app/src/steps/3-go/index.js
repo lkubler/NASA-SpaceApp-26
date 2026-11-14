@@ -123,11 +123,15 @@ export default {
     const prof = heightProfile(plan, { spotName });
     const profBox = h('section.go__profile', prof.el);
 
-    // --- checks
+    // --- checks: one per rule in the row; the radio shadow is not a rule, so it gets its own "Caution" line
     let active = null;
-    const ruleChecks = plan.checks.map((c) => {
+    const toggle = (b, c, d, status) => (e) => {
+      if (e.target.closest('.vlabel')) return;
+      select(active && active.c === c ? null : { c, b, d, status });
+    };
+    const ruleChecks = plan.checks.filter((c) => c.id !== 'radio').map((c) => {
       const d = describe(c, plan);
-      const status = c.id === 'radio' ? (c.status === 'ok' ? 'ok' : 'caution') : c.status;
+      const status = c.status;
       const icon = { ok: '✓', caution: '!', broken: '×' }[status] || '';
       const clickable = !!c.where;
       const b = h(`${clickable ? 'button' : 'div'}.gocheck.gocheck--${status}`, clickable ? { type: 'button', 'aria-pressed': 'false' } : null,
@@ -135,14 +139,23 @@ export default {
         status === 'broken' && c.text ? h('span.gocheck__why', c.text) : null,
         h('span.gocheck__vals', d.planned, d.limit),
       );
-      if (clickable) {
-        b.addEventListener('click', (e) => {
-          if (e.target.closest('.vlabel')) return;
-          select(active && active.c === c ? null : { c, b, d, status });
-        });
-      }
+      if (clickable) b.addEventListener('click', toggle(b, c, d, status));
       return b;
     });
+
+    const radio = plan.checks.find((c) => c.id === 'radio');
+    let cautionLine = null;
+    if (radio) {
+      const d = describe(radio, plan);
+      const has = !!radio.where && plan.radioStretches.length > 0;
+      cautionLine = h(`${has ? 'button' : 'div'}.gocaution${has ? '' : '.is-none'}`, has ? { type: 'button', 'aria-pressed': 'false' } : null,
+        h('span.gocaution__tag', 'Caution'),
+        h('span.gocaution__name', radio.name),
+        h('span.gocaution__v', d.planned),
+        h('span.gocaution__note', has ? 'No line of sight to the rover. Not a rule: the walk may go on.' : 'Line of sight to the rover all the way.'),
+        has ? h('span.gocaution__show', 'Show on route') : null);
+      if (has) cautionLine.addEventListener('click', toggle(cautionLine, radio, d, 'caution'));
+    }
 
     function select(sel) {
       if (active) { active.b.classList.remove('is-active'); active.b.setAttribute('aria-pressed', 'false'); }
@@ -190,7 +203,7 @@ export default {
       h('div.go__checks',
         h('div.go__checkshead', h('span.go__checkstitle', broken ? `${plural(broken, 'rule')} broken.` : 'Every rule kept.'), h('span.muted', 'Click a check to see where it occurs on the route.')),
         h('div.go__rulechecks', ruleChecks),
-        suitChecks, crew),
+        cautionLine, suitChecks, crew),
       h('div.go__action', textLink('Edit route', () => ctx.back()), btn));
 
     el.append(h(`div.go${broken ? '.is-broken' : ''}`, intro, mapBox, profBox, bottom));
