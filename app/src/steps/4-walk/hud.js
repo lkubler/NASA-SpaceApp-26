@@ -266,7 +266,8 @@ export function createHud(el) {
 
   // ---------- look-at card ----------
   function setLook(look) {
-    if (modal.classList.contains('is-on')) look = null;
+    // one thing at a time in the centre: no look-at card while a warning, a prompt or a modal is shown
+    if (modal.classList.contains('is-on') || alertEl.firstChild || prompt.classList.contains('is-on')) look = null;
     const key = look ? look.title + look.size : '';
     if (key === lastLook) return;
     lastLook = key;
@@ -280,14 +281,24 @@ export function createHud(el) {
   }
 
   // ---------- markers ----------
+  let minY = 0;
   function place(m, p, on) {
-    // only in the open middle of the visor: not behind the side cards, below the compass strip
+    // only in the open middle of the visor: not behind the side cards, below the compass strip and the warning
     const W = window.innerWidth, show = !!on && p.visible && p.x > W * 0.25 && p.x < W * 0.76;
     m.classList.toggle('is-on', show);
-    if (show) m.style.transform = `translate(${p.x.toFixed(1)}px, ${Math.max(p.y, window.innerHeight * 0.27).toFixed(1)}px)`;
+    if (show) m.style.transform = `translate(${p.x.toFixed(1)}px, ${Math.max(p.y, minY).toFixed(1)}px)`;
+  }
+  const overlaps = (a, b) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+  /** A marker label that would cover the warning, the look-at card or the prompt stays quiet (diamond only). */
+  function quietIfCovering(m, blocks) {
+    if (!m.classList.contains('is-on')) return;
+    const r = m.querySelector('.walk-mark__label').getBoundingClientRect();
+    m.classList.toggle('is-quiet', blocks.some((b) => overlaps(r, b)));
   }
   let lastRoverTxt = '';
   function setMarks(target, roverP, roverOn, points) {
+    const box = alertEl.firstChild && alertEl.firstChild.getBoundingClientRect();
+    minY = Math.max(window.innerHeight * 0.27, box ? box.bottom + 40 : 0);
     const toRover = target.kind === 'rover';
     place(tgtMark, target.p, !toRover);
     if (!toRover) tgtMark.firstChild.replaceChildren(h('span', target.name + ' '), h('b.mono', fmtDistance(target.metres)));
@@ -297,6 +308,10 @@ export function createHud(el) {
     roverMark.classList.toggle('is-target', toRover);
     place(roverMark, roverP, roverOn);
     points.forEach((q, i) => place(pointMarks[i], q.p, q.on));
+    const blocks = [box, lookCard.classList.contains('is-on') && lookCard.firstChild && lookCard.firstChild.getBoundingClientRect(),
+      prompt.classList.contains('is-on') && prompt.getBoundingClientRect()].filter(Boolean);
+    quietIfCovering(tgtMark, blocks);
+    quietIfCovering(roverMark, blocks);
   }
 
   // ---------- modals ----------
@@ -304,8 +319,11 @@ export function createHud(el) {
     modal.replaceChildren(h('div.walk-modal__card',
       h('div.walk-modal__kicker.mono', `Sample · +${fmtDuration(spotSeconds())} work`, ' ', tag(DEMO.spotWorkMin)),
       h('div.walk-modal__title', 'Sample taken.'),
-      h('p.walk-modal__text', `${route.spot.name}: bedrock at the foot of a butte, bagged ${fmtDistance(Math.hypot(log.sample.x - ROVER.x, log.sample.z - ROVER.z))} from the rover.`),
-      h('p.walk-modal__note', 'No photo: Curiosity never stopped at this rock, so no real image of it exists.'),
+      log.sample.photo ? h('figure.walk-modal__photo',
+        h('img', { src: log.sample.photo, alt: log.sample.photoTitle || 'Curiosity photo' }),
+        h('figcaption.mono', `${log.sample.photoTitle || ''}. ${log.sample.photoMeta || 'Curiosity'}, ${log.sample.photoCredit || 'NASA/JPL-Caltech'} `,
+          tag({ label: 'real', text: 'Real Curiosity photo of this rock, the sandstone of the Murray Buttes. Curiosity never stopped at this exact spot.', source: { title: `${log.sample.photoMeta || 'Curiosity'}, ${log.sample.photoCredit || 'NASA/JPL-Caltech'}`, url: log.sample.photoUrl || '', where: '' } }))) : null,
+      h('p.walk-modal__text', `${route.spot.name}: sandstone of the butte (Stimson formation), bagged ${fmtDistance(Math.hypot(log.sample.x - ROVER.x, log.sample.z - ROVER.z))} from the rover. The photo shows this rock in the Murray Buttes as Curiosity saw it, not this exact spot.`),
       h('div.walk-modal__next', 'Next target: the rover. ', h('kbd', 'E'), ' continue')));
     modal.classList.add('is-on');
   }

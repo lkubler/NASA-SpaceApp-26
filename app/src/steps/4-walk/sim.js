@@ -3,7 +3,7 @@
 // thresholds in display.js only decide when the display speaks.
 import {
   RULES, WORK, ASTRONAUT, ROVER,
-  logMove, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, hasRadio,
+  logMove, logPath, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, hasRadio,
   radioShadowMask, roverField, spotField, isClosedAt,
 } from '../../core/index.js';
 import { DISPLAY as D } from './display.js';
@@ -47,12 +47,15 @@ export function createSim(t, route, log) {
     tb: null, leftRover: false, atEdge: false,
     homeAtSample: null,
   };
-  log.track.length || log.track.push({ x: s.x, z: s.z, tS: log.tS, reserveS: NaN, radio: true });
+  log.track.length || log.track.push({ x: ROVER.x, z: ROVER.z, tS: log.tS, reserveS: NaN, radio: true });
+  // the metres from the rover to the start point are walked at planning pace with the first step
+  const startPath = [{ x: ROVER.x, z: ROVER.z }, ...pts.slice(1, k0 + 1)];
   s.radio = hasRadio(t, s.x, s.z);
   refreshReserve();
 
   function refreshReserve() {
-    s.reserve = reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: log.phase, spot: route.spot });
+    const p = s.started ? s : ROVER; // before the first step the walk counts from the rover, like the plan
+    s.reserve = reserveFrom(t, log.levels, { x: p.x, z: p.z, phase: log.phase, spot: route.spot });
     s.timeLeft = timeLeft(log.levels);
   }
 
@@ -65,7 +68,10 @@ export function createSim(t, route, log) {
     s.pitch = Math.max(-D.pitchMaxDeg * DEG, Math.min(D.pitchMaxDeg * DEG, s.pitch + inp.pitch * D.pitchDegS * DEG * dt));
     let f = inp.f, r = inp.r;
     const len = Math.hypot(f, r);
-    if (len > 0 && !s.started) s.started = true;
+    if (len > 0 && !s.started) {
+      s.started = true;
+      if (log.distanceM === 0) logPath(log, t, startPath, { shadow, spot: route.spot });
+    }
     if (!s.started) return; // the clock starts with the first step
     const from = { x: s.x, y: ground(s.x, s.z), z: s.z };
     let nx = s.x, nz = s.z;
@@ -119,18 +125,38 @@ export function createSim(t, route, log) {
     return null;
   }
 
-  function distToRoute() {
-    let best = Infinity;
-    for (const L of legs) {
+  /** Distance to the planned route (both legs), and the nearest point on the current leg. */
+  function nearRoute() {
+    let best = Infinity, cur = null;
+    const curLeg = log.phase === 'out' && !log.sample ? 0 : 1;
+    legs.forEach((L, li) => {
       for (let i = 1; i < L.length; i++) {
         const p = L[i - 1], q = L[i];
         const dx = q.x - p.x, dz = q.z - p.z, l2 = dx * dx + dz * dz;
         const u = l2 ? Math.max(0, Math.min(1, ((s.x - p.x) * dx + (s.z - p.z) * dz) / l2)) : 0;
         const d = Math.hypot(s.x - (p.x + u * dx), s.z - (p.z + u * dz));
         if (d < best) best = d;
+        if (li === curLeg && (!cur || d < cur.d)) cur = { d, i, u };
       }
+    });
+    return { m: best, cur, L: legs[curLeg] };
+  }
+
+  /** Closed ground on the planned route ahead (the crew keeps to the band): metres to it, or null. */
+  function routeAheadClosed(near, maxM) {
+    const { cur, L } = near;
+    if (!cur) return null;
+    let p = { x: L[cur.i - 1].x + (L[cur.i].x - L[cur.i - 1].x) * cur.u, z: L[cur.i - 1].z + (L[cur.i].z - L[cur.i - 1].z) * cur.u };
+    let m = 0;
+    for (let i = cur.i; i < L.length && m <= maxM; i++) {
+      const q = L[i], len = Math.hypot(q.x - p.x, q.z - p.z), n = Math.max(1, Math.ceil(len / (t.cell / 4)));
+      for (let k = 1; k <= n; k++) {
+        const x = p.x + (q.x - p.x) * k / n, z = p.z + (q.z - p.z) * k / n;
+        if (isClosedAt(t, x, z)) return m + len * k / n;
+      }
+      m += len; p = q;
     }
-    return best;
+    return null;
   }
 
   const broken = {};
@@ -144,15 +170,19 @@ export function createSim(t, route, log) {
     const cur = {}, info = {};
     cur.steepUnder = isClosedAt(t, s.x, s.z); // the planner's slope test (core/planner.js)
     if (cur.steepUnder) info.steepUnder = { slopeDeg: t.slope[i] };
+    const near = nearRoute();
     if (!cur.steepUnder) {
-      const m = aheadHit((j, x, z) => isClosedAt(t, x, z), D.steepAheadM);
+      // on the band: closed ground on the planned route ahead (only where the plan breaks the slope rule);
+      // off the band: closed ground in the walking direction
+      const m = near.m <= D.onRouteM ? (s.moveDir && s.sinceMoveS <= D.aheadHoldS ? routeAheadClosed(near, D.steepAheadM) : null)
+        : aheadHit((j, x, z) => isClosedAt(t, x, z), D.steepAheadM);
       if (m != null) { cur.steepAhead = true; info.steepAhead = { m }; }
     }
     if (s.radio) {
       const m = aheadHit((j) => shadow[j] === 1, D.radioAheadM);
       if (m != null) { cur.radioAhead = true; info.radioAhead = { m }; }
     }
-    const off = distToRoute();
+    const off = near.m;
     if (off > D.offPathM) { cur.offPath = true; info.offPath = { m: off }; }
     const edgeM = Math.min(s.x - t.min, t.max - s.x, s.z - t.min, t.max - s.z);
     if (edgeM < D.edgeBandM || s.atEdge) { cur.edge = true; info.edge = { m: edgeM }; }
@@ -180,8 +210,12 @@ export function createSim(t, route, log) {
     breakRule('excursion', 'Excursion length', log.tS > RULES.evaLimitH.value * 3600);
 
     // warnings log: each onset, where it occurred
+    // (a warning that flickers on and off in the same place is logged once)
     for (const id of ORDER) {
-      if (cur[id] && !s.active[id]) log.warnings.push({ id, level: ALERTS[id].level, text: ALERTS[id].title, x: s.x, z: s.z, tS: log.tS });
+      if (!cur[id] || s.active[id]) continue;
+      const prev = log.warnings.findLast((w) => w.id === id);
+      if (prev && Math.hypot(prev.x - s.x, prev.z - s.z) < D.relogM) continue;
+      log.warnings.push({ id, level: ALERTS[id].level, text: ALERTS[id].title, x: s.x, z: s.z, tS: log.tS });
     }
     s.active = cur; s.alertInfo = info;
     s.alert = ORDER.find((id) => cur[id]) || null;
@@ -208,12 +242,20 @@ export function createSim(t, route, log) {
   }
 
   function finish(returned) {
+    if (returned) {
+      // the last metres to the rover, straight, at planning pace
+      const d = distTo(ROVER), n = Math.max(1, Math.ceil(d / t.cell));
+      const path = Array.from({ length: n + 1 }, (_, k) => ({ x: s.x + (ROVER.x - s.x) * k / n, z: s.z + (ROVER.z - s.z) * k / n }));
+      const r = logPath(log, t, path, { shadow, spot: route.spot });
+      if (r) { s.reserve = r; s.timeLeft = timeLeft(log.levels); }
+    }
     log.ended = true;
     log.returned = returned;
-    const r = reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: 'back' });
+    const at = returned ? { x: ROVER.x, z: ROVER.z } : { x: s.x, z: s.z };
+    const r = reserveFrom(t, log.levels, { ...at, phase: 'back' });
     log.reserveAtHomeS = returned ? r.seconds : null;
     log.outcome = !returned ? 'not-returned' : log.brokenRules.length ? 'home-broken' : 'home';
-    log.end = { x: s.x, z: s.z, tS: log.tS, roverDistanceM: distTo(ROVER) };
+    log.end = { ...at, tS: log.tS, roverDistanceM: returned ? 0 : distTo(ROVER) };
   }
 
   function suitEmpty() {

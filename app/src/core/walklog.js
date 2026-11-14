@@ -1,6 +1,6 @@
 // Walk log: what the Walk writes into state.walk and the Debrief reads. Shape in app/README.md.
 
-import { fullLevels, consume, workRate, doseMSv, spotSeconds } from './suit.js';
+import { fullLevels, consume, workRate, doseMSv, spotSeconds, walkSeconds } from './suit.js';
 import { WORK } from './values.js';
 import { stepCost } from './planner.js';
 import { radioShadowMask } from './radio.js';
@@ -41,6 +41,26 @@ export function logMove(log, terrain, { from, to, dtS, workW, radio, spot }) {
   const last = log.track[log.track.length - 1];
   if (!last || Math.hypot(to.x - last.x, to.z - last.z) >= 1) {
     log.track.push({ x: to.x, z: to.z, tS: log.tS, reserveS: r.seconds, radio: !!radio });
+  }
+  return r;
+}
+
+/**
+ * Log a stretch walked at planning pace along the scene points pts ([{ x, z }], heights from the grid):
+ * used by the Walk for the few metres beside the rover that the visitor does not walk by hand
+ * (rover to start point, last metres to the rover), so the log covers rover to rover like the plan.
+ */
+export function logPath(log, terrain, pts, { shadow, spot } = {}) {
+  let r = null;
+  for (let k = 1; k < pts.length; k++) {
+    const a = { x: pts[k - 1].x, y: terrain.heightAt(pts[k - 1].x, pts[k - 1].z), z: pts[k - 1].z };
+    const b = { x: pts[k].x, y: terrain.heightAt(pts[k].x, pts[k].z), z: pts[k].z };
+    const flat = Math.hypot(b.x - a.x, b.z - a.z);
+    if (flat < 1e-6) continue;
+    const m = Math.hypot(flat, b.y - a.y);
+    const slopeDeg = (Math.atan2(b.y - a.y, flat) * 180) / Math.PI;
+    const radio = shadow ? shadow[terrain.indexOf(b.x, b.z)] === 0 : true;
+    r = logMove(log, terrain, { from: a, to: b, dtS: walkSeconds(m), workW: workRate(slopeDeg), radio, spot });
   }
   return r;
 }

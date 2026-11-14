@@ -109,6 +109,7 @@
 .walk-mark--rover .walk-mark__dia { display: none; position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border: 2px solid var(--accent); transform: rotate(45deg); box-shadow: 0 0 10px rgba(79, 203, 255, 0.55); }
 .walk-mark--rover.is-target .walk-mark__dia { display: block; }
 .walk-mark--rover.is-target .walk-mark__label { bottom: 14px; }
+.walk-mark.is-quiet .walk-mark__label { visibility: hidden; }
 .walk-mark--point .walk-mark__dot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.45); }
 
 /* modal: sample taken, suit empty */
@@ -120,6 +121,9 @@
 .walk-modal__kicker { font-size: var(--fs-tag); color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; }
 .walk-modal__title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-headline); letter-spacing: -0.02em; margin-top: 0.15em; }
 .walk-modal__text { margin: 0.5em 0 0; }
+.walk-modal__photo { margin: 0.7em 0 0; }
+.walk-modal__photo img { display: block; width: 100%; max-height: 26vh; object-fit: cover; border-radius: 8px; }
+.walk-modal__photo figcaption { margin-top: 0.35em; font-size: var(--fs-tag); color: var(--text-2); }
 .walk-modal__note { margin: 0.5em 0 0; color: var(--text-2); font-size: var(--fs-small); }
 .walk-modal__next { margin-top: 1em; color: var(--text-2); font-size: var(--fs-small); display: flex; align-items: center; gap: 0.5em; }
 

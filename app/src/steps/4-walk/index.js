@@ -94,6 +94,10 @@ export default {
       if (sim.s.modal === 'sample') { closeSample(); return; }
       if (sim.s.modal === 'empty') { finishStep(); return; }
       if (sim.takeSample()) {
+        // the photo shown at the spot: the request's real Curiosity photo of this rock type (step 1);
+        // logged with the sample so the debrief report shows the same photo
+        const rq = ctx.state.request;
+        if (rq && rq.photo) Object.assign(log.sample, { photo: rq.photo, photoTitle: rq.photoCaption, photoCredit: rq.photoCredit, photoMeta: rq.photoMeta, photoUrl: rq.photoUrl });
         ctx.set({ walk: log });
         v3.setBand('out', route.out.points, false);
         v3.setBand('back', route.back.points, true);

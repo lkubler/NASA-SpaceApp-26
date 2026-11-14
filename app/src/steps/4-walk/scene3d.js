@@ -23,6 +23,8 @@ export function createScene3d(host, t) {
 
   let terrainRoot = null;
   const bands = {};
+  const patch = groundPatch(t);
+  scene.add(patch);
   const rover = roverModel();
   sceneToThree(ROVER.x, t.heightAt(ROVER.x, ROVER.z), ROVER.z, rover.position);
   scene.add(rover);
@@ -82,7 +84,8 @@ export function createScene3d(host, t) {
   function dispose() {
     window.removeEventListener('resize', resize);
     if (terrainRoot) scene.remove(terrainRoot); // shared object: leave it intact for other views
-    for (const b of Object.values(bands)) { b.geometry.dispose(); b.material.map && b.material.map.dispose(); b.material.dispose(); }
+    for (const b of Object.values(bands)) { b.geometry.dispose(); b.material.dispose(); }
+    patch.geometry.dispose(); patch.material.dispose();
     rover.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
     renderer.dispose();
     renderer.domElement.remove();
@@ -104,7 +107,7 @@ function smooth(points, k = 3) {
 }
 
 function band(t, points) {
-  const p = smooth(points);
+  const p = smooth(points, 4);
   const pos = [], uv = [], idx = [];
   const w = D.bandWidthM / 2, lift = 0.07;
   let along = 0;
@@ -125,20 +128,70 @@ function band(t, points) {
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
-  // soft edges across the band
-  const c = document.createElement('canvas'); c.width = 64; c.height = 1;
-  const x = c.getContext('2d');
-  const gr = x.createLinearGradient(0, 0, 64, 0);
-  gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.85)');
-  gr.addColorStop(0.75, 'rgba(255,255,255,0.85)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-  x.fillStyle = gr; x.fillRect(0, 0, 64, 1);
-  const tex = new THREE.CanvasTexture(c);
-  const m = new THREE.MeshBasicMaterial({
-    color: ACCENT, map: tex, transparent: true, opacity: 0.62, depthWrite: false,
+  // soft edges across the band; fades in a few metres ahead of the eye (no wide wedge at the feet) and
+  // into the haze far away, like the terrain
+  const m = new THREE.ShaderMaterial({
+    uniforms: {
+      color: { value: new THREE.Color(ACCENT) }, opacity: { value: 0.62 },
+      near: { value: D.bandFadeNearM }, full: { value: D.bandFadeFullM },
+      fogColor: { value: new THREE.Color(ACCESS_MARS_FOG.color) }, fogDensity: { value: ACCESS_MARS_FOG.density },
+    },
+    vertexShader: `
+      varying vec2 vUv; varying float vDepth;
+      void main() {
+        vUv = uv;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vDepth = -mv.z;
+        gl_Position = projectionMatrix * mv;
+      }`,
+    fragmentShader: `
+      uniform vec3 color; uniform float opacity, near, full, fogDensity; uniform vec3 fogColor;
+      varying vec2 vUv; varying float vDepth;
+      void main() {
+        float edge = smoothstep(0.0, 0.3, vUv.x) * smoothstep(1.0, 0.7, vUv.x);
+        float fade = smoothstep(near, full, vDepth);
+        float fog = 1.0 - exp(-fogDensity * fogDensity * vDepth * vDepth);
+        gl_FragColor = vec4(mix(color, fogColor, fog), opacity * edge * fade);
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false,
     polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4, side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(g, m);
   mesh.renderOrder = 2;
+  return mesh;
+}
+
+// ---------- ground patch over the strip Access Mars has no imagery for (behind and under Curiosity) ----------
+function groundPatch(t) {
+  const yaw = (D.roverHeadingDeg * Math.PI) / 180;
+  const fx = Math.sin(yaw), fz = Math.cos(yaw), rx = Math.cos(yaw), rz = -Math.sin(yaw);
+  const step = t.cell / 2, half = D.patchWidthM / 2;
+  const nu = Math.ceil((D.patchToM - D.patchFromM) / step), nv = Math.ceil(D.patchWidthM / step);
+  const pos = [], col = [], idx = [];
+  const base = new THREE.Color(D.patchColor);
+  for (let i = 0; i <= nu; i++) {
+    const u = D.patchFromM + (i / nu) * (D.patchToM - D.patchFromM);
+    for (let j = 0; j <= nv; j++) {
+      const v = -half + (j / nv) * D.patchWidthM;
+      const x = ROVER.x + fx * u + rx * (v + D.patchRightM), z = ROVER.z + fz * u + rz * (v + D.patchRightM);
+      pos.push(x, t.heightAt(x, z) + 0.04, -z);
+      // soft rim: fully opaque inside, fading over the last metre on every side
+      const a = Math.min(1, (half - Math.abs(v)) / 1, (u - D.patchFromM) / 1, (D.patchToM - u) / 1);
+      col.push(base.r, base.g, base.b, Math.max(0, a));
+      if (i && j) { const a0 = (i - 1) * (nv + 1) + j - 1, b0 = i * (nv + 1) + j - 1; idx.push(a0, b0, a0 + 1, a0 + 1, b0, b0 + 1); }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  g.setIndex(idx);
+  const m = new THREE.MeshBasicMaterial({
+    vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.renderOrder = 1;
   return mesh;
 }
 

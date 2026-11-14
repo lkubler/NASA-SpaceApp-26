@@ -5,6 +5,8 @@ export const DISPLAY = {
   maxFrameS: 0.25,        // longest real time one frame may advance (tab switch, slow frame)
   steepAheadM: 6,         // "Steep stretch ahead": closed ground within this distance in the walking direction
   radioAheadM: 10,        // "Radio shadow ahead": shadow within this distance in the walking direction
+  onRouteM: 1,            // on the band: within this distance of the planned route (steep check follows the route)
+  relogM: 8,              // walk log: the same warning again within this distance counts as the same one
   offPathM: 6,            // "Off the path": farther than this from the planned route
   edgeBandM: 4,           // "Edge of the site": closer than this to the edge of the mapped square
   aheadHoldS: 1.2,        // keep the walking direction this long after the visitor stops
@@ -29,7 +31,15 @@ export const DISPLAY = {
   // north-north-west from the start point); the model is parked along that strip, centred this far up it
   roverHeadingDeg: -19,
   roverShiftM: 0.8,
+  // ground patch over that strip: plain ground following the walk grid, from behind the rover up the strip
+  patchFromM: -4,
+  patchToM: 26,
+  patchWidthM: 8,
+  patchRightM: 1.5,       // patch centre this far right (east) of the rover's long axis
+  patchColor: 0xb4876a,   // the mean colour of the Access Mars ground around the start point
   miniRadiusM: 32,        // minimap: metres from the centre to the rim
   fovDeg: 66,
-  bandWidthM: 0.7,        // route band on the ground
+  bandWidthM: 0.4,        // route band on the ground
+  bandFadeNearM: 2.2,     // the band fades in from this far in front of the eye ...
+  bandFadeFullM: 6,       // ... to full strength here, so it stays a calm, even band
 };
