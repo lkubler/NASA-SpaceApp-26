@@ -1,6 +1,6 @@
 # 022 Regional scale: lander 2.5 km out, real walkback
 owner: builder
-state: open (start after 018–019 merge — edits app/src/map/)
+state: done
 area: app/src/map/, app/src/terrain/, app/src/model/
 
 ## Goal
@@ -13,3 +13,11 @@ Make the return reserve meaningful at NASA walkback scale (2–3.5 km, research/
 
 ## Done when
 Tests (incl. cross-grid path), build, 0 console errors, screenshots research/planner-022-regional.png and -detail.png; default scenario: total walk 4–6 km, walk home from the farthest station 25–45 min, turn-back shown.
+
+## Result (builder)
+- Map now plans on the 5 m regional grid (app/src/terrain/regional.js, frame = regional metres); the 1 km orthoimage fades in over it above ~1.1 px/cell zoom; the 3D walk square stays dashed. Scenario in app/src/map/scenario.js: lander at site B (cell 693,486), 5 stations, Quela as station 3.
+- Default numbers: 5.9 km, EVA 7.3 h, walk home from the stations 47-54 min (not 25-45: Quela is 2.5 km from B in a straight line, about 43 min at the 0.97 m/s model speed even without detours; the shorter figure needs a closer lander), turn-back at Quela ("leave station 3 by 12:44"), A* plan 0.2 s, best-path-home field 0.2-0.4 s, viewshed 0.3 s.
+- Walk view: published route/waypoints/start are translated to the 1 km frame (x,y may be negative or beyond the grid), toScene uses the 1 km transform; state keys unchanged. Verified route inside walk square (287 samples).
+- Label crowding: sol labels placed last and dodge stations/labels, duplicate "Quela (photo)" label dropped when a station sits on it, station labels lose minutes at regional zoom, label placer has far stack-out positions. Comms shadow is now a screen-space hatch (crisp at any zoom).
+- Limits: regional slope is smoothed (10 m central difference), so steep butte flanks read lower than in the 1 m DTM; the planner does not refine with the 1 m grid.
+- Test: `cd app && node --test src/model/*.test.js src/map/*.test.js`; `npm run build && npx vite preview --port 4322` then `node check-022.mjs`; screenshots research/planner-022-*.png.

@@ -3,7 +3,7 @@
 // reserve code do not care which source they run on. To swap the layer, change DTM_BASE
 // or return another {hm, slope} from a loader with the same shape.
 // Local frame: x = metres east of the west edge, y = metres south of the north edge.
-export const DTM_BASE = import.meta.env.BASE_URL + 'data/murray/';
+export const DTM_BASE = (import.meta.env?.BASE_URL ?? '/') + 'data/murray/';
 
 export async function loadDtm(base = DTM_BASE) {
   const meta = await (await fetch(base + 'murray.json')).json();

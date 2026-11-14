@@ -4,6 +4,8 @@
 // waypoint = remove, wheel = zoom, shift/middle-drag = pan.
 import { app } from '../state.js';
 import { loadDtm, makeTransform } from '../terrain/dtm.js';
+import { loadRegional, makeFrames } from '../terrain/regional.js';
+import { buildScenario, snapFlat, QUELA } from './scenario.js';
 import { whenHeightmap, slopeGrid } from '../terrain/heightmap.js';
 import { planRoute, costGrid, SLOPE_HARD_DEG, SLOPE_PREFER_DEG } from './planner.js';
 import { makeHome } from './home.js';
@@ -16,26 +18,15 @@ import { createStationCard } from '../ui/stationCard.js';
 import { loadScience, legGrades, routeGrades, slopeStats } from './science.js';
 import '../styles/science.css';
 
-const QUELA = { lon: 137.353006, lat: -4.695202 }; // rover waypoint at the Quela drill site (research/)
 // Comms source: ONE name everywhere (COMMS_SOURCE_NAME in model/comms.js): a relay rover parked on high ground.
 // Geometric line of sight from its 2 m antenna [assumption]. The lander is not the source and must see the relay.
 // Default relay position: parked beside the lander (a plausible first guess; it sees little of the loop).
 // "Move relay to high ground" searches the DTM for the position that keeps the crew in contact best.
-// Marimba (Curiosity parked 137.35447 E, -4.68718, research/data-science.md section 1) lies on the DTM's north edge,
-// ~590 m walk away in a hollow no relay sees together with Quela, so the default loop stays around Quela and the buttes.
-const RELAY_CELL = [504, 541]; // DTM crop col,row of the default relay
 const EVA_START_H = 8.5; // EVA clock start, local true solar time [assumption]
 const fmtClock = (h) => { const m = Math.round(((h % 24) + 24) % 24 * 60); return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
-// Default scenario: a ~1.5 km loop lander -> five science stations -> lander (research/planner-012 numbers: three
-// stations cannot use up an 8 h suit, so this is a full Apollo-style science EVA). Station minutes: assumptions.
-// Positions: Quela from Curiosity's waypoint; the others are placed on flat ground of the DTM (cell = DTM crop col,row).
-const SCENARIO = [
-  { cell: [250, 660], task: 'sample', short: 'Mudstone outcrop', maxDeg: 8, R: 30 },
-  { cell: [645, 463], task: 'imaging', short: 'Butte flank', maxDeg: 8, R: 30 },
-  { quela: true, task: 'drill', short: 'Quela drill site' },
-  { fromQuela: [45, 25], task: 'sample', short: 'Murray/Stimson contact' },
-  { fromStart: [-30, 25], task: 'sample', minutes: 90, short: 'Cross-bedding, butte foot' },
-];
+// Default scenario (map/scenario.js): lander at site B ~2.5 km from Quela, five stations, a ~6 km EVA; the walk home is
+// 45-55 min, a real share of the suit. Planning runs on the 5 m regional grid (terrain/regional.js); the 1 km grid and
+// orthoimage give the detail inside the walk area.
 const DTM_BASE_URL = (import.meta.env?.BASE_URL ?? '/') + 'data/murray/';
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const hex = (c) => { const v = parseInt(c.replace('#', ''), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
@@ -61,49 +52,46 @@ export function mountMap(el) {
   let sci = null, ortho = null; // science layers: Curiosity track + station photos; HiRISE orthoimage
   const layers = { ortho: true, hazards: false, track: true };
 
+  // The planning layer L is the 5 m regional grid (frame: regional local metres). Fallbacks keep the map alive:
+  // regional missing -> the 1 km DTM (frame offset 0); both missing -> the Access Mars grid.
+  let tf1 = null, frames = null, orthoD = null; // tf1 = 1 km-frame transform; frames = regional <-> 1 km frame; orthoD = 1 km detail orthoimage
+  const cs1 = () => (L.meta1 ? L.meta1.dtm.cell_m : cs());
   async function init() {
-    try { L = await loadDtm(); }
-    catch (e) { // fallback layer: the Access Mars grid built by the Walk view
-      console.warn('DTM unavailable, using Access Mars grid', e);
+    let reg = null, d1 = null;
+    try { d1 = await loadDtm(); } catch (e) { console.warn('1 km DTM unavailable', e); }
+    try { reg = await loadRegional(DTM_BASE_URL); } catch (e) { console.warn('regional DTM unavailable, using the 1 km grid', e); }
+    if (reg && d1) {
+      L = reg; L.meta1 = d1.meta; frames = makeFrames(reg.meta, d1.meta.dtm.cell_m); tf1 = makeTransform(d1.meta);
+      const o = frames.off, h2 = tf1.walkHalf_m;
+      L.tf = { // regional-frame transform; walk-view coordinates go through tf1 (1 km frame)
+        sceneToLocal: (x, z) => frames.fromCrop(tf1.sceneToLocal(x, z)), localToScene: (px, py) => tf1.localToScene(px - o.x, py - o.y),
+        lonLatToLocal: (a, b) => frames.fromCrop(tf1.lonLatToLocal(a, b)), walkHalf_m: h2,
+      };
+    } else if (d1) {
+      L = d1; L.meta1 = d1.meta; frames = makeFrames({ relation_to_1km_grid: { col_offset: 0, row_offset: 0 } }, d1.meta.dtm.cell_m); tf1 = makeTransform(d1.meta); L.tf = tf1;
+    } else { // fallback layer: the Access Mars grid built by the Walk view
       const { hm } = await whenHeightmap(); L = { hm, slope: slopeGrid(hm), meta: null, name: 'Access Mars 0.5 m' };
     }
-    L.tf = L.meta ? makeTransform(L.meta) : null;
     L.grid = costGrid(L.hm, L.slope);
     L.base = renderBase(L);
     L.hazard = renderHazard(L);
-    if (L.meta) { // HiRISE orthoimage (same grid as the DTM, 2x resolution) and Curiosity's real traverse; both optional
-      ortho = new Image(); ortho.onload = () => draw(); ortho.src = DTM_BASE_URL + 'ortho_2048.jpg';
-      loadScience().then((s) => { sci = s; sci.slopes = slopeStats(legGrades(s.track.points, L.hm.cellSize_m), SLOPE_HARD_DEG); panelUpdate(); draw(); }).catch((e) => console.warn('science layers unavailable', e));
+    if (L.meta1) { // HiRISE orthoimage (regional 5 m, plus the 1 km detail at 2x resolution) and Curiosity's real traverse; all optional
+      ortho = new Image(); ortho.onload = () => draw(); ortho.src = DTM_BASE_URL + (reg ? 'regional_ortho.jpg' : 'ortho_2048.jpg');
+      if (reg) { orthoD = new Image(); orthoD.onload = () => draw(); orthoD.src = DTM_BASE_URL + 'ortho_2048.jpg'; }
+      loadScience().then((s) => { sci = s; sci.slopes = slopeStats(legGrades(s.track.points, cs1()), SLOPE_HARD_DEG); panelUpdate(); draw(); }).catch((e) => console.warn('science layers unavailable', e));
     }
-    const c0 = L.tf ? L.tf.sceneToLocal(0, 0) : { x: L.hm.width * L.hm.cellSize_m / 2, y: L.hm.height * L.hm.cellSize_m / 2 };
-    start = { x: c0.x, y: c0.y }; // lander starts at the Walk view's origin
     if (L.tf) {
-      const rc = RELAY_CELL;
-      rover = { x: (rc[0] + 0.5) * cs(), y: (rc[1] + 0.5) * cs() };
-      const Q = snapFlat(L.tf.lonLatToLocal(QUELA.lon, QUELA.lat), 10, 40);
-      waypoints = SCENARIO.map((w) => {
-        let p;
-        if (w.quela) p = Q;
-        else if (w.cell) p = snapFlat({ x: (w.cell[0] + 0.5) * cs(), y: (w.cell[1] + 0.5) * cs() }, w.maxDeg, w.R);
-        else if (w.fromQuela) p = snapFlat({ x: Q.x + w.fromQuela[0], y: Q.y + w.fromQuela[1] }, 10, 40);
-        else p = snapFlat({ x: start.x + w.fromStart[0], y: start.y + w.fromStart[1] }, 10, 40);
-        return { x: p.x, y: p.y, task: w.task, short: w.short, minutes: w.minutes ?? STATION_TASKS[w.task].minutes };
-      });
-    } else rover = { x: c0.x, y: c0.y - 300 };
+      const sc = buildScenario(L, L.tf, frames);
+      start = sc.start; rover = sc.rover; waypoints = sc.waypoints;
+    } else {
+      const c0 = { x: L.hm.width * L.hm.cellSize_m / 2, y: L.hm.height * L.hm.cellSize_m / 2 };
+      start = { x: c0.x, y: c0.y }; rover = { x: c0.x, y: c0.y - 300 };
+    }
     fit(); msg = '';
     replan(true); draw(); window.__map = api;
   }
-
-  // nearest cell flatter than maxDeg within R cells (default scenario stations must sit on walkable ground)
-  function snapFlat(p, maxDeg = 12, R = 30) {
-    const W = L.hm.width, Hh = L.hm.height, c0 = Math.floor(p.x / cs()), r0 = Math.floor(p.y / cs());
-    let best = null;
-    for (let r = Math.max(0, r0 - R); r <= Math.min(Hh - 1, r0 + R); r++) for (let c = Math.max(0, c0 - R); c <= Math.min(W - 1, c0 + R); c++) {
-      if (!(L.slope[r * W + c] <= maxDeg)) continue;
-      const d = Math.hypot(c - c0, r - r0); if (!best || d < best.d) best = { d, x: (c + 0.5) * cs(), y: (r + 0.5) * cs() };
-    }
-    return best ? { x: best.x, y: best.y } : p;
-  }
+  // position of a 1 km-grid point (col,row) in the map frame (science layers are stored in 1 km-grid cells)
+  const cropPt = (col, row) => (frames ? frames.cropCell(col, row) : { x: col * cs(), y: row * cs() });
 
   // Slope hazard overlay for the orthoimage: amber above the preferred slope, red above the hard limit
   function renderHazard({ hm, slope }) {
@@ -150,16 +138,17 @@ export function mountMap(el) {
   const cs = () => L.hm.cellSize_m;
   const toScreen = (p) => [(p.x / cs()) * view.s + view.ox, (p.y / cs()) * view.s + view.oy];
   const toLocal = (sx, sy) => ({ x: ((sx - view.ox) / view.s) * cs(), y: ((sy - view.oy) / view.s) * cs() });
+  const inGrid = (p) => p.x >= 0 && p.y >= 0 && p.x < L.hm.width * cs() && p.y < L.hm.height * cs();
   const cellOf = (p) => [Math.min(L.hm.width - 1, Math.max(0, Math.floor(p.x / cs()))), Math.min(L.hm.height - 1, Math.max(0, Math.floor(p.y / cs())))];
   function fit() {
     const w = canvas.width = el.clientWidth, h = canvas.height = el.clientHeight;
     // frame the working area (lander, rover, stations) in the space right of the side panel; whole DTM if there is none
     const pts = [start, rover, ...waypoints].filter(Boolean);
     if (pts.length < 2) { const s = Math.min(w, h) / L.hm.width * 0.96; view = { s, ox: (w - L.hm.width * s) / 2, oy: (h - L.hm.height * s) / 2 }; return; }
-    const pad = 70, x0 = Math.min(...pts.map((p) => p.x)) - pad, x1 = Math.max(...pts.map((p) => p.x)) + pad, y0 = Math.min(...pts.map((p) => p.y)) - pad, y1 = Math.max(...pts.map((p) => p.y)) + pad;
-    const left = w > 800 ? 400 : 0, aw = w - left - 20, ah = h - 20;
+    const pad = 60, x0 = Math.min(...pts.map((p) => p.x)) - pad, x1 = Math.max(...pts.map((p) => p.x)) + pad, y0 = Math.min(...pts.map((p) => p.y)) - pad, y1 = Math.max(...pts.map((p) => p.y)) + pad;
+    const left = w > 800 ? 470 : 0, aw = w - left - (w > 800 ? 170 : 20), ah = h - 60;
     const s = Math.min(aw / ((x1 - x0) / cs()), ah / ((y1 - y0) / cs()));
-    view = { s, ox: left + (aw - ((x1 - x0) / cs()) * s) / 2 - (x0 / cs()) * s, oy: 10 + (ah - ((y1 - y0) / cs()) * s) / 2 - (y0 / cs()) * s };
+    view = { s, ox: left + (aw - ((x1 - x0) / cs()) * s) / 2 - (x0 / cs()) * s, oy: 30 + (ah - ((y1 - y0) / cs()) * s) / 2 - (y0 / cs()) * s };
   }
 
   // ---- planning ----
@@ -229,10 +218,19 @@ export function mountMap(el) {
   // Route results for the Walk view. `reserve`/`comms` use the shapes walk/hud.js reads.
   // route.points[i] additionally carry elapsed_s, remainingFraction, metabolicW, inShadow;
   // route.stations, route.shadowSegments, route.turnBackIndex/turnBackStation, route.startHour.
+  // The Walk view works in the 1 km frame (x,y metres east/south of the 1 km grid's NW corner; points outside the grid are
+  // negative or too large and get clipped there). Internally the map uses the regional frame, so publish a translated copy.
+  const toWalk = (p) => (frames ? frames.toCrop(p) : { ...p });
+  function walkRoute() {
+    if (!route || !frames) return route;
+    const sh = (p) => ({ ...p, ...toWalk(p) });
+    return { ...route, points: route.points.map(sh), waypoints: route.waypoints.map(sh), start: toWalk(route.start), rover: toWalk(route.rover),
+      homeFromTurnBack: route.homeFromTurnBack && route.homeFromTurnBack.map(toWalk), toScene: tf1 ? (x, y) => tf1.localToScene(x, y) : null };
+  }
   function publish() {
     const rs = route && route.reserve, last = rs && rs.points[rs.points.length - 1];
     app.set({
-      route, rover: { ...rover }, start: { ...start },
+      route: walkRoute(), rover: toWalk(rover), start: toWalk(start),
       reserve: last ? { fraction: Math.max(0, Math.min(1, last.remainingKJ / rs.capacityKJ)) } : undefined,
       comms: route && route.shadows ? { status: route.shadows.length ? 'shadow' : 'ok' } : undefined,
     });
@@ -258,15 +256,8 @@ export function mountMap(el) {
       route.points.forEach((p, i) => (i ? mg.lineTo(p.x / cs(), p.y / cs()) : mg.moveTo(p.x / cs(), p.y / cs()))); mg.stroke();
       near = mg.getImageData(0, 0, W, H).data;
     }
-    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-      const k = j * W + i; if (vis[k] !== HIDDEN) continue;
-      const edge = i > 0 && j > 0 && i < W - 1 && j < H - 1 && (vis[k - 1] !== HIDDEN || vis[k + 1] !== HIDDEN || vis[k - W] !== HIDDEN || vis[k + W] !== HIDDEN);
-      let a = 0;
-      const inCor = near && near[k * 4 + 3] > 0;
-      if (edge) a = inCor ? 150 : 0; // outline only along the route corridor; far outlines read as noise
-      else if (inCor && (i + j) % 5 === 0) a = 120; // diagonal hatch
-      if (a) { const p = k * 4; d[p] = m[0]; d[p + 1] = m[1]; d[p + 2] = m[2]; d[p + 3] = a; }
-    }
+    // mask only (alpha = hidden cells along the route corridor); draw() fills it with a screen-space hatch so it stays crisp at any zoom
+    if (near) for (let k = 0; k < W * H; k++) if (vis[k] === HIDDEN && near[k * 4 + 3] > 0) { const p = k * 4; d[p] = m[0]; d[p + 1] = m[1]; d[p + 2] = m[2]; d[p + 3] = 255; }
     g.putImageData(img, 0, 0); comms = c;
   }
   function attachShadows() {
@@ -308,12 +299,19 @@ export function mountMap(el) {
     ctx.fillStyle = css('--scrim-solid'); ctx.fillRect(0, 0, w, h);
     if (!L) { ctx.fillStyle = css('--hud-text'); ctx.font = '14px ' + css('--font-mono'); ctx.fillText(msg, 24, 70); return; }
     placed = [];
+    for (const q of [...waypoints, start, rover].filter(Boolean)) { const [x, y] = toScreen(q); placed.push([x - 12, y - 14, 24, 26]); } // icons first: labels dodge them
     const W = L.hm.width, H = L.hm.height;
     ctx.imageSmoothingEnabled = view.s < 1.5;
     const useOrtho = layers.ortho && ortho && ortho.complete && ortho.naturalWidth;
     ctx.drawImage(useOrtho ? ortho : L.base, view.ox, view.oy, W * view.s, H * view.s);
+    // zoom blend: the 1 km HiRISE detail (1 m/px, 2 px per metre of the file) fades in over the regional image
+    const a = Math.min(1, Math.max(0, (view.s - 1.1) / 1.3));
+    if (useOrtho && orthoD && orthoD.complete && orthoD.naturalWidth && a > 0 && frames) {
+      const q = toScreen(frames.off), k = (1024 * cs1() / cs()) * view.s;
+      ctx.save(); ctx.globalAlpha = a; ctx.imageSmoothingEnabled = true; ctx.drawImage(orthoD, q[0], q[1], k, k); ctx.restore();
+    }
     if (layers.hazards && useOrtho) ctx.drawImage(L.hazard, view.ox, view.oy, W * view.s, H * view.s);
-    if (comms) ctx.drawImage(comms, view.ox, view.oy, W * view.s, H * view.s);
+    if (comms) drawComms(W, H);
     // walk square outline
     if (L.tf) {
       const h2 = L.tf.walkHalf_m, c = [[-h2, -h2], [h2, -h2], [h2, h2], [-h2, h2]].map(([x, z]) => toScreen(L.tf.sceneToLocal(x, z)));
@@ -360,7 +358,7 @@ export function mountMap(el) {
       const [x, y] = toScreen(p), st = route && route.stations && route.stations.find((q) => q.wp === i), late = st && st.afterTurnBack;
       ctx.beginPath(); ctx.arc(x, y, 9, 0, 7); ctx.fillStyle = late ? css('--ink-muted') : css('--mars'); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
       ctx.fillStyle = '#fff'; ctx.font = '600 11px ' + css('--font-body'); ctx.textAlign = 'center'; ctx.fillText(i + 1, x, y + 4); ctx.textAlign = 'left';
-      if (st) label((p.short || STATION_TASKS[st.task].label) + ' ' + st.minutes + ' min', x + 12, y + 4 + (i % 2 ? 10 : -4));
+      if (st) label((p.short || STATION_TASKS[st.task].label) + (view.s < 1.3 ? '' : ' ' + st.minutes + ' min'), x + 12, y + 4);
     });
     if (sci && layers.track) drawStations();
     // lander (route start) and rover (comms source)
@@ -376,28 +374,52 @@ export function mountMap(el) {
       ctx.fillRect(x - 7, y - 7, 14, 14); ctx.strokeRect(x - 7, y - 7, 14, 14);
       label(COMMS_SOURCE_NAME.charAt(0).toUpperCase() + COMMS_SOURCE_NAME.slice(1) + ' (comms)', x + 12, y + 4);
     }
+    if (sci && layers.track) drawSolLabels();
+  }
+  let hatch = null, tmp = null;
+  function drawComms(W, H) {
+    if (!hatch) {
+      const t = document.createElement('canvas'); t.width = t.height = 8; const g = t.getContext('2d');
+      g.strokeStyle = css('--comms-shadow'); g.lineWidth = 2; g.beginPath(); g.moveTo(-1, 9); g.lineTo(9, -1); g.moveTo(-1, 1); g.lineTo(1, -1); g.moveTo(7, 9); g.lineTo(9, 7); g.stroke();
+      hatch = ctx.createPattern(t, 'repeat');
+    }
+    if (!tmp) tmp = document.createElement('canvas');
+    if (tmp.width !== canvas.width || tmp.height !== canvas.height) { tmp.width = canvas.width; tmp.height = canvas.height; }
+    const g = tmp.getContext('2d'); g.clearRect(0, 0, tmp.width, tmp.height);
+    g.globalAlpha = 0.18; g.fillStyle = css('--comms-shadow'); g.fillRect(0, 0, tmp.width, tmp.height); g.globalAlpha = 1;
+    g.fillStyle = hatch; g.fillRect(0, 0, tmp.width, tmp.height);
+    g.globalCompositeOperation = 'destination-in'; g.imageSmoothingEnabled = true; g.drawImage(comms, view.ox, view.oy, W * view.s, H * view.s); g.globalCompositeOperation = 'source-over';
+    ctx.drawImage(tmp, 0, 0);
   }
   function drawTrack() {
-    const pts = sci.track.points.filter((p) => p.in_crop), sc = (p) => [p.col * view.s + view.ox, p.row * view.s + view.oy], mc = css('--prov-measured');
+    const pts = sci.track.points.map((p) => ({ ...p, ...cropPt(p.col, p.row) })).filter(inGrid), sc = (p) => toScreen(p), mc = css('--prov-measured');
     ctx.beginPath(); pts.forEach((p, i) => { const [x, y] = sc(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
     ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(28,15,12,.85)'; ctx.lineWidth = 5; ctx.stroke();
     ctx.strokeStyle = mc; ctx.lineWidth = 2.2; ctx.setLineDash([2, 5]); ctx.lineCap = 'round'; ctx.stroke(); ctx.setLineDash([]); ctx.lineCap = 'butt';
+    for (const p of pts) { const [x, y] = sc(p); ctx.fillStyle = mc; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill(); }
+  }
+  // Sol labels go last and only where they do not collide with a station, route or lander label (or each other):
+  // far fewer, and never on top of "Quela" or "3D walk area".
+  function drawSolLabels() {
+    const pts = sci.track.points.map((p) => ({ ...p, ...cropPt(p.col, p.row) })).filter(inGrid);
     ctx.font = '600 10px ' + css('--font-mono'); ctx.textAlign = 'left';
+    const marks = [...waypoints, start, ...sci.stations.map((st) => cropPt(st.col, st.row))].filter(Boolean).map(toScreen);
     let last = null;
     for (const p of pts) {
-      const [x, y] = sc(p);
-      ctx.fillStyle = mc; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill();
-      if (last && Math.hypot(x - last[0], y - last[1]) < 46) continue;
-      last = [x, y]; const t = 'sol ' + p.sol;
+      const [x, y] = toScreen(p), t = 'sol ' + p.sol, w = ctx.measureText(t).width + 8, r = [x + 5, y - 15, w, 13];
+      if (last && Math.hypot(x - last[0], y - last[1]) < 64) continue;
+      if (marks.some(([mx, my]) => Math.hypot(mx - x, my - y) < 26)) continue;
+      if (placed.some((q) => r[0] < q[0] + q[2] && r[0] + r[2] > q[0] && r[1] < q[1] + q[3] && r[1] + r[3] > q[1])) continue;
+      last = [x, y]; placed.push(r);
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,15,12,.9)'; ctx.strokeText(t, x + 6, y - 5); ctx.fillStyle = '#fff'; ctx.fillText(t, x + 6, y - 5);
     }
   }
   function drawStations() {
     for (const st of sci.stations) {
-      const [x, y] = toScreen({ x: st.col * cs(), y: st.row * cs() });
+      const [x, y] = toScreen(cropPt(st.col, st.row));
       ctx.beginPath(); ctx.arc(x, y, 14, 0, 7); ctx.strokeStyle = css('--prov-measured'); ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = css('--prov-measured'); ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7); ctx.fill();
-      label(st.name + ' (photo)', x + 12, y + 3, { dx: 14 });
+      if (!waypoints.some((w) => Math.hypot(toScreen(w)[0] - x, toScreen(w)[1] - y) < 28)) label(st.name + ' (photo)', x + 12, y + 3, { dx: 14 });
     }
   }
   // Labels sit on a dark pill and dodge each other: try offsets around the anchor, keep the first free one.
@@ -406,6 +428,7 @@ export function mountMap(el) {
     ctx.font = '600 11px ' + css('--font-body');
     const w = ctx.measureText(t).width + 10, hh = 16, dx = o.dx ?? 12, up = o.pri ? 1 : 0;
     const cands = [[dx, -2], [dx, 14], [dx, -18], [-w - dx + 2, -2], [-w - dx + 2, 14], [-w / 2, -22], [-w / 2, 22], [dx, 30], [dx, -34]];
+    for (let k = 2; k <= 7; k++) cands.push([dx + 4, -2 + 17 * k], [dx + 4, -2 - 17 * k], [-w - dx - 2, -2 + 17 * k], [-w - dx - 2, -2 - 17 * k]); // crowded: stack further out
     let pick = cands[0];
     for (const c of cands) { const r = [x + c[0] - 3, y + c[1] - 12, w, hh]; if (!placed.some((q) => r[0] < q[0] + q[2] && r[0] + r[2] > q[0] && r[1] < q[1] + q[3] && r[1] + r[3] > q[1])) { pick = c; break; } }
     const rx = x + pick[0] - 3, ry = y + pick[1] - 12; placed.push([rx, ry, w, hh]);
@@ -433,7 +456,7 @@ export function mountMap(el) {
 
   // ---- panel (designer components: tile, chip, badge, button, provLegend) ----
   const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const head = h('div'); head.innerHTML = '<h3>EVA route planner</h3><div class="mp-sub"></div><div class="mp-job">Plan a loop from the lander. Click the map to add stations; get home with 20 % suit left.</div>';
+  const head = h('div'); head.innerHTML = '<h3>EVA route planner</h3><div class="mp-sub"></div><div class="mp-job">Walk out from a lander 2.5 km away and back. Click the map to add stations; get home with 20 % suit left.</div>';
   const ctl = h('div', 'mp-ctl');
   ctl.innerHTML = `<label>EVA start (local solar time) <input id="mp-clock" type="time" value="${fmtClock(EVA_START_H)}"></label>
     <label>Suit start level <b id="mp-capv">100%</b><input id="mp-cap" type="range" min="1" max="100" step="1" value="100"></label>`;
@@ -464,10 +487,10 @@ export function mountMap(el) {
   function moveRelay() {
     if (!L || !route) return;
     const P = route.points, idx = new Set([0, P.length - 1]);
-    for (let i = 0; i < P.length; i += 6) idx.add(i);
+    for (let i = 0; i < P.length; i += Math.max(1, Math.round(35 / cs()) * 2)) idx.add(i);
     route.stations.forEach((st) => idx.add(st.idx));
     const samples = [...idx].sort((p, q) => p - q).map((i) => ({ x: P[i].x, y: P[i].y, from_s: P[i].elapsed_s - (P[i].stationS || 0), to_s: P[i].elapsed_s }));
-    const xs = P.map((p) => p.x), ys = P.map((p) => p.y), pad = 100, step = 20, cands = [], W = L.hm.width;
+    const xs = P.map((p) => p.x), ys = P.map((p) => p.y), pad = 200, step = Math.max(20, Math.round(80 / cs()) * cs()), cands = [], W = L.hm.width;
     for (let y = Math.max(0, Math.min(...ys) - pad); y <= Math.min(L.hm.height * cs() - 1, Math.max(...ys) + pad); y += step)
       for (let x = Math.max(0, Math.min(...xs) - pad); x <= Math.min(W * cs() - 1, Math.max(...xs) + pad); x += step) {
         const [c, r] = cellOf({ x, y }); if (L.slope[r * W + c] <= SLOPE_HARD_DEG) cands.push({ x, y });
@@ -491,7 +514,7 @@ export function mountMap(el) {
     const rs = route.reserve, P = route.points, last = rs && rs.points[rs.points.length - 1], sh = route.shadows || [], tb = route.turnBack, buf = DEFAULTS.bufferFrac;
     const endH = last ? startH + P.at(-1).elapsed_s / 3600 : startH, night = route.night;
     const tiles = h('div', 'mp-tiles');
-    const dist = tile({ label: 'Distance', value: Math.round(t.dist_m), unit: 'm', prov: 'modelled' }); dist.querySelector('.chip').title = 'Route length computed on measured HiRISE DTM terrain (NASA/UArizona); route choice is modelled.';
+    const dist = tile({ label: 'Distance', value: t.dist_m >= 1000 ? (t.dist_m / 1000).toFixed(1) : Math.round(t.dist_m), unit: t.dist_m >= 1000 ? 'km' : 'm', prov: 'modelled' }); dist.querySelector('.chip').title = 'Route length computed on measured HiRISE DTM terrain (NASA/UArizona); route choice is modelled.';
     const clk = tile({ label: 'EVA length', value: last ? (P.at(-1).elapsed_s / 3600).toFixed(1) : '--', unit: 'h', prov: 'modelled', state: night && (night.afterSunset || night.beforeSunrise) ? 'warn' : undefined });
     // reserve at the lander, coloured by margin against the 20 % buffer; the sentence below says why (same numbers)
     const endFrac = last ? last.remainingFraction : 0;
@@ -565,7 +588,7 @@ export function mountMap(el) {
   function poiAt(sx, sy, r) {
     if (!sci || !layers.track) return null;
     let best = null;
-    for (const st of sci.stations) { const [x, y] = toScreen({ x: st.col * cs(), y: st.row * cs() }), d = Math.hypot(sx - x, sy - y); if (d < r && (!best || d < best.d)) best = { d, st }; }
+    for (const st of sci.stations) { const [x, y] = toScreen(cropPt(st.col, st.row)), d = Math.hypot(sx - x, sy - y); if (d < r && (!best || d < best.d)) best = { d, st }; }
     return best && best.st;
   }
   canvas.addEventListener('contextmenu', (e) => {
@@ -616,8 +639,9 @@ export function mountMap(el) {
     setShadowLimitMin(m) { shadowLimit_s = m * 60; replan(false); },
     get relay() { return rover; },
     route: () => route,
-    stationScreen(id) { const st = sci && sci.stations.find((q) => q.id === id); if (!st) return null; const [x, y] = toScreen({ x: st.col * cs(), y: st.row * cs() }), r = canvas.getBoundingClientRect(); return [x + r.left, y + r.top]; },
+    stationScreen(id) { const st = sci && sci.stations.find((q) => q.id === id); if (!st) return null; const [x, y] = toScreen(cropPt(st.col, st.row)), r = canvas.getBoundingClientRect(); return [x + r.left, y + r.top]; },
     local: (x, z) => L.tf.sceneToLocal(x, z),
+    walkScreen() { const q = toScreen(L.tf.sceneToLocal(0, 0)), r = canvas.getBoundingClientRect(); return [q[0] + r.left, q[1] + r.top]; },
   };
   init();
 }
