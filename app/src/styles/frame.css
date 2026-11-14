@@ -17,13 +17,21 @@
 .header--minimal { justify-content: flex-end; height: auto; top: 10px; padding: 0 16px; }
 
 /* step bar: small, shows done, current, next */
-.stepbar { display: flex; align-items: center; gap: 0.55em; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-3); white-space: nowrap; transition: opacity 600ms ease-out; }
+.stepbar { position: relative; isolation: isolate; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-3); white-space: nowrap; transition: opacity 600ms ease-out; }
+.stepbar__list { display: flex; align-items: center; gap: 0.55em; }
 .stepbar__item { display: inline-flex; align-items: center; gap: 0.45em; color: inherit; padding: 0.2em 0; }
 .stepbar__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; border: 1px solid currentColor; }
 .stepbar__item.is-done { color: var(--text-2); }
 .stepbar__item.is-done .stepbar__n { border-color: var(--accent); color: var(--accent); }
 .stepbar__item.is-current { color: var(--text); }
-.stepbar__item.is-current .stepbar__n { background: var(--text); color: #000; border-color: var(--text); }
+.stepbar__item.is-current .stepbar__n { border-color: var(--text); }
+/* the active step's marker: a white disc over the current number (difference blend: the number shows dark on
+   it), sliding to the new step on every step change */
+.stepbar__marker {
+  position: absolute; left: 0; top: 0; z-index: 1; border-radius: 50%; background: #fff; mix-blend-mode: difference;
+  pointer-events: none; transition: transform 320ms cubic-bezier(0.3, 0.7, 0.2, 1);
+}
+.stepbar__marker.is-still { transition: none; }
 .stepbar__item:not(:disabled):not(.is-current):hover .stepbar__t { text-decoration: underline; text-underline-offset: 3px; }
 .stepbar__sep { color: var(--text-3); opacity: 0.6; }
 
@@ -42,8 +50,24 @@
 /* placeholder note inside a step (to be removed by the step builders) */
 .placeholder-note { font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-3); border: 1px dashed var(--line-strong); border-radius: 8px; padding: 0.5em 0.7em; }
 
-/* sources page */
-.sources { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow: auto; outline: none; }
+/* sources page: slides in from the right over the dimmed page, slides out on close */
+.sources {
+  position: fixed; top: 0; bottom: 0; right: 0; left: clamp(0px, 5vw, 80px); z-index: 50; background: var(--bg);
+  border-left: 1px solid var(--line); box-shadow: -24px 0 60px rgba(0, 0, 0, 0.5); overflow: auto; outline: none;
+  animation: sources-in 300ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.sources.is-closing { animation: sources-out 240ms ease-in both; pointer-events: none; }
+.sources-dim { position: fixed; inset: 0; z-index: 49; background: rgba(0, 0, 0, 0.6); animation: fade-in 300ms ease-out both; }
+.sources-dim.is-closing { animation: fade-out 240ms ease-in both; pointer-events: none; }
+@keyframes sources-in { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes sources-out { from { transform: none; } to { transform: translateX(100%); } }
+@keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .sources { animation: fade-in 150ms linear both; }
+  .sources.is-closing { animation: fade-out 150ms linear both; }
+  .sources-dim { animation-duration: 150ms; }
+  .sources-dim.is-closing { animation-duration: 150ms; }
+}
 .sources__inner { max-width: 1080px; margin: 0 auto; padding: var(--header-h) var(--gutter) calc(var(--gutter) * 2); }
 .sources__head { display: flex; align-items: baseline; justify-content: space-between; }
 .sources__close { font-family: var(--font-mono); font-size: var(--fs-mono); border: 1px solid var(--line-strong); border-radius: var(--radius-pill); padding: 0.4em 1.1em; }
@@ -75,3 +99,45 @@
 .confirm__actions .pill { min-width: 0; height: clamp(38px, 5.2vh, 48px); padding: 0 1.6em; font-size: var(--fs-text); }
 @keyframes confirm-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes confirm-slide { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- step transitions (specs/x-transitions.md; timing mirrored in frame/shell.js T) ----------
+   Only opacity and position move. The old page (.step--out, inert, above) fades out moving 16 px in the
+   direction of travel; the new page (.step--in, below, interactive at once) fades in from the other side.
+   The walk (full-screen WebGL, pointer lock) fades only; step 1 keeps its own entry (dark ground, crater fades in). */
+.stage { isolation: isolate; }
+.step--out { z-index: 2; pointer-events: none; animation: step-out-fwd 220ms ease-out both; }
+.step--out.step--back { animation-name: step-out-back; }
+.step--in { --t-in: 140ms; animation: step-in-fwd 260ms cubic-bezier(0.2, 0.7, 0.2, 1) var(--t-in) backwards; }
+.step--in.step--back { animation-name: step-in-back; }
+.step--walk.step--out { animation-name: fade-out; }
+.step--walk.step--in { animation-name: fade-in; }
+.step--mission.step--in { animation: none; }
+/* fade through black: the old page stays under the black, the new one is uncovered as it fades */
+.step--out.step--black, .step--in.step--black { animation: none; }
+.step--in.step--black { --t-in: 300ms; }
+.stage__black { position: absolute; inset: 0; z-index: 3; background: #000; pointer-events: none; }
+.stage__black.is-in { animation: fade-in 300ms ease-in both; }
+.stage__black.is-out { animation: fade-out 300ms ease-out both; }
+@keyframes step-out-fwd { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-16px); } }
+@keyframes step-out-back { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(16px); } }
+@keyframes step-in-fwd { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes step-in-back { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+
+/* blocks of the new page one after the other (headline, numbers, map, main button last; about 0.3 s):
+   steps mark their main blocks with data-enter="1".."5" */
+.step--in [data-enter] { animation: enter-block-fwd 180ms ease-out backwards; animation-delay: calc(var(--t-in) + var(--enter-i, 0) * 40ms); }
+.step--in.step--back [data-enter] { animation-name: enter-block-back; }
+.step--in [data-enter="2"] { --enter-i: 1; }
+.step--in [data-enter="3"] { --enter-i: 2; }
+.step--in [data-enter="4"] { --enter-i: 3; }
+.step--in [data-enter="5"] { --enter-i: 4; }
+@keyframes enter-block-fwd { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+@keyframes enter-block-back { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .step--out, .step--out.step--back, .step--walk.step--out { animation: fade-out 150ms linear both; }
+  .step--in, .step--in.step--back, .step--walk.step--in { animation: fade-in 150ms linear backwards; }
+  .step--mission.step--in { animation: none; }
+  .step--in [data-enter] { animation: none; }
+  .stepbar__marker { transition: none; }
+}

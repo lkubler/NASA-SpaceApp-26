@@ -67,6 +67,7 @@ export default {
   async mount(el, ctx) {
     root = el;
     const Lay = splitLayout();
+    Lay.map.dataset.enter = '3'; Lay.action.dataset.enter = '4'; // x-transitions: entry order of the blocks
     el.append(Lay.el);
     // while the terrain loads: the empty map frame in the dark ground tone, not a blank column
     const placeholder = h('div.map.plan-map-wait');
@@ -109,9 +110,9 @@ export default {
     Lay.map.append(map.el, leg);
 
     // ----- panel -----
-    const cards = h('div.plan-cards');
+    const cards = h('div.plan-cards', { 'data-enter': 2 });
     const legs = h('div.plan-legs');
-    const totals = h('div.plan-totals');
+    const totals = h('div.plan-totals', { 'data-enter': 2 });
     const demo = h('div.plan-demo', 'Demo time: clock and suit run ', String(DEMO.timeFactor.value), DEMO.timeFactor.unit, ' faster ', labelTag(DEMO.timeFactor));
     const btn = pillButton({ text: 'Confirm route', onClick: () => ctx.next(), disabled: !ctx.state.route });
     const req = ctx.state.request;
@@ -120,7 +121,9 @@ export default {
       h('span.plan-chip__dot'), h('span.plan-chip__k', 'Request'), h('span.plan-chip__v', req.title)) : null;
     // one short line that says what a click does now (and why a click did nothing)
     const hint = h('div.plan-hint', { role: 'status', 'aria-live': 'polite', tabindex: '-1' });
-    Lay.panel.append(reqBox, headline('Plan your mission.'), hint, cards, legs, h('div.plan-spacer'), totals, demo);
+    const head = headline('Plan your mission.');
+    head.dataset.enter = '1';
+    Lay.panel.append(reqBox, head, hint, cards, legs, h('div.plan-spacer'), totals, demo);
     Lay.action.append(btn);
 
     cards.append(card({ title: 'Calculating routes…', sub: 'Fastest route to every spot that keeps every rule.' }));
@@ -263,17 +266,22 @@ export default {
       return { x0: (n - vw) / 2, y0: (n - vh) / 2, x1: (n + vw) / 2, y1: (n + vh) / 2 };
     };
 
+    let drawnPlan; // the route last drawn: a newly chosen one draws in along its path (x-transitions), not a redraw
     function drawMap() {
       ['areas', 'routes', 'markers', 'top'].forEach((n) => map.clearLayer(n));
       const ids = stopIds();
       const sel = ids.length ? { plan: ctx.state.plan } : null;
+      const fresh = drawnPlan !== undefined && sel && sel.plan && sel.plan !== drawnPlan;
+      drawnPlan = (sel && sel.plan) || null;
 
       // the round over the chosen stops
       if (sel && sel.plan) {
         const rs = runs(sel.plan.profile);
-        for (const r of rs) if (r.kind === 'shadow') map.path(r.points, { style: 'radio' });
+        const paths = [];
+        for (const r of rs) if (r.kind === 'shadow') paths.push(map.path(r.points, { style: 'radio' }));
         // the stretch that breaks a rule is drawn above the spot markers, so it stays visible
-        for (const r of rs) map.path(r.points, r.kind === 'closed' ? { style: 'broken', layer: 'top' } : { style: 'foot' });
+        for (const r of rs) paths.push(map.path(r.points, r.kind === 'closed' ? { style: 'broken', layer: 'top' } : { style: 'foot' }));
+        if (fresh) map.drawIn(sel.plan.profile, paths);
         for (const b of sel.plan.brokenRules) {
           if (!b.where || b.id === 'slope') continue;
           map.addMarker(b.where.x, b.where.z, { kind: 'dot', label: b.name, layer: 'top' }).classList.add('plan-broken');

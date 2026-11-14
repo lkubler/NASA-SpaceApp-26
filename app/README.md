@@ -36,6 +36,19 @@ only with `prefers-reduced-motion`), helmet frame only; then the display fades i
 over. The sim, the suit clock and the walk log stand still until then. Skip button, any key or a click ends it at
 once. Test hook: `window.__intro` (`phase`: a, hold, b, hud, done; `path`; `skip()`).
 
+## Step transitions (`specs/x-transitions.md`, `src/frame/shell.js`, `src/styles/frame.css`)
+The frame animates every step change: the new step mounts at once (interactive at once) under the old one, which
+stays as an inert layer while it fades out moving 16 px in the direction of travel (forward left, back right),
+then is unmounted (its loops, listeners and WebGL go then). The new page fades in from the other side (about
+0.4 s); its main blocks come in one after the other when marked `data-enter="1".."5"` (headline 1, numbers 2,
+map 3, main button last; about 0.3 s). The walk fades only (no transform over its canvas); step 1 keeps its own
+entry. Walk -> Debrief and Go / no-go -> every walk after the first fade through black (0.3 s + 0.3 s); the first
+walk has the intro. A step change during a transition finishes the running one at once. The top menu's marker
+slides to the active step. Sources slides in from the right over a dimmed page. Reduced motion: a 150 ms fade,
+no movement, no stagger, no drawing. Inside the pages: a newly chosen route draws along its path on the Plan map
+(`mapPanel.drawIn`, 0.6 s, not on pan / zoom / redraw); Go / no-go ticks its rule checks in one after the other
+and draws its profile once. Test hook: `<html data-step-transition="slide|black|fade">` while a transition runs.
+
 ## Walk keys
 Mouse look in every browser: a click captures the mouse (pointer lock), then moving it turns the view, no button
 held. Without a lock (before the first click, lock refused or released with esc) free look applies: the plain

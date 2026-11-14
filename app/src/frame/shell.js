@@ -3,7 +3,7 @@
 // complete; back always possible. From the walk an earlier step first asks "End this walk and go back?"; yes
 // discards the walk. From the Debrief an earlier step discards the walk. Request, spot, route and plan stay.
 
-import { h, clear } from '../ui/dom.js';
+import { h } from '../ui/dom.js';
 import { closePop } from '../ui/label.js';
 import { state, setState, subscribe, resetMission } from './state.js';
 import { sourcesPage } from './sourcesPage.js';
@@ -13,9 +13,18 @@ import { PROJECT_NAME } from './project.js';
 
 const SHOW_BAR = new Set([1, 2, 3, 4, 5]); // step 4: the top menu is the way back from the walk
 
+// Step transitions (specs/x-transitions.md), UI timing only; mirrored in styles/frame.css (--t-*).
+// slide: the old page fades out moving in the direction of travel, the new one fades in from the other side.
+// black: Walk -> Debrief and Go / no-go -> a later walk fade through black. Reduced motion: a plain fade.
+const T = { out: 220, done: 440, black: 300, reduced: 150 }; // done: page in 140 + 260 ms, last block 140 + 120 + 180 ms
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 export function startShell(root, { startStep = 1 } = {}) {
   const stage = h('main.stage');
-  const bar = h('nav.stepbar', { 'aria-label': 'Mission steps' });
+  // the active step's marker slides along the bar; the items are built once and only change their state
+  const barMarker = h('span.stepbar__marker', { 'aria-hidden': 'true' });
+  const barList = h('div.stepbar__list');
+  const bar = h('nav.stepbar', { 'aria-label': 'Mission steps' }, barList, barMarker);
   const sourcesBtn = h('button.header__sources.mono', { type: 'button', onclick: () => openSources() }, 'Sources');
   const header = h('header.header',
     h('div.header__left', h('div.header__name.mono', `[${PROJECT_NAME}]`), bar),
@@ -23,7 +32,12 @@ export function startShell(root, { startStep = 1 } = {}) {
   root.append(stage, header);
 
   let current = null;     // mounted step module
+  let currentEl = null;   // its element in the stage
+  let shownStep = 0;     // the step on screen (state.step can be reset before a mount, e.g. New mission)
+  let walkMounts = 0;     // walks mounted this page load (the first one opens with the intro, specs/x-intro.md)
+  let trans = null;       // the running step transition: { finish() }
   let overlay = null;
+  let overlayDim = null, overlayTimer = 0;
   const overlayListeners = new Set();
 
   let dialog = null;      // the "End this walk and go back?" question
@@ -63,19 +77,8 @@ export function startShell(root, { startStep = 1 } = {}) {
       return false;
     }
     // back from the walk or the Debrief: the walk is discarded, request, spot, route and plan stay
-    if (n < state.step && state.step >= 4) {
-      leaveStep();
-      setState({ walk: null });
-    }
-    mount(n);
+    mount(n, { discardWalk: n < state.step && state.step >= 4 });
     return true;
-  }
-
-  /** Unmount the current step (pointer lock released, loops stopped by the step's own unmount). */
-  function leaveStep() {
-    if (current && current.unmount) current.unmount();
-    current = null;
-    if (document.pointerLockElement) document.exitPointerLock();
   }
 
   /** Small dialog in the design's style; the walk is paused while it is open. */
@@ -94,9 +97,7 @@ export function startShell(root, { startStep = 1 } = {}) {
       window.removeEventListener('keyup', stopKey, true);
       dialog.remove(); dialog = null;
       if (!yes) { overlayListeners.forEach((fn) => fn(false)); return; }
-      leaveStep();
-      setState({ walk: null });
-      mount(n);
+      mount(n, { discardWalk: true });
     };
     const stopKey = (e) => e.stopPropagation();
     const yesBtn = h('button.pill.confirm__yes', { type: 'button', onclick: () => close(true) }, 'End walk');
@@ -113,45 +114,150 @@ export function startShell(root, { startStep = 1 } = {}) {
     noBtn.focus();
   }
 
-  function mount(n) {
+  /** End the running transition at once: the old page goes (unmounted), the new one shows in full. */
+  function finishTransition() {
+    if (!trans) return;
+    const t = trans; trans = null;
+    t.finish();
+  }
+
+  /**
+   * Swap the step. The new step mounts at once and takes clicks at once; the old one stays briefly as an
+   * inert layer above it while it fades out, then is unmounted (its loops, listeners and WebGL go then).
+   * A new step change during a transition first finishes the running one, so at most one old layer exists.
+   */
+  function mount(n, { discardWalk = false } = {}) {
     closePop();
-    if (current && current.unmount) current.unmount();
-    clear(stage);
-    setState({ step: n });
+    finishTransition();
+    if (document.pointerLockElement) document.exitPointerLock();
+    const from = currentEl ? shownStep : 0;
+    shownStep = n;
+    const oldMod = current, oldEl = currentEl;
+    let oldGone = !oldEl;
+    const dropOld = () => {
+      if (oldGone) return;
+      oldGone = true;
+      if (oldMod && oldMod.unmount) oldMod.unmount();
+      oldEl.remove();
+    };
+    if (discardWalk) setState({ walk: null });
     current = STEPS[n - 1];
-    const el = h(`div.step.step--${current.id}.fade-in`, { dataset: { step: String(n) } });
-    stage.append(el);
+    const firstWalk = n === 4 && walkMounts === 0;
+    if (n === 4) walkMounts++;
+
+    const reduced = reducedMotion();
+    const kind = !from ? 'none'
+      : reduced ? 'fade'
+        : (from === 4 && n === 5) || (from === 3 && n === 4 && !firstWalk) ? 'black' : 'slide';
+    const dir = n > from ? 'step--fwd' : 'step--back';
+    const el = h(`div.step.step--${current.id}`, { dataset: { step: String(n) } });
+    if (kind === 'none') el.classList.add('fade-in');
+    else el.classList.add('step--in', `step--${kind}`, dir);
+
+    if (oldEl) {
+      oldEl.inert = true;
+      oldEl.classList.add('step--out', `step--${kind}`, dir);
+      stage.insertBefore(el, oldEl);
+      if (oldMod === current) dropOld(); // never two instances of one step module
+    } else stage.append(el);
+    currentEl = el;
+
+    setState({ step: n });
     header.classList.toggle('header--minimal', !SHOW_BAR.has(n));
     renderBar();
+
+    if (kind !== 'none') {
+      const timers = [];
+      let black = null;
+      if (kind === 'black') {
+        black = h('div.stage__black.is-in');
+        stage.append(black);
+      }
+      // timed from the first frame (the CSS animations start there; a heavy mount can hold that frame back)
+      const frame = requestAnimationFrame(() => {
+        if (kind === 'black') timers.push(setTimeout(() => { dropOld(); black.classList.replace('is-in', 'is-out'); }, T.black));
+        else timers.push(setTimeout(dropOld, reduced ? T.reduced : T.out));
+        timers.push(setTimeout(() => { if (trans === t) finishTransition(); }, reduced ? T.reduced + 20 : kind === 'black' ? 2 * T.black + 20 : T.done));
+      });
+      const t = {
+        finish() {
+          cancelAnimationFrame(frame);
+          timers.forEach(clearTimeout);
+          dropOld();
+          if (black) black.remove();
+          el.classList.remove('step--in', 'step--slide', 'step--fade', 'step--black', 'step--fwd', 'step--back');
+          delete document.documentElement.dataset.stepTransition;
+        },
+      };
+      trans = t;
+      document.documentElement.dataset.stepTransition = kind;
+    }
+
     Promise.resolve(current.mount(el, ctx)).catch((e) => console.error(e));
   }
 
+  // step bar: items built once; each render only updates their state and moves the marker
+  const barItems = STEPS.map((m, k) => {
+    const n = k + 1;
+    const b = h('button.stepbar__item', { type: 'button' }, h('span.stepbar__n', String(n)), h('span.stepbar__t', m.title));
+    b.addEventListener('click', () => { b.blur(); goto(n); }); // blur: walk keys (Enter) must not re-click it
+    barList.append(b);
+    if (n < STEPS.length) barList.append(h('span.stepbar__sep', '—'));
+    return b;
+  });
+  let markerAt = '';
+  function placeMarker() {
+    const b = barItems[state.step - 1];
+    const dot = b && b.querySelector('.stepbar__n');
+    if (!dot || !dot.offsetWidth) return;
+    const at = `${dot.offsetLeft}|${dot.offsetTop}|${dot.offsetWidth}`;
+    if (at === markerAt) return;
+    const first = !markerAt;
+    markerAt = at;
+    if (first) barMarker.classList.add('is-still');
+    barMarker.style.width = barMarker.style.height = `${dot.offsetWidth}px`;
+    barMarker.style.transform = `translate(${dot.offsetLeft}px, ${dot.offsetTop}px)`;
+    if (first) requestAnimationFrame(() => requestAnimationFrame(() => barMarker.classList.remove('is-still')));
+  }
   function renderBar() {
-    clear(bar);
-    STEPS.forEach((m, k) => {
+    barItems.forEach((b, k) => {
       const n = k + 1;
       const status = n < state.step ? 'done' : n === state.step ? 'current' : 'next';
-      const b = h(`button.stepbar__item.is-${status}`, { type: 'button', 'aria-current': status === 'current' ? 'step' : null },
-        h('span.stepbar__n', String(n)), h('span.stepbar__t', m.title));
+      b.classList.toggle('is-done', status === 'done');
+      b.classList.toggle('is-current', status === 'current');
+      b.classList.toggle('is-next', status === 'next');
+      if (status === 'current') b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
       b.disabled = !allowed(n);
-      b.addEventListener('click', () => { b.blur(); goto(n); }); // blur: walk keys (Enter) must not re-click it
-      bar.append(b);
-      if (n < STEPS.length) bar.append(h('span.stepbar__sep', '—'));
     });
+    placeMarker();
   }
   subscribe(() => renderBar());
+  window.addEventListener('resize', () => { markerAt = markerAt && 'x'; placeMarker(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => placeMarker());
 
+  // sources: slides in from the right over the dimmed page, slides out on close
+  function dropSources() {
+    clearTimeout(overlayTimer);
+    if (overlay) overlay.remove();
+    if (overlayDim) overlayDim.remove();
+    overlay = overlayDim = null;
+  }
   function openSources() {
-    if (overlay) return;
+    if (overlay && !overlay.classList.contains('is-closing')) return;
+    dropSources(); // still sliding out: gone at once
     closePop();
+    overlayDim = h('div.sources-dim', { 'aria-hidden': 'true' });
     overlay = sourcesPage(closeSources);
-    root.append(overlay);
-    overlay.tabIndex = -1; overlay.focus();
+    root.append(overlayDim, overlay);
+    overlay.tabIndex = -1; overlay.focus({ preventScroll: true });
     overlayListeners.forEach((fn) => fn(true));
   }
   function closeSources() {
-    if (!overlay) return;
-    overlay.remove(); overlay = null;
+    if (!overlay || overlay.classList.contains('is-closing')) return;
+    overlay.classList.add('is-closing');
+    overlayDim.classList.add('is-closing');
+    overlay.inert = true;
+    overlayTimer = setTimeout(dropSources, reducedMotion() ? T.reduced : T.out + 40);
     overlayListeners.forEach((fn) => fn(false));
   }
 

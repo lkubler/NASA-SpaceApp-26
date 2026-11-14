@@ -133,3 +133,22 @@
 .step--go .gocaution__show { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
 .step--go .gocaution.is-none { border-left-color: var(--line-strong); background: transparent; }
 .step--go .gocaution.is-none .gocaution__tag, .step--go .gocaution.is-none .gocaution__v { color: var(--text-3); }
+
+/* x-transitions (specs/x-transitions.md): the rule checks tick in one after the other (the caution line last);
+   the profile line draws from left to right once, when the page opens (a redraw on resize or a clicked check
+   does not repeat it: the svg element stays, only its content is redrawn) */
+.step--go .go__rulechecks > .gocheck, .step--go .go__checks > .gocaution { animation: go-tick-in 220ms ease-out backwards; animation-delay: calc(300ms + var(--tick, 0) * 90ms); }
+.step--go .go__rulechecks > .gocheck .check__icon { animation: go-tick-icon 260ms cubic-bezier(0.3, 1.6, 0.5, 1) backwards; animation-delay: calc(360ms + var(--tick, 0) * 90ms); }
+.step--go .go__rulechecks > :nth-child(2) { --tick: 1; }
+.step--go .go__rulechecks > :nth-child(3) { --tick: 2; }
+.step--go .go__rulechecks > :nth-child(4) { --tick: 3; }
+.step--go .go__rulechecks > :nth-child(5) { --tick: 4; }
+.step--go .go__checks > .gocaution { --tick: 4; }
+.step--go .goprof__svg { animation: go-prof-draw 600ms cubic-bezier(0.4, 0, 0.2, 1) 300ms backwards; }
+@keyframes go-tick-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes go-tick-icon { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
+@keyframes go-prof-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .step--go .go__rulechecks > .gocheck, .step--go .go__checks > .gocaution,
+  .step--go .go__rulechecks > .gocheck .check__icon, .step--go .goprof__svg { animation: none; }
+}
