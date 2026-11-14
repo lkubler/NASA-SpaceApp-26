@@ -33,3 +33,13 @@ DECIDED during the agent-system port (revise freely)
   Reason: a tester alone makes the product usable, not memorable; Presentation is 1/5 of the score.
 - Time tracking: `now.py` and `watchdog.sh` now read from the main checkout and scan all worktrees. Before, worktrees had their own copy of `deadlines.json` and their heartbeats were invisible to the watchdog. `loop_guard` ignores harmless repeats (`now.py`, `git status`, …).
 - Git: agents commit their own work (`<agent>: <what>`, only their own files). Research/docs go to `main`; code goes on branches and is merged runnable. The orchestrator pulls and pushes `main` every round. Heartbeats (`status/`) and raw data (`data/raw/`) are not committed.
+
+## AI feature in the product
+DECIDED (human, Sat 13:30): the product gets an AI part (humans' idea in notes.md "AI USECASE": ask the HUD about what you see, answer from measurement + suit specs).
+PROPOSED approach (all three together; no API key, no hosted backend):
+1. Pre-generated answers: during the hackathon, generate answers with `claude -p` on the team's plan for a fixed question set (per POI, rock/terrain type, "can my suit make this step?" across slope/load bins). Ship as JSON. In the HUD the user looks at a target and picks from 3–4 suggested questions; the live measurement (slope, distance, reserve) is computed in the browser and combined with the pre-written text. Labelled as AI-generated.
+2. In-browser retrieval: small embedding model (transformers.js, ~25 MB) over a prepared corpus of suit specs and NASA documents (sources in `research/sources-validity.md`). Shows the most relevant passage as a cited source next to the answer. Runs on the viewer's machine.
+3. Live mode for the pitch only: a local toggle sends free-text questions to `claude -p` on the presenter's own laptop (a tiny localhost bridge). Off or unreachable → silently falls back to 1+2. Never used by the public link.
+Reason: public link must work for judges weeks later without a running laptop or secrets; a subscription plan is for personal use, not for serving other users; 1+2 are instant and free, 3 adds the live wow moment.
+Disclosure: AI-generated answer text noted in the UI, `docs/ai-use.md`, and the submission description.
+Hosting consequence: site stays fully static (GitHub Pages; Cloudflare Pages mirror).
