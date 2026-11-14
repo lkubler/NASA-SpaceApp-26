@@ -69,6 +69,11 @@
 .step--go .goprof__labels { position: relative; height: 1.6em; margin-top: 0.5em; font-size: var(--fs-small); }
 .step--go .goprof__label { position: absolute; top: 0; white-space: nowrap; color: var(--text-2); }
 .step--go .goprof__label.is-spot { color: var(--accent); }
+/* several stops: a label that would overlap the one before drops to a second row */
+.step--go .goprof__labels.has-row2 { height: 2.9em; }
+.step--go .goprof__label.is-row2 { top: 1.35em; }
+.step--go .go-order rect { fill: #000; stroke: var(--accent); stroke-width: 0.8; }
+.step--go .go-order text { fill: var(--accent); font: 700 4.4px var(--font-mono); }
 
 /* bottom: checks and main button */
 .step--go .go__bottom {

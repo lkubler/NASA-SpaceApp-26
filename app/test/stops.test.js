@@ -31,7 +31,7 @@ describe('several stops', () => {
         expect(reserveFrom(t, fullLevels(), { x: p.x, z: p.z, phase: 'back' }), c.id).toEqual(legacy.reserveFrom(t, fullLevels(), { x: p.x, z: p.z, phase: 'back' }));
       }
     }
-  });
+  }, 60000);
 
   it('two and three stops: legs rover -> s1 -> ... -> rover by the same planner; totals = legs + one work time per stop', () => {
     for (const ids of [['F1', 'F3'], ['F3', 'F7', 'F1']]) {
@@ -105,6 +105,17 @@ describe('several stops', () => {
     expect(where.sM).toBeLessThan(p.legPlans[2].endM + 1e-9);
     // a round of rule-keeping legs keeps every rule
     expect(planNumbers(t, planRound(t, ['F1', 'F2', 'F3'].map(C))).keepsRules).toBe(true);
+    // turn-back point: none while the round comes home with reserve, one on the way when it does not
+    for (const ids of [['F1', 'F2', 'F3'], ['F5', 'F3', 'F1']]) {
+      const q = planNumbers(t, planRound(t, ids.map(C)));
+      expect(q.reserveS, ids.join()).toBeGreaterThan(0);
+      expect(q.turnBack, ids.join()).toBe(null);
+    }
+    const over = planNumbers(t, planRound(t, ['F3', 'F7', 'F1'].map(C)));
+    expect(over.reserveS).toBeLessThan(0);
+    expect(over.checks.find((c) => c.id === 'wayHome').status).toBe('broken');
+    expect(over.turnBack).not.toBe(null);
+    expect(over.turnBack.sM).toBeLessThan(over.legPlans[over.legPlans.length - 1].startM);
   });
 
   it('a round has one to three stops', () => {

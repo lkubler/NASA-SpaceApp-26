@@ -11,5 +11,5 @@ export const BROKEN_TEST_TARGET = { id: 'TEST-BROKEN', name: 'Test point up the 
 export function brokenFixture(terrain) {
   const route = planRoute(terrain, BROKEN_TEST_TARGET);
   const plan = planNumbers(terrain, route);
-  return { spotId: BROKEN_TEST_TARGET.id, route, plan };
+  return { stops: [BROKEN_TEST_TARGET.id], spotId: BROKEN_TEST_TARGET.id, route, plan };
 }

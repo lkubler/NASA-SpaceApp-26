@@ -195,12 +195,13 @@ export function planNumbers(terrain, route) {
     homeEnergyJ: home.e, homeSeconds: home.s,
   });
 
-  // Turn-back point: first point on the way to the last stop where turning straight back (same path, the
-  // work at earlier stops counted) leaves zero reserve.
+  // Turn-back point: first point on the way to the last stop where turning back leaves zero reserve.
+  // One stop: straight back on the same path (as before). Several: the work at earlier stops counted, and
+  // home from there by the fastest way (the rover's cost field), not back through the earlier stops.
   const toLast = joinPaths(legPaths.slice(0, last));
   const workAt = new Set();
   for (let k = 0, n = 0; k < last - 1; k++) { n += legPaths[k].cells.length - (k ? 1 : 0); workAt.add(n - 1); }
-  const turnBack = turnBackOnOut(terrain, toLast.cells, workAt, spotE, spotS);
+  const turnBack = turnBackOnOut(terrain, toLast.cells, workAt, spotE, spotS, last > 1 ? roverField(terrain) : null);
 
   const longest = stretches.reduce((a, b) => (b.seconds > (a ? a.seconds : -1) ? b : a), null);
   const spotIndex = stopAt[0].index;
@@ -284,8 +285,9 @@ export function planNumbers(terrain, route) {
 /**
  * First point on the way (cells) where turning straight back on the same path leaves zero reserve.
  * workAt: indices of cells where the work at a stop is done on the way (a round's earlier stops).
+ * homeField: if given, the way home from each cell is the fastest one (cost field), not the path reversed.
  */
-function turnBackOnOut(terrain, cells, workAt = new Set(), workE = 0, workS = 0) {
+function turnBackOnOut(terrain, cells, workAt = new Set(), workE = 0, workS = 0, homeField = null) {
   // cumulative cost from the start to each cell, and of the reverse walk home from each cell
   const n = cells.length;
   const outE = new Float64Array(n), outS = new Float64Array(n), outM = new Float64Array(n);
@@ -296,6 +298,9 @@ function turnBackOnOut(terrain, cells, workAt = new Set(), workE = 0, workS = 0)
     if (workAt.has(k - 1)) { outE[k] += workE; outS[k] += workS; }
     const back = stepCost(terrain, cells[k], cells[k - 1]);
     homeE[k] = homeE[k - 1] + back.energyJ; homeS[k] = homeS[k - 1] + back.seconds;
+  }
+  if (homeField) {
+    for (let k = 0; k < n; k++) { homeE[k] = homeField.energyJ[cells[k]]; homeS[k] = homeField.seconds[cells[k]]; }
   }
   for (let k = 0; k < n; k++) {
     const r = reserveOnReturn(fullLevels(), { energyJ: outE[k], seconds: outS[k], homeEnergyJ: homeE[k], homeSeconds: homeS[k] });

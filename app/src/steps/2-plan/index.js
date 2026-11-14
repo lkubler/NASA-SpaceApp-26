@@ -1,11 +1,13 @@
 // Step 2 Plan (specs/2-plan.md). Map left with legend, panel right: headline, cards, legs, totals,
 // main button. Every number comes from the core (planAllCandidates / planNumbers, closedMask,
 // radioShadowMask); routes are calculated in the browser when the step opens.
+// Several stops (specs/feedback-1.md): each click on a spot adds it to the round in the order clicked, up
+// to PLANNER.maxStops; a click on a chosen spot removes it; the list reorders (up / down) or clears.
 import './style.css';
 import { h, s, splitLayout, headline, card, pillButton, mapPanel, legend, marker, row, bigNumber, alertBox, labelTag,
-  fmtDuration, fmtDistance, fmtDeg } from '../../ui/index.js';
-import { planAllCandidates, ROVER, ACCESS_MARS_POINTS, RULES, DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA,
-  sourceOf, spotNumber } from '../../core/index.js';
+  textLink, fmtDuration, fmtDistance, fmtDeg } from '../../ui/index.js';
+import { planAllCandidates, planRound, planNumbers, stopOrdinal, MAX_STOPS, PLANNER, ROVER, ACCESS_MARS_POINTS, RULES,
+  DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA, sourceOf, spotNumber } from '../../core/index.js';
 import { paintGround, composeGround, hatchPattern, dotPattern } from './ground.js';
 import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
 import { GROUND_TAG } from '../../core/groundColor.js';
@@ -25,6 +27,7 @@ const L = {
   time: { label: 'model', text: 'Route length at NASA\'s planning pace, plus the fixed work at the spot; in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
   reserve: { label: 'model', moon: true, text: `Time left in the suit when back at the rover, if the crew walks the plan. The way home counts at a ${Math.round((RULES.walkBackRateFactor.value - 1) * 100)} % higher work rate. Set by the consumable that runs out first.`, source: sourceOf(SUIT.designW) },
   slope: { label: 'model', text: 'Steepest ground on the route, from the slope grid of the terrain.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
+  leg: { label: 'model', text: 'One leg of the round: length of the fastest way that keeps every rule, and its walking time at NASA\'s planning pace, in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
 };
 
 const SPOT_WORK = () => fmtDuration(DEMO.spotWorkMin.value * 60);
@@ -89,6 +92,7 @@ export default {
       { kind: 'radio', text: 'Route in radio shadow' },
       { kind: 'rover', text: ['Rover, home ', labelTag(HOME.rover)] },
       { kind: 'marker', text: ['Candidate spot ', labelTag(L.spot)] },
+      { kind: 'order', text: 'Chosen stop, visiting order' },
       { kind: 'cheapest', text: 'Cheapest' },
       { kind: 'point', text: ['Access Mars point ', labelTag(L.point)] },
       { kind: 'steep', text: [`Too steep (> ${RULES.slopeMaxDeg.value}°) `, labelTag(L.steep)] },
@@ -106,7 +110,9 @@ export default {
     const reqBox = req ? h('div.plan-req',
       h('div.plan-req__kicker.mono', 'Request from Earth · ', req.from || ''),
       h('div.plan-req__title', req.title)) : null;
-    Lay.panel.append(headline('Plan your mission.'), reqBox, cards, legs, h('div.plan-spacer'), totals, demo);
+    // one short line that says what a click does now (and why a click did nothing)
+    const hint = h('div.plan-hint', { role: 'status', 'aria-live': 'polite', tabindex: '-1' });
+    Lay.panel.append(headline('Plan your mission.'), reqBox, hint, cards, legs, h('div.plan-spacer'), totals, demo);
     Lay.action.append(btn);
 
     cards.append(card({ title: 'Calculating routes…', sub: 'Fastest route to every spot that keeps every rule.' }));
@@ -163,17 +169,83 @@ export default {
     // the tip belongs to a place on the map: it closes when the map moves or zooms
     map.onView(() => { pinned = null; tip.hidden = true; });
 
-    const select = (id) => {
-      const c = cands.find((x) => x.candidate.id === id);
-      if (!c) return;
-      ctx.set({ spotId: id, route: c.route, plan: c.plan });
+    // ----- the stops of the round (shared state: stops, spotId = stops[0], route, plan) -----
+    const candOf = (id) => cands.find((x) => x.candidate.id === id) || null;
+    const stopIds = () => (ctx.state.stops && ctx.state.stops.length ? [...ctx.state.stops] : ctx.state.spotId ? [ctx.state.spotId] : []);
+    // one stop: the candidate's own route and numbers, exactly as before; several: planned leg by leg (cached)
+    const rounds = new Map();
+    const roundOf = (ids) => {
+      if (ids.length === 1) { const c = candOf(ids[0]); return { route: c.route, plan: c.plan }; }
+      const key = ids.join('>');
+      if (!rounds.has(key)) {
+        const route = planRound(terrain, ids.map((id) => candOf(id).candidate));
+        rounds.set(key, { route, plan: planNumbers(terrain, route) });
+      }
+      return rounds.get(key);
+    };
+    let notice = null, noticeTimer = 0; // a short message after a click that could not add a stop
+    cleanup.push(() => clearTimeout(noticeTimer));
+    const setStops = (ids) => {
+      notice = null;
+      if (!ids.length) ctx.set({ stops: [], spotId: null, route: null, plan: null });
+      else { const r = roundOf(ids); ctx.set({ stops: ids, spotId: ids[0], route: r.route, plan: r.plan }); }
       render();
     };
+    /** A click on a spot: add it as the next stop, or remove it if it is chosen. */
+    const toggle = (id) => {
+      if (!candOf(id)) return;
+      const ids = stopIds();
+      if (ids.includes(id)) return setStops(ids.filter((x) => x !== id));
+      if (ids.length >= MAX_STOPS) {
+        notice = `Already ${MAX_STOPS} stops, the most. To add this one, remove a stop first.`;
+        clearTimeout(noticeTimer);
+        noticeTimer = setTimeout(() => { notice = null; renderHint(); }, 5000);
+        renderHint();
+        hint.classList.remove('is-flash'); void hint.offsetWidth; hint.classList.add('is-flash');
+        return;
+      }
+      setStops([...ids, id]);
+    };
+    const move = (k, d) => { const ids = stopIds(); [ids[k], ids[k + d]] = [ids[k + d], ids[k]]; setStops(ids); };
 
     const pointTip = (p) => [
       h('div.plan-tip__title', p.name, ' ', labelTag(L.point)),
       h('p.plan-tip__text', p.text),
     ];
+
+    const tipRow = (label, value, tone = null) => h(`div.plan-tip__row${tone ? '.tone-' + tone : ''}`,
+      h('span.muted', label), h('span.mono', value), ' ', h('span.vlabel', 'model'));
+    /**
+     * Hover on a spot: what a click does, and what the spot costs. Not chosen: its own round trip and, with
+     * stops chosen, the round with this spot added (a preview of the next click). Chosen: its place in the order.
+     */
+    const spotTip = (c, plan, order) => {
+      const ids = stopIds();
+      const title = h('div.plan-tip__title', marker(numberOf(c.id), { selected: order > 0 }), ' ', c.name);
+      if (order > 0) {
+        return [title,
+          h('div.plan-tip__row.tone-accent', `${stopOrdinal(order)} stop of ${ids.length}`),
+          h('div.plan-tip__row.muted', 'Click to remove it from the route')];
+      }
+      const own = [
+        tipRow(ids.length ? 'On its own ' : 'Total time ', fmtDuration(plan.timeS, { approx: true })),
+        ids.length ? null : tipRow('Reserve on return ', fmtDuration(plan.reserveS), plan.reserveS < 0 ? 'warning' : null),
+        c.id === cheapest ? h('div.plan-tip__row.tone-accent', 'Cheapest of the spots') : null,
+        !plan.keepsRules ? h('div.plan-tip__row.tone-warning', 'No route keeps every rule') : null,
+      ];
+      if (!ids.length) return [title, ...own, h('div.plan-tip__row.muted', 'Click to plan this spot')];
+      if (ids.length >= MAX_STOPS) {
+        return [title, ...own, h('div.plan-tip__row.tone-advisory', `${MAX_STOPS} stops chosen: remove one to add this spot`)];
+      }
+      const next = roundOf([...ids, c.id]).plan, now = ctx.state.plan;
+      const more = next.timeS - now.timeS;
+      return [title,
+        h('div.plan-tip__row.tone-accent', `Click to add as ${stopOrdinal(ids.length + 1)} stop`),
+        tipRow('Round ', `${fmtDuration(next.timeS, { approx: true })} (+${fmtDuration(more)})`),
+        tipRow('Reserve on return ', fmtDuration(next.reserveS), next.reserveS < 0 ? 'warning' : null),
+        ...next.brokenRules.map((b) => h('div.plan-tip__row.tone-warning', `Round breaks a rule: ${b.name}`)),
+        ...own];
+    };
 
     // the part of the map grid (SVG units) the cropped (slice) map box shows
     const visibleBox = () => {
@@ -185,10 +257,11 @@ export default {
 
     function drawMap() {
       ['areas', 'routes', 'markers', 'top'].forEach((n) => map.clearLayer(n));
-      const sel = cands.find((x) => x.candidate.id === ctx.state.spotId);
+      const ids = stopIds();
+      const sel = ids.length ? { plan: ctx.state.plan } : null;
 
-      // route of the selected candidate
-      if (sel) {
+      // the round over the chosen stops
+      if (sel && sel.plan) {
         const rs = runs(sel.plan.profile);
         for (const r of rs) if (r.kind === 'shadow') map.path(r.points, { style: 'radio' });
         // the stretch that breaks a rule is drawn above the spot markers, so it stays visible
@@ -202,27 +275,29 @@ export default {
       // rover, home
       map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Home' });
 
-      // candidates
-      let selG = null;
-      cands.forEach(({ candidate: c, plan }, k) => {
-        const isSel = c.id === ctx.state.spotId;
+      // candidates; a chosen one is filled cyan and carries its visiting order ("1st") beside its own number
+      const selGs = [];
+      cands.forEach(({ candidate: c, plan }) => {
+        const order = ids.indexOf(c.id) + 1;
+        const isSel = order > 0;
         const g = map.addMarker(c.x, c.z, { kind: 'number', text: numberOf(c.id), selected: isSel });
         if (c.id === cheapest) g.prepend(s('circle', { class: 'plan-ring', r: 9.5 }));
+        if (isSel) {
+          g.append(s('g', { class: 'plan-order', transform: 'translate(0 -11.2)' },
+            s('rect', { x: -6, y: -3.3, width: 12, height: 6.6, rx: 3.3 }),
+            s('text', { 'text-anchor': 'middle', dy: '0.36em' }, stopOrdinal(order))));
+        }
         g.classList.add('plan-hit');
         if (c.id === cheapest) g.classList.add('plan-cheapest');
         if (!plan.keepsRules) g.classList.add('plan-breaks');
         g.setAttribute('role', 'button');
-        g.setAttribute('aria-label', `${c.name}, total ${fmtDuration(plan.timeS)}`);
-        // the chosen spot is described in the panel: no tip over the map labels for it
-        g.addEventListener('mouseenter', () => c.id !== ctx.state.spotId && (pinned = null, showTip(c.x, c.z, [
-          h('div.plan-tip__title', marker(numberOf(c.id), { selected: isSel }), ' ', c.name),
-          h('div.plan-tip__row', h('span.muted', 'Total time '), h('span.mono', fmtDuration(plan.timeS, { approx: true })), ' ', h('span.vlabel', 'model')),
-          c.id === cheapest ? h('div.plan-tip__row.tone-accent', 'Cheapest of the spots') : null,
-          !plan.keepsRules ? h('div.plan-tip__row.tone-warning', 'No route keeps every rule') : null,
-        ])));
+        g.setAttribute('aria-label', isSel
+          ? `${numberOf(c.id)} ${c.name}, ${stopOrdinal(order)} stop. Click to remove it.`
+          : `${numberOf(c.id)} ${c.name}, total ${fmtDuration(plan.timeS)} on its own. Click to ${ids.length ? 'add it as a stop' : 'plan it'}.`);
+        g.addEventListener('mouseenter', () => { pinned = null; showTip(c.x, c.z, spotTip(c, plan, order)); });
         g.addEventListener('mouseleave', () => { if (!pinned) tip.hidden = true; });
-        g.addEventListener('click', (e) => { e.stopPropagation(); pinned = null; tip.hidden = true; select(c.id); });
-        if (isSel) selG = g;
+        g.addEventListener('click', (e) => { e.stopPropagation(); pinned = null; tip.hidden = true; toggle(c.id); });
+        if (isSel) selGs.push(g);
       });
 
       // Access Mars points with their text (on top: the Buttes point sits beside spot 02)
@@ -264,52 +339,124 @@ export default {
           pinned = p.id; showTip(p.x, p.z, pointTip(p), { wide: true });
         });
       }
-      // the chosen spot sits above the other markers; the broken stretch stays above all markers
-      if (selG) map.layer('top').append(selG);
+      // the chosen spots sit above the other markers; the broken stretch stays above all markers
+      for (const g of selGs) map.layer('top').append(g);
       const top = map.layer('top');
       for (const el of [...top.querySelectorAll('.map-path--broken')]) top.append(el);
     }
 
+    function renderHint() {
+      const ids = stopIds();
+      hint.classList.toggle('is-notice', !!notice);
+      if (!notice) hint.classList.remove('is-flash');
+      let text;
+      if (notice) text = notice;
+      else if (!ids.length) text = 'Click a spot on the map to plan the route there and back.';
+      else if (ids.length === 1) text = `Click more spots to add stops (up to ${MAX_STOPS}); click a chosen one to remove it.`;
+      else if (ids.length < MAX_STOPS) text = `Click a spot for a ${stopOrdinal(ids.length + 1)} stop. ↑ ↓ change the order, × removes.`;
+      else text = `${MAX_STOPS} stops, the most per excursion. ↑ ↓ change the order, × removes.`;
+      hint.textContent = text;
+    }
+
+    /** The list of a round with several stops: every leg with distance and time, every stop with up / down / remove. */
+    function stopList(P, ids) {
+      const ctl = (sym, label, onClick, disabled, key) => {
+        const b = h('button.plan-ctl', { type: 'button', 'aria-label': label, title: label, 'data-ctl': key }, sym);
+        b.disabled = disabled;
+        b.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
+        return b;
+      };
+      // after a click in the list the list is drawn anew: keep the keyboard focus on the same control
+      const keep = (key, fn) => () => {
+        fn();
+        const b = legs.querySelector(`[data-ctl="${key}"]:not(:disabled)`) || legs.querySelector('.plan-ctl:not(:disabled)') || hint;
+        b.focus();
+      };
+      const out = [];
+      P.legs.forEach((lg, i) => {
+        if (lg.kind === 'rover' && i === 0) {
+          out.push(row('Rover, home', '', { lead: h('span.plan-leg-icon.plan-leg-icon--rover') }));
+        } else if (lg.kind === 'rover') {
+          // the way to clear sits at the end of the list, on the last row
+          out.push(h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--rover')), h('span.row__label', 'Rover'),
+            h('span.plan-clear', textLink('Clear all stops', () => { setStops([]); hint.focus(); }))));
+        } else if (lg.kind === 'foot') {
+          const lp = P.legPlans[(i - 1) / 2];
+          out.push(row('On foot', `${fmtDistance(lg.distanceM)} · ${fmtDuration(lg.seconds)}`,
+            { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tag: L.leg, tone: lp && !lp.keepsRules ? 'warning' : null }));
+        } else {
+          const k = lg.order - 1, id = ids[k];
+          out.push(h('div.row.plan-stop',
+            h('span.plan-stop__ord.mono', stopOrdinal(lg.order)),
+            h('span.row__label.plan-stop__name', marker(numberOf(id), { selected: true }), h('span.plan-stop__text', lg.name)),
+            h('span.row__value.mono', fmtDuration(lg.seconds), ' ', labelTag(DEMO.spotWorkMin)),
+            h('span.plan-stop__ctl',
+              ctl('↑', `Move ${numberOf(id)} earlier`, keep(`${id}-up`, () => move(k, -1)), k === 0, `${id}-up`),
+              ctl('↓', `Move ${numberOf(id)} later`, keep(`${id}-down`, () => move(k, 1)), k === ids.length - 1, `${id}-down`),
+              ctl('×', `Remove ${numberOf(id)} from the route`, keep('x', () => setStops(ids.filter((x) => x !== id))), false, `${id}-x`))));
+        }
+      });
+      return out;
+    }
+
     function renderPanel() {
-      const k = cands.findIndex((x) => x.candidate.id === ctx.state.spotId);
-      const sel = k >= 0 ? cands[k] : null;
+      const ids = stopIds();
+      const P = ids.length ? ctx.state.plan : null;
       cards.replaceChildren();
       legs.replaceChildren();
       totals.replaceChildren();
-      if (!sel) {
+      legs.classList.toggle('is-round', ids.length > 1);
+      cards.classList.toggle('is-round', ids.length > 1);
+      renderHint();
+      if (!P) {
         cards.append(card({ title: 'Choose a spot on the map.', sub: 'Hover a number to see its total time.' }));
-      } else {
-        const { candidate: c, plan } = sel;
+      } else if (ids.length === 1) {
+        const { candidate: c } = candOf(ids[0]);
         cards.append(card({
           lead: marker(numberOf(c.id), { selected: true }),
           title: [c.name, ' ', labelTag(L.spot)],
           sub: [spotPlace(c), ' · ', taskOf(ctx.state.request), ', ', SPOT_WORK(), ' ', labelTag(DEMO.spotWorkMin),
             c.id === cheapest ? h('span.tone-accent', ' · cheapest') : null],
-          right: [fmtDistance(plan.distanceM), ' ', labelTag(L.distance)],
+          right: [fmtDistance(P.distanceM), ' ', labelTag(L.distance)],
           selected: true,
         }));
-        for (const b of plan.brokenRules) {
-          cards.append(alertBox('warning', `Breaks a rule: ${b.name}`, b.text || 'No route to this spot keeps this rule; the best route is shown.'));
+      } else {
+        // one line: the stops in order and the length of the whole round (work time per stop: in the list)
+        cards.append(card({
+          lead: h('span.plan-round-n.mono', String(ids.length)),
+          title: [`Round with ${ids.length} stops `, h('span.plan-round-seq.mono', ids.map(numberOf).join(' → '))],
+          right: [fmtDistance(P.distanceM), ' ', labelTag(L.distance)],
+          selected: true,
+        }));
+        cards.lastChild.classList.add('plan-round');
+      }
+      if (P) {
+        for (const b of P.brokenRules) {
+          cards.append(alertBox('warning', `Breaks a rule: ${b.name}`, b.text || (ids.length > 1
+            ? 'No way on this round keeps this rule; the best route is shown.'
+            : 'No route to this spot keeps this rule; the best route is shown.')));
         }
       }
-      const P = sel && sel.plan;
-      const legRows = P ? P.legs : [
-        { kind: 'rover', name: 'Rover' }, { kind: 'foot', name: 'On foot' }, { kind: 'spot', name: 'Spot' },
-        { kind: 'foot', name: 'On foot' }, { kind: 'rover', name: 'Rover' }];
-      legRows.forEach((lg, i) => {
-        const lead = h(`span.plan-leg-icon.plan-leg-icon--${lg.kind}`);
-        let value = '', tag = null;
-        if (P && lg.kind === 'foot') { value = `${fmtDistance(lg.distanceM)} · ${fmtDuration(lg.seconds)}`; tag = L.time; }
-        else if (P && lg.kind === 'spot') { value = fmtDuration(lg.seconds); tag = DEMO.spotWorkMin; }
-        else if (!P && lg.kind !== 'rover') value = '–';
-        const name = lg.kind === 'rover' ? (i === 0 ? 'Rover, home' : 'Rover') : lg.name;
-        legs.append(row(name, value, { lead, tag }));
-      });
+      if (P && ids.length > 1) legs.append(...stopList(P, ids));
+      else {
+        const legRows = P ? P.legs : [
+          { kind: 'rover', name: 'Rover' }, { kind: 'foot', name: 'On foot' }, { kind: 'spot', name: 'Spot' },
+          { kind: 'foot', name: 'On foot' }, { kind: 'rover', name: 'Rover' }];
+        legRows.forEach((lg, i) => {
+          const lead = h(`span.plan-leg-icon.plan-leg-icon--${lg.kind}`);
+          let value = '', tag = null;
+          if (P && lg.kind === 'foot') { value = `${fmtDistance(lg.distanceM)} · ${fmtDuration(lg.seconds)}`; tag = L.time; }
+          else if (P && lg.kind === 'spot') { value = fmtDuration(lg.seconds); tag = DEMO.spotWorkMin; }
+          else if (!P && lg.kind !== 'rover') value = '–';
+          const name = lg.kind === 'rover' ? (i === 0 ? 'Rover, home' : 'Rover') : lg.name;
+          legs.append(row(name, value, { lead, tag }));
+        });
+      }
       const slopeBroken = P && P.steepestDeg > RULES.slopeMaxDeg.value;
       const reserve = bigNumber({ label: 'Reserve on return', value: P ? fmtDuration(P.reserveS) : '–', tag: L.reserve, tone: P && P.reserveS < 0 ? 'warning' : null });
       reserve.append(h('div.plan-limiting', P ? `limited by ${P.limitingName.toLowerCase()}` : ' '));
       totals.append(
-        bigNumber({ label: 'Total time', value: P ? fmtDuration(P.timeS, { approx: true }) : '–', tag: L.time }),
+        bigNumber({ label: ids.length > 1 ? 'Total time, round' : 'Total time', value: P ? fmtDuration(P.timeS, { approx: true }) : '–', tag: L.time }),
         reserve,
         bigNumber({ label: 'Steepest slope', value: P ? fmtDeg(P.steepestDeg) : '–', tag: L.slope, tone: P ? (slopeBroken ? 'warning' : 'accent') : null }),
       );
@@ -323,18 +470,28 @@ export default {
     cleanup.push(() => document.removeEventListener('click', onDoc));
 
     // keep a previous choice (back from Go / no-go) in step with the fresh candidate list
-    if (ctx.state.spotId && !cands.some((c) => c.candidate.id === ctx.state.spotId)) ctx.set({ spotId: null, route: null, plan: null });
+    const kept = stopIds();
+    if (kept.some((id) => !candOf(id))) ctx.set({ stops: [], spotId: null, route: null, plan: null });
+    else if (kept.length && !(ctx.state.stops && ctx.state.stops.length)) ctx.set({ stops: kept });
     render();
   },
 
   unmount() { root = null; cleanup.forEach((f) => f()); cleanup = []; },
 
-  /** State after this step is finished, for ?step=N. ?spot=F7 picks another candidate. */
+  /**
+   * State after this step is finished, for ?step=N. ?spot=F7 picks another candidate; ?stops=F3,F7,F1 a round
+   * of up to PLANNER.maxStops stops in that order (dev aid for the steps after this one).
+   */
   async devFixture(state, { getTerrain, params }) {
     const terrain = await getTerrain();
     const candidates = planAllCandidates(terrain);
-    const id = params.get('spot') || 'F3';
+    const ids = (params.get('stops') || '').split(',').filter((id) => candidates.some((x) => x.candidate.id === id)).slice(0, PLANNER.maxStops.value);
+    if (ids.length > 1) {
+      const route = planRound(terrain, ids.map((id) => candidates.find((x) => x.candidate.id === id).candidate));
+      return { candidates, stops: ids, spotId: ids[0], route, plan: planNumbers(terrain, route) };
+    }
+    const id = ids[0] || params.get('spot') || 'F3';
     const c = candidates.find((x) => x.candidate.id === id) || candidates[0];
-    return { candidates, spotId: c.candidate.id, route: c.route, plan: c.plan };
+    return { candidates, stops: [c.candidate.id], spotId: c.candidate.id, route: c.route, plan: c.plan };
   },
 };
