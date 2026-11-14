@@ -1,6 +1,6 @@
 # 013 Autonomy clock and radiation dose counter
 owner: builder
-state: open
+state: done
 area: app/src/model/rad.js, app/src/ui/autonomy.js, app/src/walk/hud.js
 
 ## Goal
