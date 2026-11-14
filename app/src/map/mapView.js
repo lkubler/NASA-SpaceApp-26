@@ -12,6 +12,9 @@ import { viewshed, HIDDEN, DEFAULT_SHADOW_LIMIT_S, COMMS_SOURCE_NAME, bestRelay 
 import { sunAtLtst } from '../model/mars24.js';
 import { tile, chip, badge, button, provLegend } from '../ui/components.js';
 import { autonomyBar } from '../ui/autonomy.js';
+import { createStationCard } from '../ui/stationCard.js';
+import { loadScience, legGrades, routeGrades, slopeStats } from './science.js';
+import '../styles/science.css';
 
 const QUELA = { lon: 137.353006, lat: -4.695202 }; // rover waypoint at the Quela drill site (research/)
 // Comms source: ONE name everywhere (COMMS_SOURCE_NAME in model/comms.js): a relay rover parked on high ground.
@@ -33,6 +36,7 @@ const SCENARIO = [
   { fromQuela: [45, 25], task: 'sample', short: 'Murray/Stimson contact' },
   { fromStart: [-30, 25], task: 'sample', minutes: 90, short: 'Cross-bedding, butte foot' },
 ];
+const DTM_BASE_URL = (import.meta.env?.BASE_URL ?? '/') + 'data/murray/';
 const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const hex = (c) => { const v = parseInt(c.replace('#', ''), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255]; };
 const fmtT = (s) => (s >= 3600 ? Math.floor(s / 3600) + ' h ' : '') + Math.floor((s % 3600) / 60) + ' min ' + Math.round(s % 60) + ' s';
@@ -41,6 +45,7 @@ export function mountMap(el) {
   const canvas = document.createElement('canvas');
   const panel = document.createElement('div'); panel.id = 'map-panel';
   el.append(canvas, panel);
+  const card = createStationCard(el);
   const ctx = canvas.getContext('2d');
 
   // ---- data + derived layers ----
@@ -53,6 +58,8 @@ export function mountMap(el) {
   let route = null, vis = null, comms = null; // comms = overlay canvas
   let view = { s: 1, ox: 0, oy: 0 }; // screen = cell * s + o   (cells of the DTM grid)
   let msg = 'Loading HiRISE DTM...';
+  let sci = null, ortho = null; // science layers: Curiosity track + station photos; HiRISE orthoimage
+  const layers = { ortho: true, hazards: false, track: true };
 
   async function init() {
     try { L = await loadDtm(); }
@@ -63,6 +70,11 @@ export function mountMap(el) {
     L.tf = L.meta ? makeTransform(L.meta) : null;
     L.grid = costGrid(L.hm, L.slope);
     L.base = renderBase(L);
+    L.hazard = renderHazard(L);
+    if (L.meta) { // HiRISE orthoimage (same grid as the DTM, 2x resolution) and Curiosity's real traverse; both optional
+      ortho = new Image(); ortho.onload = () => draw(); ortho.src = DTM_BASE_URL + 'ortho_2048.jpg';
+      loadScience().then((s) => { sci = s; sci.slopes = slopeStats(legGrades(s.track.points, L.hm.cellSize_m), SLOPE_HARD_DEG); panelUpdate(); draw(); }).catch((e) => console.warn('science layers unavailable', e));
+    }
     const c0 = L.tf ? L.tf.sceneToLocal(0, 0) : { x: L.hm.width * L.hm.cellSize_m / 2, y: L.hm.height * L.hm.cellSize_m / 2 };
     start = { x: c0.x, y: c0.y }; // lander starts at the Walk view's origin
     if (L.tf) {
@@ -93,6 +105,16 @@ export function mountMap(el) {
     return best ? { x: best.x, y: best.y } : p;
   }
 
+  // Slope hazard overlay for the orthoimage: amber above the preferred slope, red above the hard limit
+  function renderHazard({ hm, slope }) {
+    const { width: W, height: H } = hm, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g = cv.getContext('2d'), img = g.createImageData(W, H), o = img.data, warn = hex(css('--warn')), bad = hex(css('--danger'));
+    for (let k = 0; k < W * H; k++) {
+      const sd = slope[k]; if (!(sd > SLOPE_PREFER_DEG)) continue;
+      const c = sd > SLOPE_HARD_DEG ? bad : warn, p = k * 4; o[p] = c[0]; o[p + 1] = c[1]; o[p + 2] = c[2]; o[p + 3] = sd > SLOPE_HARD_DEG ? 150 : 90;
+    }
+    g.putImageData(img, 0, 0); return cv;
+  }
   function renderBase({ hm, slope }) {
     const { width: W, height: H, cellSize_m: cs, data } = hm;
     const lo = hex(css('--terrain-lo')), hi = hex(css('--terrain-hi')), warn = hex(css('--warn')), bad = hex(css('--danger'));
@@ -288,7 +310,9 @@ export function mountMap(el) {
     placed = [];
     const W = L.hm.width, H = L.hm.height;
     ctx.imageSmoothingEnabled = view.s < 1.5;
-    ctx.drawImage(L.base, view.ox, view.oy, W * view.s, H * view.s);
+    const useOrtho = layers.ortho && ortho && ortho.complete && ortho.naturalWidth;
+    ctx.drawImage(useOrtho ? ortho : L.base, view.ox, view.oy, W * view.s, H * view.s);
+    if (layers.hazards && useOrtho) ctx.drawImage(L.hazard, view.ox, view.oy, W * view.s, H * view.s);
     if (comms) ctx.drawImage(comms, view.ox, view.oy, W * view.s, H * view.s);
     // walk square outline
     if (L.tf) {
@@ -296,10 +320,14 @@ export function mountMap(el) {
       ctx.beginPath(); c.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
       ctx.strokeStyle = css('--hud-text'); ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.stroke(); ctx.setLineDash([]);
       label('3D walk area', c[0][0] + 4, c[0][1] - 5);
-      const q = toScreen(L.tf.lonLatToLocal(QUELA.lon, QUELA.lat));
-      ctx.fillStyle = css('--hud-text'); ctx.beginPath(); ctx.arc(q[0], q[1], 4, 0, 7); ctx.fill();
-      if (!waypoints.some((w) => Math.hypot(toScreen(w)[0] - q[0], toScreen(w)[1] - q[1]) < 16)) label('Quela (drill site)', q[0] + 7, q[1] + 4);
+      if (!sci) {
+        const q = toScreen(L.tf.lonLatToLocal(QUELA.lon, QUELA.lat));
+        ctx.fillStyle = css('--hud-text'); ctx.beginPath(); ctx.arc(q[0], q[1], 4, 0, 7); ctx.fill();
+        if (!waypoints.some((w) => Math.hypot(toScreen(w)[0] - q[0], toScreen(w)[1] - q[1]) < 16)) label('Quela (drill site)', q[0] + 7, q[1] + 4);
+      }
     }
+    // Curiosity's real traverse (MEASURED): dotted line through drive-end positions with sol labels
+    if (sci && layers.track) drawTrack();
     // route
     if (route && route.points.length > 1) {
       const P = route.points;
@@ -334,6 +362,7 @@ export function mountMap(el) {
       ctx.fillStyle = '#fff'; ctx.font = '600 11px ' + css('--font-body'); ctx.textAlign = 'center'; ctx.fillText(i + 1, x, y + 4); ctx.textAlign = 'left';
       if (st) label((p.short || STATION_TASKS[st.task].label) + ' ' + st.minutes + ' min', x + 12, y + 4 + (i % 2 ? 10 : -4));
     });
+    if (sci && layers.track) drawStations();
     // lander (route start) and rover (comms source)
     if (start) {
       const [x, y] = toScreen(start);
@@ -346,6 +375,29 @@ export function mountMap(el) {
       ctx.fillStyle = css('--comms-shadow'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
       ctx.fillRect(x - 7, y - 7, 14, 14); ctx.strokeRect(x - 7, y - 7, 14, 14);
       label(COMMS_SOURCE_NAME.charAt(0).toUpperCase() + COMMS_SOURCE_NAME.slice(1) + ' (comms)', x + 12, y + 4);
+    }
+  }
+  function drawTrack() {
+    const pts = sci.track.points.filter((p) => p.in_crop), sc = (p) => [p.col * view.s + view.ox, p.row * view.s + view.oy], mc = css('--prov-measured');
+    ctx.beginPath(); pts.forEach((p, i) => { const [x, y] = sc(p); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(28,15,12,.85)'; ctx.lineWidth = 5; ctx.stroke();
+    ctx.strokeStyle = mc; ctx.lineWidth = 2.2; ctx.setLineDash([2, 5]); ctx.lineCap = 'round'; ctx.stroke(); ctx.setLineDash([]); ctx.lineCap = 'butt';
+    ctx.font = '600 10px ' + css('--font-mono'); ctx.textAlign = 'left';
+    let last = null;
+    for (const p of pts) {
+      const [x, y] = sc(p);
+      ctx.fillStyle = mc; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill();
+      if (last && Math.hypot(x - last[0], y - last[1]) < 46) continue;
+      last = [x, y]; const t = 'sol ' + p.sol;
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(28,15,12,.9)'; ctx.strokeText(t, x + 6, y - 5); ctx.fillStyle = '#fff'; ctx.fillText(t, x + 6, y - 5);
+    }
+  }
+  function drawStations() {
+    for (const st of sci.stations) {
+      const [x, y] = toScreen({ x: st.col * cs(), y: st.row * cs() });
+      ctx.beginPath(); ctx.arc(x, y, 14, 0, 7); ctx.strokeStyle = css('--prov-measured'); ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = css('--prov-measured'); ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7); ctx.fill();
+      label(st.name + ' (photo)', x + 12, y + 3, { dx: 14 });
     }
   }
   // Labels sit on a dark pill and dodge each other: try offsets around the anchor, keep the first free one.
@@ -362,18 +414,40 @@ export function mountMap(el) {
     ctx.fillStyle = o.accent ? '#1C0F0C' : '#fff'; ctx.textAlign = 'left'; ctx.fillText(t, rx + 5, ry + 12);
   }
 
+  // ---- on-map key: layer toggles, legend (magenta hatch, amber turn-back), credit ----
+  const key = document.createElement('div'); key.className = 'map-key';
+  key.innerHTML = `<div class="mk-h">Layers</div>
+    <label><input type="checkbox" data-layer="ortho" checked> HiRISE orthoimage (off: shaded terrain)</label>
+    <label><input type="checkbox" data-layer="hazards"> Slope hazards (amber &gt; ${SLOPE_PREFER_DEG}&deg;, red &gt; ${SLOPE_HARD_DEG}&deg;)</label>
+    <label><input type="checkbox" data-layer="track" checked> Curiosity track and photo stations</label>
+    <div class="mk-h">Key</div>
+    <div class="mk-r"><i class="mk-hatch"></i> Comms shadow (no radio link)</div>
+    <div class="mk-r"><i class="mk-diamond"></i> Turn-back / leave-by point</div>
+    <div class="mk-r"><i class="mk-route"></i> Planned route</div>
+    <div class="mk-r"><i class="mk-track"></i> Curiosity drive, labelled by sol</div>
+    <div class="mk-r"><i class="mk-ring"></i> Station photo: click</div>
+    <div class="mk-c"></div>`;
+  key.querySelector('.mk-c').append(chip('measured', 'HiRISE orthoimage ESP_040770_1755 and DTM DTEEC_040770_1755_039280_1755_U01, NASA/JPL/University of Arizona. Curiosity track: NASA/JPL MMGIS waypoints.'), document.createTextNode(' HiRISE image: NASA/JPL/University of Arizona'));
+  el.append(key);
+  key.addEventListener('change', (e) => { const k = e.target.dataset.layer; if (k) { layers[k] = e.target.checked; if (k === 'track' && !e.target.checked) card.hide(); draw(); } });
+
   // ---- panel (designer components: tile, chip, badge, button, provLegend) ----
   const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const head = h('div'); head.innerHTML = '<h3>EVA route planner</h3><div class="mp-sub"></div><p class="mp-hint">Click: add station &middot; drag: move (lander, rover or station) &middot; right-click: remove &middot; wheel: zoom &middot; shift-drag: pan.</p>';
-  const out = h('div', 'mp-out'), ctl = h('div', 'mp-ctl');
+  const head = h('div'); head.innerHTML = '<h3>EVA route planner</h3><div class="mp-sub"></div><div class="mp-job">Plan a loop from the lander. Click the map to add stations; get home with 20 % suit left.</div>';
+  const ctl = h('div', 'mp-ctl');
   ctl.innerHTML = `<label>EVA start (local solar time) <input id="mp-clock" type="time" value="${fmtClock(EVA_START_H)}"></label>
     <label>Suit start level <b id="mp-capv">100%</b><input id="mp-cap" type="range" min="1" max="100" step="1" value="100"></label>`;
+  const tilesBox = h('div'), verdictBox = h('div'), stBody = h('div'), valBody = h('div', 'mp-val'), moreDyn = h('div');
   const clear = button('Clear stations', { variant: 'secondary', onClick: () => { waypoints = []; replan(false); } });
   const fixBtn = button('Move relay to high ground', { variant: 'primary', onClick: () => moveRelay() });
+  const btnRow = h('div', 'mp-btns'); btnRow.append(fixBtn, clear);
   let relayNote = '';
   const note = h('p', 'mp-note', 'Model estimates (Pandolf load model, geometric radio line of sight, assumed station times). Not flight data.');
   const auto = autonomyBar(); auto.classList.add('auto-panel');
-  panel.append(head, auto, out, ctl, fixBtn, clear, provLegend(), note);
+  const hint = h('p', 'mp-hint'); hint.innerHTML = 'Click the map: add station &middot; drag: move lander, relay or station &middot; right-click: remove &middot; wheel: zoom &middot; shift-drag: pan &middot; click a ring: Curiosity photo.';
+  const fold = (title, body, open, id) => { const d = h('details', 'mp-fold'); d.id = id; d.open = !!open; d.append(h('summary', null, title), body); return d; };
+  const more = h('div'); more.append(hint, auto, moreDyn, provLegend(), note);
+  panel.append(head, ctl, tilesBox, verdictBox, btnRow, fold('Stations: tasks and times', stBody, window.innerHeight >= 800, 'mp-f-st'), fold('Check against Curiosity and RAD data', valBody, false, 'mp-f-val'), fold('Comms rule, light time, legend, hints', more, false, 'mp-f-more'));
   panel.addEventListener('input', (e) => { if (e.target.id === 'mp-cap') { capacityPct = +e.target.value; panel.querySelector('#mp-capv').textContent = capacityPct + '%'; replan(false); } });
   panel.addEventListener('change', (e) => {
     const t = e.target;
@@ -409,36 +483,39 @@ export function mountMap(el) {
   }
   function panelUpdate() {
     if (!L) return;
-    panel.querySelector('.mp-sub').textContent = `${L.name} · slope limit ${SLOPE_HARD_DEG}°, prefer < ${SLOPE_PREFER_DEG}°`;
-    out.replaceChildren();
+    panel.querySelector('.mp-sub').textContent = `${L.name} · slope limit ${SLOPE_HARD_DEG}°, prefer < ${SLOPE_PREFER_DEG}° · click map to add stations`;
+    for (const e of [tilesBox, verdictBox, stBody, moreDyn]) e.replaceChildren();
     const t = route && route.total;
-    if (!t) { out.append(h('p', null, 'Add at least one station.')); return; }
+    valBody.replaceChildren(); validationPanel(valBody);
+    if (!t) { verdictBox.append(h('p', 'mp-res', 'Add at least one station.')); return; }
     const rs = route.reserve, P = route.points, last = rs && rs.points[rs.points.length - 1], sh = route.shadows || [], tb = route.turnBack, buf = DEFAULTS.bufferFrac;
     const endH = last ? startH + P.at(-1).elapsed_s / 3600 : startH, night = route.night;
     const tiles = h('div', 'mp-tiles');
-    const dist = tile({ label: 'Walking distance', value: Math.round(t.dist_m), unit: 'm', prov: 'modelled' }); dist.querySelector('.chip').title = 'Route length computed on measured HiRISE DTM terrain (NASA/UArizona); route choice is modelled.';
+    const dist = tile({ label: 'Distance', value: Math.round(t.dist_m), unit: 'm', prov: 'modelled' }); dist.querySelector('.chip').title = 'Route length computed on measured HiRISE DTM terrain (NASA/UArizona); route choice is modelled.';
     const clk = tile({ label: 'EVA length', value: last ? (P.at(-1).elapsed_s / 3600).toFixed(1) : '--', unit: 'h', prov: 'modelled', state: night && (night.afterSunset || night.beforeSunrise) ? 'warn' : undefined });
-    // reserve at the lander, coloured by margin against the 20 % buffer (not by the bare number)
+    // reserve at the lander, coloured by margin against the 20 % buffer; the sentence below says why (same numbers)
     const endFrac = last ? last.remainingFraction : 0;
-    const res = tile({ label: 'Suit reserve back at lander', value: last ? Math.round(endFrac * 100) : '--', unit: '%', prov: 'modelled', state: tb || endFrac < buf ? 'danger' : endFrac < buf + 0.05 ? 'warn' : undefined });
+    const res = tile({ label: 'Reserve at lander', value: last ? Math.round(endFrac * 100) : '--', unit: '% (buffer ' + Math.round(buf * 100) + ')', prov: 'modelled', state: tb || endFrac < buf ? 'danger' : endFrac < buf + 0.05 ? 'warn' : undefined });
     const worst = sh.reduce((m, s) => Math.max(m, s.duration_s), 0);
-    const cm = tile({ label: 'Comms shadow on route', value: sh.length ? Math.round(worst / 60) : 0, unit: sh.length ? 'min longest' : 'min', prov: 'modelled', state: sh.some((s) => s.exceedsLimit) ? 'danger' : sh.length ? 'warn' : undefined });
-    tiles.append(dist, clk, res, cm); out.append(tiles);
-    const verdict = h('p', 'mp-res'), ts = route.turnBackStation;
+    const cm = tile({ label: 'Comms shadow', value: sh.length ? Math.round(worst / 60) : 0, unit: sh.length ? 'min longest' : 'min', prov: 'modelled', state: sh.some((s) => s.exceedsLimit) ? 'danger' : sh.length ? 'warn' : undefined });
+    tiles.append(dist, clk, res, cm); tilesBox.append(tiles);
+    // One story, three places (tile, this sentence, map label): same clock time, same station, reserve against the buffer.
+    const verdict = h('p', 'mp-res'), ts = route.turnBackStation, endPct = Math.round(endFrac * 100), bufPct = Math.round(buf * 100);
     if (tb && tb.kind === 'station') {
-      verdict.innerHTML = `<b class="bad-t">Leave station ${ts ? ts.n : ''} by ${fmtClock(tb.clockH)}</b>: you can work ${Math.round(tb.workS / 60)} of ${ts ? ts.minutes : '?'} min there. The best way home from that spot is ${Math.round(tb.returnS / 60)} min and ${Math.round((tb.returnKJ / rs.capacityKJ) * 100)} % of the suit; the 20 % buffer stays untouched.`;
+      verdict.innerHTML = `<b class="bad-t">Leave station ${ts ? ts.n : ''} by ${fmtClock(tb.clockH)}.</b> As planned, the loop ends with ${endPct} % of the suit, below the ${bufPct} % buffer. You can work ${Math.round(tb.workS / 60)} of ${ts ? ts.minutes : '?'} min there; the best way home is ${Math.round(tb.returnS / 60)} min and ${Math.round((tb.returnKJ / rs.capacityKJ) * 100)} % of the suit.`;
     } else if (tb) {
-      verdict.innerHTML = `<b class="bad-t">Turn back by ${fmtClock(tb.clockH)}</b> after ${Math.round(P[tb.index].dist_m)} m` + (ts ? ` (before station ${ts.n})` : '') + `: past this point the remaining consumables no longer cover the best way home (${Math.round(tb.returnS / 60)} min) plus the 20 % buffer.`;
+      verdict.innerHTML = `<b class="bad-t">Turn back by ${fmtClock(tb.clockH)}</b> after ${Math.round(P[tb.index].dist_m)} m` + (ts ? `, on the way to station ${ts.n}` : '') + `. As planned, the loop ends with ${endPct} % of the suit, below the ${bufPct} % buffer; past this point the suit no longer covers the best way home (${Math.round(tb.returnS / 60)} min) plus the buffer.`;
     } else {
-      verdict.innerHTML = `Whole loop within budget: back at the lander at ${fmtClock(endH)} with ${Math.round(endFrac * 100)} % of the suit left (buffer ${Math.round(buf * 100)} %). EVA clock ${fmtClock(startH)} to ${fmtClock(endH)}.`;
+      verdict.innerHTML = `Whole loop within budget: back at the lander at ${fmtClock(endH)} with ${endPct} % of the suit left (buffer ${bufPct} %). EVA ${fmtClock(startH)} to ${fmtClock(endH)}.`;
     }
-    out.append(verdict);
+    verdictBox.append(verdict);
     if (night && (night.afterSunset || night.beforeSunrise)) {
       const w = h('p', 'mp-res'); w.innerHTML = `<b class="bad-t">${night.afterSunset ? `Sunset is at ${fmtClock(night.set)}: this EVA ends at ${fmtClock(night.endH)} in the dark.` : `Sunrise is at ${fmtClock(night.rise)}: this EVA starts in the dark.`}</b> <span class="mp-assume">Sun from Mars24, sol 1440 (modelled).</span>`;
-      out.append(w);
+      verdictBox.append(w);
     }
-    const sec = h('div', 'mp-sec'); sec.append(h('span', 'label', 'Stations'), chip('modelled', 'Assumption: station durations are ours, plausible analog-EVA scale (research/science.md); editable.'), h('span', 'mp-assume', 'durations assumed'));
-    out.append(sec);
+    if (relayNote) verdictBox.append(h('p', 'mp-assume', relayNote));
+    const sec = h('div', 'mp-sec'); sec.append(chip('modelled', 'Assumption: station durations are ours, plausible analog-EVA scale (research/science.md); editable.'), h('span', 'mp-assume', 'durations assumed, editable'));
+    stBody.append(sec);
     const tbl = h('table', 'mp-st');
     waypoints.forEach((w, i) => {
       const st = route.stations.find((q) => q.wp === i), leg = route.legs[i];
@@ -452,14 +529,27 @@ export function mountMap(el) {
       if (w.short) tr.title = w.short;
       tbl.append(tr);
     });
-    out.append(tbl);
+    stBody.append(tbl);
     const homeLeg = route.legs[route.legs.length - 1];
-    if (homeLeg && homeLeg.feasible && waypoints.length) { const hp = h('p', 'mp-assume', `Last leg home: ${Math.round(homeLeg.dist_m)} m. "home" = best path to the lander from that station, not the outbound path reversed.`); out.append(hp); }
+    if (homeLeg && homeLeg.feasible && waypoints.length) stBody.append(h('p', 'mp-assume', `Last leg home: ${Math.round(homeLeg.dist_m)} m. "home" = best path to the lander from that station, not the outbound path reversed. Amber = slope above ${SLOPE_PREFER_DEG}°; red = after the turn-back point or infeasible.`));
     const seg = h('p', 'mp-res'); seg.innerHTML = `<span class="sw"></span> Comms shadow on route (${COMMS_SOURCE_NAME}): ` + (sh.length ? sh.length + ' segment(s), longest ' + fmtT(worst) + (sh.some((s) => s.exceedsLimit) ? ` <b class="bad-t">exceeds assumed ${Math.round(shadowLimit_s / 60)} min mission rule</b>` : '') : 'none');
-    out.append(seg);
+    moreDyn.append(seg);
     const lim = h('label', 'mp-assume'); lim.innerHTML = `Assumed mission rule: max min out of contact <input id="mp-limit" type="number" min="1" max="240" value="${Math.round(shadowLimit_s / 60)}" style="width:4em"> (our assumption, not a NASA figure)`;
-    out.append(lim);
-    if (relayNote) out.append(h('p', 'mp-assume', relayNote));
+    moreDyn.append(lim);
+  }
+  // Validation (jury change 5, cheapest honest version): slopes Curiosity really drove vs. our limits, plus one sourced shielding fact.
+  function validationPanel(box) {
+    const add = (html) => { const p = h('p', 'mp-vp'); p.innerHTML = html; box.append(p); return p; };
+    const sec = h('div', 'mp-sec'); sec.append(chip('measured', 'Curiosity waypoint positions and elevations, NASA/JPL MMGIS.'), h('span', 'mp-assume', 'real Curiosity track'));
+    box.append(sec);
+    const c = sci && sci.slopes;
+    if (c) add(`Between drive ends 5 to 76 m apart (sols 1414-1475, ${c.n} legs), Curiosity's net grade was median ${c.median.toFixed(1)}&deg; and at most ${c.max.toFixed(1)}&deg;, from the rover's own elevation at each drive end. Local slopes along each drive are not recorded.`);
+    else add('Curiosity track loading...');
+    const r = route && route.points.length > 1 ? slopeStats(routeGrades(route.points, 40), SLOPE_HARD_DEG) : null;
+    if (r) add(`Our planned loop, same measure over 40 m stretches: median ${r.median.toFixed(1)}&deg;, at most ${r.max.toFixed(1)}&deg; (modelled). Steepest single cell on it: ${route.total.maxSlope_deg.toFixed(0)}&deg; against our ${SLOPE_HARD_DEG}&deg; suited-crew limit. Curiosity has its own limits, so this shows comparable terrain, not that our route is validated.`);
+    add('<b>Shielding by terrain:</b> parked against a butte at Quela (sols 1455-1468), Curiosity\'s RAD instrument measured a dose about 4 % lower than in the open (NASA release; Ehresmann et al. 2021). Not applied to our dose numbers.');
+    const src = h('p', 'mp-assume'); src.innerHTML = 'Source: <a href="https://doi.org/10.1029/2021JE006851" target="_blank" rel="noopener">Ehresmann et al. 2021, JGR Planets 126(8)</a>';
+    box.append(src);
   }
 
   // ---- input ----
@@ -469,7 +559,14 @@ export function mountMap(el) {
     if (rover) { const [x, y] = toScreen(rover); if (Math.hypot(sx - x, sy - y) < 14) return { kind: 'rover' }; }
     if (start) { const [x, y] = toScreen(start); if (Math.hypot(sx - x, sy - y) < 14) return { kind: 'start' }; }
     for (let i = waypoints.length - 1; i >= 0; i--) { const [x, y] = toScreen(waypoints[i]); if (Math.hypot(sx - x, sy - y) < 11) return { kind: 'wp', i }; }
+    const pi = poiAt(sx, sy, 16); if (pi) return { kind: 'poi', st: pi };
     return null;
+  }
+  function poiAt(sx, sy, r) {
+    if (!sci || !layers.track) return null;
+    let best = null;
+    for (const st of sci.stations) { const [x, y] = toScreen({ x: st.col * cs(), y: st.row * cs() }), d = Math.hypot(sx - x, sy - y); if (d < r && (!best || d < best.d)) best = { d, st }; }
+    return best && best.st;
   }
   canvas.addEventListener('contextmenu', (e) => {
     e.preventDefault(); if (!L) return;
@@ -487,12 +584,14 @@ export function mountMap(el) {
     if (!L) return; const [sx, sy] = pos(e);
     if (!drag) { canvas.style.cursor = hit(sx, sy) ? 'grab' : 'crosshair'; return; }
     if (drag.kind === 'pan') { view.ox = drag.ox + sx - drag.sx; view.oy = drag.oy + sy - drag.sy; draw(); return; }
-    if (drag.kind === 'new') return;
+    if (drag.kind === 'new' || drag.kind === 'poi') return;
     drag.moved = true; const p = toLocal(sx, sy);
     if (drag.kind === 'rover') { rover = p; scheduleReplan(true); } else if (drag.kind === 'start') { start = p; draggingStart = true; scheduleReplan(false); } else { waypoints[drag.i] = p; scheduleReplan(false); }
   });
   canvas.addEventListener('pointerup', (e) => {
     if (!L || !drag) return; const [sx, sy] = pos(e), d = drag; drag = null;
+    if (d.kind === 'poi' && !d.moved) { card.show(d.st); return; }
+    if (d.kind === 'wp' && !d.moved) { const pi = poiAt(...toScreen(waypoints[d.i]), 24); if (pi) card.show(pi); } // a planned station on a photo site
     if (d.kind === 'new' && Math.hypot(sx - d.sx, sy - d.sy) < 5) { waypoints.push({ ...toLocal(sx, sy), task: 'sample', minutes: STATION_TASKS.sample.minutes }); replan(false); }
     else if (d.moved && d.kind === 'rover') replan(true);
     else if (d.moved && d.kind === 'start') { draggingStart = false; replan(true); }
@@ -517,6 +616,7 @@ export function mountMap(el) {
     setShadowLimitMin(m) { shadowLimit_s = m * 60; replan(false); },
     get relay() { return rover; },
     route: () => route,
+    stationScreen(id) { const st = sci && sci.stations.find((q) => q.id === id); if (!st) return null; const [x, y] = toScreen({ x: st.col * cs(), y: st.row * cs() }), r = canvas.getBoundingClientRect(); return [x + r.left, y + r.top]; },
     local: (x, z) => L.tf.sceneToLocal(x, z),
   };
   init();
