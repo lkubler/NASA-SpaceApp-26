@@ -7,6 +7,8 @@ import { h, s, splitLayout, headline, card, pillButton, mapPanel, legend, marker
 import { planAllCandidates, ROVER, ACCESS_MARS_POINTS, RULES, DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA,
   closedMask, radioShadowMask, sourceOf, spotNumber } from '../../core/index.js';
 import { paintGround, composeGround, paintOverlays } from './ground.js';
+import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
+import { GROUND_TAG } from '../../core/groundColor.js';
 
 let root = null;
 let cleanup = [];
@@ -87,7 +89,7 @@ export default {
       { kind: 'point', text: ['Access Mars point ', labelTag(L.point)] },
       { kind: 'steep', text: [`Too steep (> ${RULES.slopeMaxDeg.value}°) `, labelTag(L.steep)] },
       { kind: 'shadow', text: ['Radio shadow ', labelTag(L.shadow)] },
-    ], ['Terrain: Access Mars ', labelTag(L.terrain)]);
+    ], ['Terrain: Access Mars ', labelTag(L.terrain), ' · ground colour ', labelTag(GROUND_TAG)]);
     Lay.map.append(map.el, leg);
 
     // ----- panel -----
@@ -109,7 +111,13 @@ export default {
     await new Promise((r) => setTimeout(r, 30));
     if (root !== el) return;
     if (!ctx.state.candidates.length) ctx.set({ candidates: planAllCandidates(terrain) });
+    // dev aid only (?step=2&broken=1, never reached in the journey): the test point of 3-go/dev/broken.js
+    // as an extra candidate 07, to see a route that breaks a rule drawn on the map
+    if (ctx.params.get('broken') === '1' && !ctx.state.candidates.some((c) => c.candidate.id === BROKEN_TEST_TARGET.id)) {
+      ctx.set({ candidates: [...ctx.state.candidates, ...planAllCandidates(terrain, [BROKEN_TEST_TARGET])] });
+    }
     const cands = ctx.state.candidates;
+    const numberOf = (id) => spotNumber(id) || String(cands.findIndex((c) => c.candidate.id === id) + 1).padStart(2, '0');
     const cheapest = cheapestId(cands);
     let pinned = null; // Access Mars point whose card is pinned open
 
@@ -181,9 +189,10 @@ export default {
       map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Home' });
 
       // candidates
+      let selG = null;
       cands.forEach(({ candidate: c, plan }, k) => {
         const isSel = c.id === ctx.state.spotId;
-        const g = map.addMarker(c.x, c.z, { kind: 'number', text: spotNumber(c.id), selected: isSel });
+        const g = map.addMarker(c.x, c.z, { kind: 'number', text: numberOf(c.id), selected: isSel });
         if (c.id === cheapest) g.prepend(s('circle', { class: 'plan-ring', r: 9.5 }));
         g.classList.add('plan-hit');
         if (c.id === cheapest) g.classList.add('plan-cheapest');
@@ -192,13 +201,14 @@ export default {
         g.setAttribute('aria-label', `${c.name}, total ${fmtDuration(plan.timeS)}`);
         // the chosen spot is described in the panel: no tip over the map labels for it
         g.addEventListener('mouseenter', () => c.id !== ctx.state.spotId && (pinned = null, showTip(c.x, c.z, [
-          h('div.plan-tip__title', marker(spotNumber(c.id), { selected: isSel }), ' ', c.name),
+          h('div.plan-tip__title', marker(numberOf(c.id), { selected: isSel }), ' ', c.name),
           h('div.plan-tip__row', h('span.muted', 'Total time '), h('span.mono', fmtDuration(plan.timeS, { approx: true })), ' ', h('span.vlabel', 'model')),
           c.id === cheapest ? h('div.plan-tip__row.tone-accent', 'Cheapest of the spots') : null,
           !plan.keepsRules ? h('div.plan-tip__row.tone-warning', 'No route keeps every rule') : null,
         ])));
         g.addEventListener('mouseleave', () => { if (!pinned) tip.hidden = true; });
         g.addEventListener('click', (e) => { e.stopPropagation(); pinned = null; tip.hidden = true; select(c.id); });
+        if (isSel) selG = g;
       });
 
       // Access Mars points with their text (on top: the Buttes point sits beside spot 02)
@@ -224,6 +234,8 @@ export default {
           pinned = p.id; showTip(p.x, p.z, pointTip(p), { wide: true });
         });
       }
+      // the chosen spot ends its route: drawn above everything, the broken stretch included
+      if (selG) map.layer('top').append(selG);
     }
 
     function renderPanel() {
@@ -237,7 +249,7 @@ export default {
       } else {
         const { candidate: c, plan } = sel;
         cards.append(card({
-          lead: marker(spotNumber(c.id), { selected: true }),
+          lead: marker(numberOf(c.id), { selected: true }),
           title: [c.name, ' ', labelTag(L.spot)],
           sub: [spotPlace(c), ' · ', taskOf(ctx.state.request), ', ', SPOT_WORK(), ' ', labelTag(DEMO.spotWorkMin),
             c.id === cheapest ? h('span.tone-accent', ' · cheapest') : null],

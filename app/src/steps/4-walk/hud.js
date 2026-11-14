@@ -8,6 +8,7 @@ import {
 import { ALERTS } from './sim.js';
 import { DISPLAY as D } from './display.js';
 import frameUrl from './helmet-frame.webp';
+import { GROUND_TAG } from '../../core/groundColor.js';
 
 const tag = (o) => labelTag(o);
 const SIM_TAG = { label: 'simulated', text: 'The rover model is a simple stand-in built for this view; it marks where the crew parked. The real scene has a gap there where Access Mars cut out Curiosity.' };
@@ -26,6 +27,8 @@ export function createHud(el) {
   // frame and the mark on it
   const frame = h('img.walk-frame', { src: frameUrl, alt: '', draggable: 'false' });
   const aiMark = h('div.walk-aimark.mono', 'AI-generated image');
+  // the ground Access Mars has only grey imagery for is tinted in our own colour (core/groundColor.js)
+  const groundMark = h('div.walk-groundmark.mono', 'Ground colour ', tag(GROUND_TAG));
 
   // compass
   const compassCv = h('canvas.walk-compass__cv');
@@ -92,7 +95,7 @@ export function createHud(el) {
   const loading = h('div.walk-loading.mono', 'Loading terrain…');
 
   const hud = h('div.walk-hud', compass, mini, bodyCard, reserve, missionCard, alertEl, reticle, lookCard, prompt, hint);
-  el.append(marks, frame, aiMark, hud, escHint, modal, loading);
+  el.append(marks, frame, aiMark, groundMark, hud, escHint, modal, loading);
 
   // ---------- minimap background (once): shaded relief, closed ground darker ----------
   let reliefCv = null, terr = null;

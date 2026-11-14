@@ -36,6 +36,7 @@ export function sourcesPage(onClose) {
         h('div.sources__name', link(d.url, d.name)),
         h('div.muted', d.by),
         h('div', d.use),
+        d.note ? h('div.muted', d.note) : null,
         h('div.mono.sources__lic', d.licence)))),
 
       h('h2', 'Rules, suit and demo values'),
