@@ -238,3 +238,11 @@ Landing Site (Bradbury Landing)
 - Muss zeigen, wie offene Daten der Raumfahrtagenturen das Projekt ermöglicht haben → Datenquellen sichtbar machen
 - TODO: Guide 2026 prüfen (bisher nur Version von 2025 gefunden): https://www.spaceappschallenge.org/resources/project-submission-guide/
 - Folge für uns: 30 s sind sehr kurz → Video-Storyboard früh planen; die Scroll-Animationen bekommen darin höchstens ein paar Sekunden
+
+
+
+
+### AI USECASE
+wahrscheinlich erhöht es die win chances wenn wir ki in unser Projekt einbauen. wir haben aber gerade noch keinen guten usecase gefunden. 
+potentielle usecases:
+- RAG in irgendeinem context: im hud kann man etwas angucken, und das rag fragen, welches basierend auf vorher extrahierten informationen antwortet. Beispiel: man guckt einen Fels an, gibt fragt sein hud, ob man mit seinen Anzug diesen schritt schafft. das hud misst nach, und benutzt ein rag, um Anzug Spezifizierungen zu lesen, und antwortet basierend auf den informationen aus beidem. 
