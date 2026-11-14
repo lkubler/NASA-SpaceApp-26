@@ -1,6 +1,0 @@
-/* Walk UX pass 2 (task 026): station-area HUD line and "Show station photo" button. */
-.hud-area { position: absolute; top: 68px; left: 200px; height: 40px; display: flex; align-items: center; max-width: min(560px, calc(100% - 520px)); padding: var(--s-2) var(--s-4); border-radius: var(--radius); font: 600 13px var(--font-display); letter-spacing: .04em; color: var(--hud-text); background: var(--scrim); }
-.hud-area[hidden] { display: none; }
-.walk-photo { position: absolute; top: 68px; left: var(--s-5); z-index: 8; height: 40px; padding: 0 var(--s-4); background: var(--scrim); color: var(--hud-text); border: 1px solid rgba(255,255,255,.5); border-radius: var(--radius); font: 600 13px var(--font-display); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
-.walk-photo:hover { background: rgba(60,30,16,.95); }
-.walk-photo[hidden] { display: none; }
