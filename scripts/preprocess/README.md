@@ -53,3 +53,26 @@ Key facts:
 - Absolute georeference is only as good as the DTM (HiRISE DTM absolute position about a few m vs. MOLA/rover; not independently checked). Relief in the Access Mars mesh is about 20% lower than the DTM (std ratio 1.25 DTM/scene): the mesh is smoother. Use the DTM for slope on the 2D map; use the walk grid only in the 3D area.
 - The data-scout estimate of the origin (waypoint mean for sols 1446-1452) is 149 m E and 68 m S of the fitted origin, i.e. outside its stated +-30 m. Trust the fit. The Quela drill site (rover waypoint lon 137.353006, lat -4.695202) lies about 155 m west and 27 m north of the scene origin, outside the +-64 m walk square, so only the DTM covers it.
 - Quantisation: DTM height 5 mm, slope 0.5 deg, walk height 1 cm.
+
+# Orthoimage, Curiosity track, station photos (task 016)
+Added files in `app/public/data/murray/` (about 1.7 MB): `ortho_1024.jpg` (251 KB), `ortho_2048.jpg` (693 KB), `curiosity_track.json` (5 KB), `photos/*.jpg` + `photos/credits.json` (about 0.74 MB).
+
+## Regenerate (repo root)
+```
+curl -o data/raw/ortho/ESP_040770_1755_RED_A_01_ORTHO.JP2 https://hirise-pds.lpl.arizona.edu/PDS/DTM/ESP/ORB_040700_040799/ESP_040770_1755_ESP_039280_1755/ESP_040770_1755_RED_A_01_ORTHO.JP2   # 294 MB, ~1 min
+python3 scripts/preprocess/build_ortho.py     # ~50 s, Pillow JPEG2000 decode at reduce=1 (needs ~2 GB RAM)
+python3 scripts/preprocess/build_track.py     # downloads MSL_waypoints.json to data/raw/msl_wp.json if missing
+python3 scripts/preprocess/build_photos.py    # downloads 6 images, resizes to <= 900 px, writes credits.json
+```
+## Orthoimage
+- Source: HiRISE `ESP_040770_1755_RED_A_01_ORTHO` (the ortho made with the same stereo pair and the same uncontrolled `_01` series as `DTEEC_..._U01`). Credit: NASA/JPL/University of Arizona (HiRISE, PDS public data). Grayscale RED band, 0.2529 m/px, same equirectangular frame (lon0 137.39, lat0 0) as the DTM, exactly 4x finer, so the crop is an integer window.
+- `ortho_1024.jpg`: 1024 x 1024, **pixel for pixel the same grid as `dtm_*`** (row 0 = north, col 0 = west). `ortho_2048.jpg`: same footprint at 2x (0.506 m/px); use it for zoomed views. Draw both over the same 1024 x 1024 coordinate box (scale the 2048 one by 0.5).
+- Black strip along the west edge (and the slanted edge) is the stereo no-data region, 0 value, same as DTM no-data.
+- Brightness is the real I/F image under its own sun angle (shadows differ from our hillshade). Do not mix its shadows with a computed hillshade without noting it.
+- Alignment check (images in `data/raw/ortho/`, not committed): the west no-data edge of the ortho vs. the DTM no-data edge differs by 0 px in 11 of 16 sampled rows, by -1 to -2 px (1 to 2 m) in the others. `overlay_zoom.png` draws the DTM 25 deg slope contour on the 2048 ortho: it rings the butte caps and flanks within about 2 to 4 ortho px (1-2 m) on all ~12 buttes in the view. A cross-correlation of hillshade against ortho was not usable (different lighting, NCC 0.2). Verdict: aligned within about 2 m, as good as the DTM's own relative accuracy.
+## Curiosity track
+- Source: `https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json` (NASA/JPL public), one position per drive end. 27 waypoints for sols 1398 to 1475; only 20 (sol 1414 onwards) fall inside the 1 km DTM crop, sols 1398-1412 are north of it (`in_crop: false`, negative `row`). Total path length inside the file's window about 957 m (straight lines, a lower bound).
+- Format: `points[] {sol, site, drive, lon, lat, elev_m, dist_total_m, col, row, in_crop}` (col,row in DTM crop pixels, not rounded to cells), `stations[]` Marimba (sol 1417) and Quela (sol 1455).
+- Registration check: the waypoint elevations vs. the DTM heights at the same pixel differ by a constant 7.4 m (vertical datum difference) with std 3.7 m; shifting the track by up to +-30 px does not improve it materially (best std 3.2 m), so the track is used unshifted. The `lat` convention (planetocentric vs graphic) was not independently proven, the check above shows no visible offset.
+## Photos
+See `photos/credits.json` (each entry: id, station, sol, camera, credit, source_url, file, license). License basis: JPL Image Policy (`jpl.nasa.gov/imagepolicy`): "may be used for any purpose without prior permission", credit line "Courtesy NASA/JPL-Caltech" unless the caption says otherwise; no NASA/JPL logos; do not imply endorsement. For the Mastcam and MAHLI frames the NASA captions credit "NASA/JPL-Caltech/MSSS" (verified on the science.nasa.gov page for PIA21042); MSSS's own policy asks for commercial-use permission, not relevant to a non-commercial hackathon. Raw frames carry no caption, so the credit for them follows the same convention; the raw-image site was not machine-readable for an explicit rights statement (the page returned only a title), so say "raw, unprocessed" in the UI.
