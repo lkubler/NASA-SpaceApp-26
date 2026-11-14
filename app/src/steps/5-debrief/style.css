@@ -22,7 +22,8 @@
 .step--debrief .map-path--walked { stroke-width: 1.3; }
 .step--debrief .map-path--foot { stroke-dasharray: 0.1 7; }
 
-.step--debrief .dbf--short .dbf__main { justify-content: space-between; }
+/* no sample photo: the blocks stay together at the top (no wide empty bands between them) */
+.step--debrief .dbf--short .dbf__main { justify-content: flex-start; }
 .step--debrief .dbf--short .dbf__lower { flex: 0 0 auto; }
 /* the planned spot carries its number and name */
 .step--debrief .dbf__table tbody tr:first-child td:nth-child(2) { white-space: normal; }
@@ -46,7 +47,7 @@
 .step--debrief .dbf__why { margin-top: auto; padding-top: 0.7em; font-size: var(--fs-small); color: var(--text); max-width: 46ch; }
 .step--debrief .dbf__table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
 .step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.32em 0.6em 0.32em 0; text-align: left; white-space: nowrap; }
-.step--debrief .dbf__th { font-weight: 400; color: var(--text); }
+.step--debrief .dbf__th { font-weight: 400; color: var(--text); padding-right: 1.4em; }
 .step--debrief .dbf__col { color: var(--text-2); font-weight: 500; font-size: var(--fs-tag); text-transform: uppercase; letter-spacing: 0.06em; }
 .step--debrief .dbf__td .mono { font-size: var(--fs-mono); white-space: nowrap; }
 /* "not returned" and its tag wrap onto two lines where the column is narrow, never clipped */
@@ -95,6 +96,7 @@
 .step--debrief .map-marker.dbf-wm--advisory circle { stroke: var(--advisory); }
 .step--debrief .map-marker.dbf-closest circle { r: 3.4px; fill: #fff; stroke: var(--accent); stroke-width: 1.6; }
 .step--debrief .map-marker.dbf-empty circle { r: 3.4px; fill: var(--warning); stroke: #fff; stroke-width: 0.8; }
+.step--debrief .dbf-leader { stroke: #fff; stroke-width: 0.6; opacity: 0.85; vector-effect: non-scaling-stroke; }
 .step--debrief .map-path.dbf-gap { fill: none; stroke: #fff; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.8; }
 .step--debrief .sw--closest { width: 0.75em; height: 0.75em; border-radius: 50%; background: #fff; border: 2px solid var(--accent); }
 .step--debrief .sw--empty { width: 0.75em; height: 0.75em; border-radius: 50%; background: var(--warning); }
