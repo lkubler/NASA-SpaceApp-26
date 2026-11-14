@@ -18,12 +18,13 @@ You don't know the current time. Run `python3 scripts/now.py` at the start of ev
 - Everything agents write is English: research, tasks, decisions, commits, code, UI text.
 - The product, demo, and submission are English only. No German strings in the app.
 
-## Judging (equal weight)
-- Impact: size of the problem, how many it helps
-- Creativity: new vs. incremental
-- Validity: scientifically sound, works in the real world
-- Relevance: answers the challenge, complete, feasible, usable
-- Presentation: how well the problem, solution, and why it matters are communicated
+## Judging (equal weight, each 1–5; details in `docs/rules-2026.md`)
+- Impact: size of the problem, how many it helps or inspires
+- Creativity: novel concept or meaningful improvement on existing tools
+- Validity: scientifically sound, feasible, complete, usable and user-friendly
+- Relevance: answers the challenge directly; NASA data is a core component, not decoration
+- Presentation: problem, solution, and why it matters told as an engaging story; judged from the demo and the full project. The guide warns teams neglect this one.
+Most fitting Global Awards for this challenge: Best Use of Data, Best Use of Science, Best Mission Concept, Best Storytelling, Art & Technology.
 
 ## Submission rules
 Summary of `docs/rules-2026.md` (full text there; it wins if they differ).

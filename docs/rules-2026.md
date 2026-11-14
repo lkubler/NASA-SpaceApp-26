@@ -2,12 +2,50 @@
 
 Source: https://www.spaceappschallenge.org/2026/ → Resources → Project Submission Guide (pasted by a human, 2026-11-14). Overrides the rules in CLAUDE.md where they differ.
 
-Still missing: the 2026 Judging and Awards Guide (criteria details, award categories). Linked from https://www.spaceappschallenge.org/2026/ → Resources.
 
 ## From the 2026 homepage
 - Teams: at most six participants.
 - Submitting gives a participant certificate and Global Judging eligibility.
 - Global Collaborators offer free tools ("Global Offers") for projects: GoDaddy, Google, Meteomatics, Microsoft, Miro. Worth checking for free hosting or credits.
+
+## Judging and Awards Guide
+
+Source: https://www.spaceappschallenge.org/2026/ → Resources → Judging and Awards Guide (pasted by a human, 2026-11-14).
+
+### Eligibility for Global Judging (minimum)
+- Respond to an official challenge.
+- All members registered, same Local Event (not waitlisted), on the team's Members tab. 1–6 members. No new members after submission closes.
+- All required fields of the project page completed.
+- Demo: ≤ 7 slides (incl. title and intro) or ≤ 30 s video.
+- English on the project page and all linked materials (video may be spoken in another language with English subtitles).
+- Submitted before Sun 15.11. 23:59 local time (Heilbronn local deadline: 15:45, see `docs/timeline.md`).
+- Two checkboxes: (1) read the submission requirements and agree to the Terms and Privacy Policy; (2) the project is the team's original work, all external resources (code, text, images, even open source) are listed in References, and no copyrighted material is used without permission.
+- NASA China funding restriction review (no prohibited bilateral activity with China or Chinese-owned entities).
+
+### Criteria (each scored 1–5, at every judging level)
+- **Impact:** addresses a minor or major problem; reach from a few to a broad audience. 5 = significant problem, extensive reach, inspiring, could change the world, far exceeds expectations.
+- **Creativity:** originality and innovation; novel concept or meaningful improvement on existing ideas. 5 = groundbreaking, never attempted before, challenges conventional methods.
+- **Validity:** grounded in scientific principles; technically, functionally, logically feasible; could work in the real world. Completeness, usability, and user-friendliness count. 5 = scientifically sound, fully developed, ready for real-world use, highly usable.
+- **Relevance:** fully and directly addresses the challenge; NASA data is a core component, not a superficial addition. 5 = deeply connected to the challenge goals; NASA data is integral and drives the innovation.
+- **Presentation:** clearly conveys the challenge, solution, and significance; engaging, well-structured storytelling. Judges score it from the demo and the full project. 5 = polished, compelling, audience fully grasps significance and impact.
+- The guide explicitly warns: teams over-focus on the first four; give presentation equal attention (story, design).
+
+### Judging phases
+1. Local judging (Heilbronn panel, after the hackathon) selects Global Nominees, announced Dec 3, 2026. Local awards are separate.
+2. Global judging → Global Finalists and Honorable Mentions, Dec 17, 2026.
+3. Executive committee (NASA + partner agencies) → Global Winners, Jan 26, 2027.
+
+### Global Awards (10)
+- Best Use of Science: best and most valid use of the scientific method.
+- Best Use of Data: makes space data accessible or leverages it for a unique application.
+- Best Use of Technology: most innovative use of technology.
+- Galactic Impact: most potential to improve life on Earth or the universe.
+- Best Mission Concept: most plausible concept and design.
+- Most Inspirational: captures our hearts.
+- Best Storytelling: most creatively communicates the potential of open data through storytelling.
+- Global Connection: best connects people around the world through technology.
+- Art & Technology: most effectively combines technical and creative skills.
+- Local Impact: greatest potential for making a difference in the local community.
 
 ## Project Submission Guide
 
