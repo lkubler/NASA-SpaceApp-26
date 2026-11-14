@@ -114,7 +114,7 @@ export default {
           pin(p, murrayBtn);
         } else {
           pin(p, h(`div.m1-pin.m1-pin--site.m1-pin--locked.m1-pin--${s.id}`, { title: `${s.name}: not in this demo` },
-            h('span.m1-pin__dot'),
+            h('span.m1-pin__lead'), h('span.m1-pin__dot'),
             h('span.m1-pin__name', h('span.m1-pin__lock', { html: LOCK_SVG }), s.name, h('span.m1-pin__note', 'not in this demo'))));
         }
       }
@@ -152,7 +152,8 @@ export default {
           h('figcaption.mono', r.photoMeta, h('br'), r.photoCredit, ' ', labelTag({ label: 'real', text: `Real Curiosity photo: ${r.photoCaption}.`, source: { title: `${r.photoMeta}, ${r.photoCredit}`, url: r.photoUrl } }))),
         h('div.m1-req__body',
           h('div.m1-req__from.mono', h('span', r.from), labelTag(simulatedMsg)),
-          h('div.m1-req__kind.mono', r.kind === 'sample' ? 'One sample' : 'One measurement'),
+          h('div.m1-req__kind.mono', r.kind === 'sample' ? 'One sample' : 'One measurement',
+            (ctx.state.requestsDone || []).includes(r.id) ? h('span.m1-req__done', '✓ Done') : null),
           h('div.m1-req__title', r.title),
           h('p.m1-req__why', r.why, ' ', labelTag({ label: 'real', text: 'The reason comes from published Curiosity science.', source: r.whySource })),
           h('div.m1-req__signal.mono',
@@ -171,6 +172,7 @@ export default {
       const id = ctx.state.request && ctx.state.request.id;
       for (const [k, c] of cardEls) {
         c.classList.toggle('is-selected', k === id);
+        c.classList.toggle('is-done', (ctx.state.requestsDone || []).includes(k));
         c.setAttribute('aria-pressed', String(k === id));
       }
       if (btn) btn.disabled = !id;

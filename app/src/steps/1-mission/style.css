@@ -6,11 +6,11 @@
 
 /* bottom-left headline, one line below it */
 .step--mission .m1-hero {
-  position: absolute; left: var(--gutter); bottom: calc(var(--gutter) + 1.6em); max-width: 30em;
+  position: absolute; left: var(--gutter); bottom: calc(var(--gutter) + 1.6em); max-width: calc(100vw - 2 * var(--gutter));
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6); transition: opacity var(--fade);
 }
-.step--mission .m1-hero .headline { font-size: var(--fs-hero); }
-.step--mission .m1-hero .lede { color: #d6d6da; }
+.step--mission .m1-hero .headline { font-size: var(--fs-hero); white-space: nowrap; }
+.step--mission .m1-hero .lede { color: #d6d6da; max-width: 30em; }
 
 .step--mission .m1-credit {
   position: absolute; left: var(--gutter); bottom: calc(var(--gutter) * 0.45); font-size: var(--fs-tag);
@@ -47,8 +47,12 @@
 .step--mission .m1-pin--locked .m1-pin__name { color: #b9b9be; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35em; }
 .step--mission .m1-pin__note { font-family: var(--font-mono); font-weight: 400; font-size: var(--fs-tag); color: var(--text-2); margin-left: 0.4em; }
 .step--mission .m1-pin__lock { display: inline-flex; color: var(--text-2); }
-.step--mission .m1-pin--marias .m1-pin__name { right: 10px; bottom: 6px; }
-.step--mission .m1-pin--pahrump .m1-pin__name { right: 12px; top: 4px; }
+.step--mission .m1-pin--marias .m1-pin__name { right: 62px; bottom: 34px; }
+.step--mission .m1-pin--pahrump .m1-pin__name { right: 62px; top: 32px; }
+/* leader lines: the three sites lie close together, so the two locked labels sit apart with a line to their dot */
+.step--mission .m1-pin__lead { position: absolute; left: 0; top: 0; height: 1px; width: 70px; background: rgba(255, 255, 255, 0.55); transform-origin: 0 0; }
+.step--mission .m1-pin--marias .m1-pin__lead { transform: rotate(-145deg); }
+.step--mission .m1-pin--pahrump .m1-pin__lead { transform: rotate(145deg); }
 
 @keyframes m1-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(79, 203, 255, 0.18); } 50% { box-shadow: 0 0 0 9px rgba(79, 203, 255, 0.05); } }
 
@@ -101,3 +105,7 @@
 
 .step--mission.m1--site .m1-hero .lede { opacity: 0.85; }
 @media (prefers-reduced-motion: reduce) { .step--mission .m1-pin--murray .m1-pin__dot { animation: none; } }
+
+/* a request finished on an earlier mission (state.requestsDone) */
+.step--mission .m1-req__done { margin-left: 0.8em; color: var(--accent); border: 1px solid currentColor; border-radius: var(--radius-pill); padding: 0 0.6em; }
+.step--mission .m1-req.is-done:not(.is-selected) { opacity: 0.75; }
