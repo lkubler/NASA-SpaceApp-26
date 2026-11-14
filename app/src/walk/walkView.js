@@ -5,6 +5,7 @@ import { app } from '../state.js';
 import { buildHeightmap as buildHm, provideHeightmap } from '../terrain/heightmap.js';
 import { mountHud } from './hud.js';
 import { initSky } from './sky.js';
+import { mountRoute3d } from './route3d.js';
 
 const BASE = import.meta.env.BASE_URL + 'murray/';
 const CELL = 0.5, HALF = 64, N = (HALF * 2) / CELL; // 256 x 256 cells
@@ -37,6 +38,7 @@ let sky; // sky.js: Mars24 sun, sky dome, fog, day/dust controls (created after 
 const state = { tiles: [], ready: false, yaw: 0, pitch: 0, pos: new THREE.Vector3(), eyeY: 0, keys: {}, speed: 0, slope: 0, mult: 1 };
 sky = initSky({ scene, sun, hemi, container: document.getElementById('walk-view') });
 const hud = mountHud(document.getElementById('hud')), msg = document.getElementById('msg');
+let route3d = null;
 const stats = { heightmapMs: 0, gridCells: N * N, tris: 0, texLoaded: 0 };
 
 // ---- load ----
@@ -73,6 +75,7 @@ loader.load(BASE + 'terrain.glb', (gltf) => {
   const h = groundRaycast(0, 0); state.pos.set(0, h ?? 0, 0);
   state.eyeY = state.pos.y + EYE;
   state.ready = true; msg.style.display = 'none';
+  route3d = mountRoute3d({ scene, state, groundRaycast, hAt, container: document.getElementById('walk-view'), eye: EYE }); api.route3d = route3d;
   window.__spike = api; window.__app = api; app.set({ walkReady: true });
 }, undefined, (e) => { console.error(e); msg.textContent = 'Load failed: ' + e.message; });
 
@@ -155,6 +158,7 @@ function frame(now) {
     camera.position.set(state.pos.x, state.eyeY, state.pos.z);
     camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
     sky.update(camera.position);
+    if (route3d) route3d.update(dt, state.slope);
   }
   renderer.render(scene, camera);
   stat.frames++;

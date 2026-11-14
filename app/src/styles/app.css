@@ -40,3 +40,9 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .hud-warn { position: absolute; top: var(--s-5); left: 50%; transform: translateX(-50%); height: 44px; display: flex; align-items: center; padding: 0 var(--s-5);
   background: var(--scrim); border-left: 6px solid var(--danger); border-radius: var(--radius); color: var(--hud-text); font: 600 16px var(--font-display); letter-spacing: .1em; text-transform: uppercase; }
 .hud-warn[hidden] { display: none; }
+/* Walk route: toast + guided-walk button (task 007) */
+.walk-toast { position: absolute; top: calc(var(--s-5) + 56px); left: 50%; transform: translateX(-50%); padding: var(--s-3) var(--s-5); background: var(--scrim); border-left: 6px solid var(--warn); border-radius: var(--radius); color: var(--hud-text); font: 600 14px var(--font-display); letter-spacing: .06em; pointer-events: none; z-index: 5; }
+.walk-toast[data-kind="danger"] { border-left-color: var(--danger); }
+.walk-toast[hidden] { display: none; }
+.walk-guide { position: absolute; top: var(--s-5); right: var(--s-5); z-index: 6; padding: var(--s-2) var(--s-4); background: var(--scrim); color: var(--hud-text); border: 1px solid var(--hud-line); border-radius: var(--radius); font: 600 13px var(--font-display); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.walk-guide[hidden] { display: none; }
