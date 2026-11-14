@@ -62,3 +62,4 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Result: 54 tests pass, build OK. Default: 5.9 km loop, EVA 7.3 h, walk home 47–54 min, A* 0.2 s; 1 m ortho fades in on zoom; walk view uses translated route.
 - Found: reserve at lander 0 % (below 20 % buffer), comms shadow covers nearly the whole route (434 → 124 min with relay), labels crowd near Quela / clip under panel → 024.
 - Next: 024 builder (running); then UX pass 2 + jury re-check before Sun 10:30 freeze; minimap; humans: pitch owner, AI 009 scope, cut 011.
+- 15:20: merged 024 (default scenario: 5.9 km, EVA 4.9 h, 22 % reserve at lander, slack ~10 min; relay 2 m antenna assumed; comms shadow 115 → 0 min with "Move relay"; labels avoid panel/key). Fixed 4 page errors from 022 (hatch drawImage on hidden 0×0 map canvas). 55 tests, all 4 views 0 errors. Known: relay search takes ~3 s; no turn-back shown in the feasible default (appears if drill time +10 min).
