@@ -17,7 +17,8 @@ Markers => numbered circles, mono digits; the chosen one filled cyan
 Main button => one per screen, a wide pill, bottom right; in the last step before the walk cyan with a glow
 Map => a rounded panel on the left, legend below it, scale bar inside
 Big numbers => label small and grey above, value large below
-Helmet => `docs/design/helmet-frame.png` around the view; the green area is the scene
+Helmet => `docs/design/helmet-frame.png` around the view; the green area is the scene; a small visible mark "AI-generated image" on the frame
+Mockup 4 => its black sky is a placeholder; the walk shows the real sky
 Labels real / model / simulated / assumption => small mono text beside the value
 Motion => short fades and slides only
 

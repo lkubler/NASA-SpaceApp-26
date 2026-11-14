@@ -3,6 +3,7 @@ The visitor should understand: at every step the helmet tells me whether I can s
 Rests on: `specs/rules.md`, `research/helmet-display.md`, `research/walk-terrain.md`, `docs/mockups/04-helmet-view.png`
 
 View => first person on the terrain, through the helmet frame; starts at the rover, facing the route
+Sky and horizon => the real background image of the Access Mars scene (`app/public/murray/background.jpg`, from Curiosity's images); never a black or invented sky
 Moving => keys and mouse, at walking pace
 Route => a cyan band on the ground; the target as a diamond marker with name and distance
 Layout => as in the mockup; the ground ahead stays clear
