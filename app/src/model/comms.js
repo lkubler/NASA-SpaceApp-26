@@ -158,8 +158,8 @@ export function lineOfSight(hm, a, b, aboveA = 2, aboveB = 1.8) {
  * `mustSee` (the lander) or it is skipped: the lander cannot sit in its own shadow. Candidates are tried in
  * order; ties go to the earlier one (put the nearest first). Returns {x, y, longest_s, total_s} or null.
  */
-export function bestRelay(hm, samples, candidates, { antennaHeight_m = 2, targetHeight_m = 1.8, mustSee = null } = {}) {
-  let best = null;
+export function bestRelay(hm, samples, candidates, { antennaHeight_m = 2, targetHeight_m = 1.8, mustSee = null, verify = null, top = 6 } = {}) {
+  const scored = [];
   for (const c of candidates) {
     if (mustSee && !lineOfSight(hm, c, mustSee, antennaHeight_m, targetHeight_m)) continue;
     let longest = 0, total = 0, a = null, last = null;
@@ -169,7 +169,23 @@ export function bestRelay(hm, samples, candidates, { antennaHeight_m = 2, target
       else if (a !== null) close();
     }
     if (a !== null) close();
-    if (!best || longest < best.longest_s || (longest === best.longest_s && total < best.total_s)) best = { x: c.x, y: c.y, longest_s: longest, total_s: total };
+    scored.push({ x: c.x, y: c.y, longest_s: longest, total_s: total });
   }
-  return best;
+  const order = (a, b) => a.longest_s - b.longest_s || a.total_s - b.total_s; // stable sort: ties keep candidate order
+  scored.sort(order);
+  if (!verify || !scored.length) return scored[0] || null;
+  // The quick line-of-sight score can differ from the viewshed the map draws (cell quantisation at the edge of a shadow):
+  // re-score the best few with `verify(candidate) -> {longest_s, total_s}` and keep the best by that.
+  return scored.slice(0, top).map((c) => ({ ...c, ...verify(c) })).sort(order)[0];
+}
+
+/**
+ * Longest and total time out of contact along a planned route, with the time spent at stations counted (the crew is
+ * working in shadow). points = [{x, y, elapsed_s, stationS?}] in route order; vis from viewshed().
+ */
+export function routeShadowScore(hm, vis, points) {
+  const rt = [];
+  for (const p of points) { if (p.stationS) rt.push({ x: p.x, y: p.y, time_s: p.elapsed_s - p.stationS }); rt.push({ x: p.x, y: p.y, time_s: p.elapsed_s }); }
+  const segs = routeShadows(rt, vis, { width: hm.width, height: hm.height, cellSize_m: hm.cellSize_m });
+  return { longest_s: Math.max(0, ...segs.map((s) => s.duration_s)), total_s: segs.reduce((a, s) => a + s.duration_s, 0) };
 }

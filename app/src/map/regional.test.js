@@ -50,3 +50,28 @@ test('cross-grid path: lander (regional) -> station inside the 1 km grid -> land
   const q = tf.sceneToLocal(10, -20), s = tf1.localToScene(fr.toCrop(q).x, fr.toCrop(q).y);
   assert.ok(Math.abs(s.x - 10) < 1e-6 && Math.abs(s.z + 20) < 1e-6);
 });
+
+test('task 024: default scenario is feasible but tight; relay first guess leaves a real shadow, the relay search clears it', async () => {
+  const { computeReserve, DEFAULTS } = await import('../model/reserve.js');
+  const { viewshed, bestRelay, routeShadowScore, lineOfSight } = await import('../model/comms.js');
+  const { relayCandidates, RELAY_ANTENNA_M } = await import('./scenario.js');
+  const sc = buildScenario(L, tf, fr), grid = costGrid(L.hm, L.slope), home = makeHome(L.hm, grid, cell(sc.start));
+  const route = planRoute(L.hm, L.slope, [sc.start, ...sc.waypoints, sc.start].map(cell), { grid }), P = route.points;
+  for (const l of route.legs) { const w = sc.waypoints[l.to - 1]; if (w) P[l.endIdx].stationS = w.minutes * 60; }
+  const rin = P.map((p) => { const [c, r] = cell(p); return { dist_m: p.dist_m, elev_m: p.elev_m, stationS: p.stationS, time_s: p.time_s, returnKJ: home.returnKJ(c, r), returnS: home.returnS(c, r) }; });
+  const res = computeReserve(rin, { capacityKJ: DEFAULTS.capacityKJ }), end = res.points.at(-1);
+  const frac = end.remainingKJ / DEFAULTS.capacityKJ;
+  assert.ok(frac >= 0.2 && frac <= 0.35, 'reserve at lander ' + frac);
+  assert.equal(res.turnBack, null);
+  P.forEach((p, i) => { p.elapsed_s = res.points[i].elapsed_s; });
+  const vsh = (rv) => viewshed(L.hm, { x: rv.x, y: rv.y, antennaHeight_m: RELAY_ANTENNA_M }, 1.8);
+  const worst = (rv) => routeShadowScore(L.hm, vsh(rv), P).longest_s;
+  assert.ok(lineOfSight(L.hm, sc.rover, sc.start, RELAY_ANTENNA_M, 1.8), 'lander sees the default relay');
+  const before = worst(sc.rover);
+  assert.ok(before > 600, 'shadow before relay ' + before);
+  const idx = new Set([0, P.length - 1]); for (let i = 0; i < P.length; i += 14) idx.add(i);
+  const samples = [...idx].sort((a, b) => a - b).map((i) => ({ x: P[i].x, y: P[i].y, from_s: res.points[i].elapsed_s - (P[i].stationS || 0), to_s: res.points[i].elapsed_s }));
+  const best = bestRelay(L.hm, samples, relayCandidates(L.hm, L.slope, sc.start, 20), { mustSee: sc.start, antennaHeight_m: RELAY_ANTENNA_M, verify: (c) => routeShadowScore(L.hm, vsh(c), P) });
+  const after = worst(best);
+  assert.ok(after <= 600 || after <= 0.1 * before, `shadow after relay ${after} (before ${before})`);
+});

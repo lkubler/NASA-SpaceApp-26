@@ -5,12 +5,12 @@
 import { app } from '../state.js';
 import { loadDtm, makeTransform } from '../terrain/dtm.js';
 import { loadRegional, makeFrames } from '../terrain/regional.js';
-import { buildScenario, snapFlat, QUELA } from './scenario.js';
+import { buildScenario, snapFlat, QUELA, RELAY_ANTENNA_M, relayCandidates } from './scenario.js';
 import { whenHeightmap, slopeGrid } from '../terrain/heightmap.js';
 import { planRoute, costGrid, SLOPE_HARD_DEG, SLOPE_PREFER_DEG } from './planner.js';
 import { makeHome } from './home.js';
 import { computeReserve, DEFAULTS, STATION_TASKS } from '../model/reserve.js';
-import { viewshed, HIDDEN, DEFAULT_SHADOW_LIMIT_S, COMMS_SOURCE_NAME, bestRelay } from '../model/comms.js';
+import { viewshed, HIDDEN, DEFAULT_SHADOW_LIMIT_S, COMMS_SOURCE_NAME, bestRelay, routeShadowScore } from '../model/comms.js';
 import { sunAtLtst } from '../model/mars24.js';
 import { tile, chip, badge, button, provLegend } from '../ui/components.js';
 import { autonomyBar } from '../ui/autonomy.js';
@@ -147,8 +147,15 @@ export function mountMap(el) {
     if (pts.length < 2) { const s = Math.min(w, h) / L.hm.width * 0.96; view = { s, ox: (w - L.hm.width * s) / 2, oy: (h - L.hm.height * s) / 2 }; return; }
     const pad = 60, x0 = Math.min(...pts.map((p) => p.x)) - pad, x1 = Math.max(...pts.map((p) => p.x)) + pad, y0 = Math.min(...pts.map((p) => p.y)) - pad, y1 = Math.max(...pts.map((p) => p.y)) + pad;
     const left = w > 800 ? 470 : 0, aw = w - left - (w > 800 ? 170 : 20), ah = h - 60;
-    const s = Math.min(aw / ((x1 - x0) / cs()), ah / ((y1 - y0) / cs()));
-    view = { s, ox: left + (aw - ((x1 - x0) / cs()) * s) / 2 - (x0 / cs()) * s, oy: 30 + (ah - ((y1 - y0) / cs()) * s) / 2 - (y0 / cs()) * s };
+    let s = Math.min(aw / ((x1 - x0) / cs()), ah / ((y1 - y0) / cs()));
+    const place = (k) => ({ s: k, ox: left + (aw - ((x1 - x0) / cs()) * k) / 2 - (x0 / cs()) * k, oy: 30 + (ah - ((y1 - y0) / cs()) * k) / 2 - (y0 / cs()) * k });
+    view = place(s);
+    // keep the relay icon out from under the on-map key (bottom right)
+    if (w > 800 && rover) for (let i = 0; i < 12; i++) {
+      const sx = (rover.x / cs()) * view.s + view.ox, sy = (rover.y / cs()) * view.s + view.oy;
+      if (sx < w - 300 || sy < h - 250) break;
+      s *= 0.92; view = place(s);
+    }
   }
 
   // ---- planning ----
@@ -240,7 +247,7 @@ export function mountMap(el) {
     const key = rover.x.toFixed(1) + ',' + rover.y.toFixed(1);
     if (key === commsKey) return; commsKey = key;
     const t0 = performance.now();
-    vis = viewshed(L.hm, { x: rover.x, y: rover.y, antennaHeight_m: 2 }, 1.8);
+    vis = viewshed(L.hm, { x: rover.x, y: rover.y, antennaHeight_m: RELAY_ANTENNA_M }, 1.8);
     api.stats.viewshedMs = performance.now() - t0;
   }
   // Overlay: hatched magenta inside a corridor around the route, only the outline of shadow areas elsewhere,
@@ -298,7 +305,7 @@ export function mountMap(el) {
     const w = canvas.width = el.clientWidth, h = canvas.height = el.clientHeight;
     ctx.fillStyle = css('--scrim-solid'); ctx.fillRect(0, 0, w, h);
     if (!L) { ctx.fillStyle = css('--hud-text'); ctx.font = '14px ' + css('--font-mono'); ctx.fillText(msg, 24, 70); return; }
-    placed = [];
+    placed = w > 800 ? [[w - 282, h - 232, 270, 225], [0, 0, 470, h]] : []; // on-map key and side panel are obstacles for labels
     for (const q of [...waypoints, start, rover].filter(Boolean)) { const [x, y] = toScreen(q); placed.push([x - 12, y - 14, 24, 26]); } // icons first: labels dodge them
     const W = L.hm.width, H = L.hm.height;
     ctx.imageSmoothingEnabled = view.s < 1.5;
@@ -490,16 +497,11 @@ export function mountMap(el) {
     for (let i = 0; i < P.length; i += Math.max(1, Math.round(35 / cs()) * 2)) idx.add(i);
     route.stations.forEach((st) => idx.add(st.idx));
     const samples = [...idx].sort((p, q) => p - q).map((i) => ({ x: P[i].x, y: P[i].y, from_s: P[i].elapsed_s - (P[i].stationS || 0), to_s: P[i].elapsed_s }));
-    const xs = P.map((p) => p.x), ys = P.map((p) => p.y), pad = 200, step = Math.max(20, Math.round(80 / cs()) * cs()), cands = [], W = L.hm.width;
-    for (let y = Math.max(0, Math.min(...ys) - pad); y <= Math.min(L.hm.height * cs() - 1, Math.max(...ys) + pad); y += step)
-      for (let x = Math.max(0, Math.min(...xs) - pad); x <= Math.min(W * cs() - 1, Math.max(...xs) + pad); x += step) {
-        const [c, r] = cellOf({ x, y }); if (L.slope[r * W + c] <= SLOPE_HARD_DEG) cands.push({ x, y });
-      }
-    cands.sort((p, q) => Math.hypot(p.x - rover.x, p.y - rover.y) - Math.hypot(q.x - rover.x, q.y - rover.y));
+    const cands = relayCandidates(L.hm, L.slope, start, SLOPE_HARD_DEG);
     const was = Math.max(0, ...(route.shadows || []).map((sg) => sg.duration_s));
-    const best = bestRelay(L.hm, samples, cands, { mustSee: start });
+    const best = bestRelay(L.hm, samples, cands, { mustSee: start, antennaHeight_m: RELAY_ANTENNA_M, verify: (c) => routeShadowScore(L.hm, viewshed(L.hm, { x: c.x, y: c.y, antennaHeight_m: RELAY_ANTENNA_M }, 1.8), P) });
     if (!best) { relayNote = 'No position found that sees the lander.'; panelUpdate(); return; }
-    rover = { x: best.x, y: best.y }; commsKey = ''; replan(true);
+    rover = { x: best.x, y: best.y }; commsKey = ''; fit(); replan(true);
     const now = Math.max(0, ...(route.shadows || []).map((sg) => sg.duration_s));
     relayNote = `Relay moved ${Math.round(Math.hypot(best.x - start.x, best.y - start.y))} m from the lander: longest time out of contact ${Math.round(was / 60)} min to ${Math.round(now / 60)} min.`;
     panelUpdate();
@@ -529,7 +531,7 @@ export function mountMap(el) {
     } else if (tb) {
       verdict.innerHTML = `<b class="bad-t">Turn back by ${fmtClock(tb.clockH)}</b> after ${Math.round(P[tb.index].dist_m)} m` + (ts ? `, on the way to station ${ts.n}` : '') + `. As planned, the loop ends with ${endPct} % of the suit, below the ${bufPct} % buffer; past this point the suit no longer covers the best way home (${Math.round(tb.returnS / 60)} min) plus the buffer.`;
     } else {
-      verdict.innerHTML = `Whole loop within budget: back at the lander at ${fmtClock(endH)} with ${endPct} % of the suit left (buffer ${bufPct} %). EVA ${fmtClock(startH)} to ${fmtClock(endH)}.`;
+      verdict.innerHTML = `Whole loop within budget: back at the lander at ${fmtClock(endH)} with ${endPct} % of the suit left (buffer ${bufPct} %). EVA ${fmtClock(startH)} to ${fmtClock(endH)}. Slack: about ${Math.max(0, Math.round(((endFrac - buf) * rs.capacityKJ * 1000) / DEFAULTS.stationRateW / 60))} min of extra station work before the buffer is used.`;
     }
     verdictBox.append(verdict);
     if (night && (night.afterSunset || night.beforeSunrise)) {
@@ -537,6 +539,8 @@ export function mountMap(el) {
       verdictBox.append(w);
     }
     if (relayNote) verdictBox.append(h('p', 'mp-assume', relayNote));
+    const rs2 = h('div', 'mp-sec'); rs2.append(chip('modelled', `Assumption: relay rover ${Math.round(Math.hypot(rover.x - start.x, rover.y - start.y))} m from the lander, antenna ${RELAY_ANTENNA_M} m above ground, geometric line of sight (no diffraction).`), h('span', 'mp-assume', `relay ${Math.round(Math.hypot(rover.x - start.x, rover.y - start.y))} m from lander, ${RELAY_ANTENNA_M} m antenna (assumed)`));
+    verdictBox.append(rs2);
     const sec = h('div', 'mp-sec'); sec.append(chip('modelled', 'Assumption: station durations are ours, plausible analog-EVA scale (research/science.md); editable.'), h('span', 'mp-assume', 'durations assumed, editable'));
     stBody.append(sec);
     const tbl = h('table', 'mp-st');
