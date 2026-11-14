@@ -1,10 +1,10 @@
 # Frame
 The visitor should understand: this is one mission in five steps, and I always know which step I am in.
-Rests on: `PROPOSAL.md`
+Rests on: `PROPOSAL.md`, `specs/design.md`
 
 Stack => static web app, Vite and Three.js, in `app/`; builds to GitHub Pages with the existing workflow
 Steps => Mission, Plan, Go / no-go, Walk, Debrief; each its own module, empty at first
-Step bar => on top in steps 1, 2, 3 and 5; shows done, current, next
+Step bar => small, beside the project name, in steps 1, 2, 3 and 5; shows done, current, next
 Forward => only when the current step is complete
 Back => always possible until the walk starts
 Shared state => one object: chosen request, candidates, chosen spot, route, plan numbers, walk log; every step reads and writes only this
@@ -16,4 +16,6 @@ Sources => a page reachable from every step: all data, tools and code used, and 
 Language => English only
 Screen => works at 1280 × 720 and 1920 × 1080
 
-Not in this spec: the content of the five steps, the look beyond a neutral dark base.
+Look => `specs/design.md`; one style sheet for all steps
+
+Not in this spec: the content of the five steps.

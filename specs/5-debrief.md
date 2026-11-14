@@ -1,8 +1,11 @@
 # 5 Debrief
 The visitor should understand: I got home, and I can see how close it was.
-Rests on: `specs/rules.md`
+Rests on: `specs/rules.md`, `specs/design.md`
 
-Outcome => one line on top: home with reserve, home with a broken rule, or not returned
+Layout => like Go / no-go: headline, big numbers, map, checks, main button
+Headline => "Back home."; otherwise "Not returned."
+
+Outcome => one sentence under the headline: home with reserve, home with a broken rule, or not returned
 Table => planned next to actual: sample, distance, time, reserve on return, time in radio shadow
 Warnings => count and list, each with where it occurred
 Closest moment => the lowest reserve on return during the walk, marked on the map

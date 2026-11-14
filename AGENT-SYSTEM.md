@@ -24,6 +24,7 @@ Not in this spec: <list>
 5. `5-debrief`
 
 `0-frame`: the shell the five steps live in.
+`design`: the look, from the team's mockups in `docs/mockups/`. All steps follow it.
 `rules`: the rules and the suit model. All five steps read it.
 
 **Additional specs**, started only when the main journey works, in this order:

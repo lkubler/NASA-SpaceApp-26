@@ -1,30 +1,33 @@
 # 4 Walk
 The visitor should understand: at every step the helmet tells me whether I can still get home.
-Rests on: `specs/rules.md`, `research/helmet-display.md`, `research/walk-terrain.md`
+Rests on: `specs/rules.md`, `research/helmet-display.md`, `research/walk-terrain.md`, `docs/mockups/04-helmet-view.png`
 
-View => first person on the terrain, through a helmet frame; starts at the rover, facing the route
+View => first person on the terrain, through the helmet frame; starts at the rover, facing the route
 Moving => keys and mouse, at walking pace
-Route => the planned route as a line on the ground; the target as a marker
-Display position => small, at the top and upper right; the ground ahead stays clear
+Route => a cyan band on the ground; the target as a diamond marker with name and distance
+Layout => as in the mockup; the ground ahead stays clear
 
 Always shown:
-Target => direction and distance
-Reserve on return => as a bar, with the limiting consumable
-Radio => connected or shadow
-Minimap => route, own position, rover
-Demo time => the factor
+Compass => strip at the top with heading
+Minimap => round, top left: route, own position and view direction, rover; below it the target with distance and time
+Reserve => a chip at the lower left: reserve on return, the limiting consumable, time left
+Suit and body => card top right: heart rate, core temperature, suit pressure, CO2; label: simulated
+Mission => card bottom right: time outside, radiation dose, outside temperature, power, radio to rover
+Demo time => the factor, in the mission card
+End => "esc: end mission" at the bottom
 
 Only when needed, in the centre, one at a time, most urgent first:
 Steep stretch ahead => caution, before the crew reaches it
 Ground over 20° underfoot => warning; counted as a broken rule
-Radio shadow ahead => advisory, before the crew enters it
+Radio shadow ahead => advisory, before the crew enters it; the radio line in the mission card changes inside
 Off the path => caution; no new route
 Turn back now => warning when the reserve on return reaches zero; stays until the crew heads home
 Edge of the site => caution, then the visitor is stopped
 Same spots => each warning appears where the plan marked it
 
-At the target => "E: take sample"; time moves on by the work duration; the real photo and one sentence; the target switches to the rover
+Looking at a butte or an Access Mars point => a card beside the reticle: name, one sentence, size
+At the target => "E: take sample"; time moves on by the work duration; a real Curiosity photo of this rock and one sentence; the target switches to the rover
 Suit empty before the rover => the walk ends; the debrief says so; label: simulated
 Back at the rover => "E: end excursion", then Debrief
 
-Not in this spec: abort key, pace, rerouting, sudden events, partner, suit readings in detail.
+Not in this spec: abort key, pace, rerouting, sudden events, partner.
