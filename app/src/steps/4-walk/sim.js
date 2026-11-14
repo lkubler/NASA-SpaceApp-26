@@ -172,9 +172,13 @@ export function createSim(t, route, log) {
     return null;
   }
 
-  const broken = {};
-  function breakRule(id, name, on) {
-    if (on && !broken[id]) log.brokenRules.push({ id, name, x: s.x, z: s.z, tS: log.tS });
+  // one entry per time into a broken rule: leaving and coming back counts again, but only after
+  // reenterM metres walked outside it, so walking along the edge of closed ground is not counted per frame
+  const broken = {}, outsideM = {};
+  let lastPos = { x: s.x, z: s.z };
+  function breakRule(id, name, on, movedM) {
+    if (on && !broken[id] && (outsideM[id] ?? Infinity) >= D.reenterM) log.brokenRules.push({ id, name, x: s.x, z: s.z, tS: log.tS });
+    if (on) outsideM[id] = 0; else if (broken[id] || outsideM[id] != null) outsideM[id] = (outsideM[id] || 0) + movedM;
     broken[id] = on;
   }
 
@@ -189,9 +193,11 @@ export function createSim(t, route, log) {
     cur.steepUnder = isClosedAt(t, q.x, q.z);
     if (cur.steepUnder) info.steepUnder = { slopeDeg: t.slope[t.indexOf(q.x, q.z)], offRoute: !onBand };
     if (!cur.steepUnder) {
-      // on the band: closed ground on the planned route ahead (only where the plan breaks the slope rule);
-      // off the band: closed ground in the walking direction
-      const m = near.m <= D.onRouteM ? (s.moveDir && s.sinceMoveS <= D.aheadHoldS ? routeAheadClosed(near, D.steepAheadM) : null)
+      // on or near the band: closed ground on the planned route ahead (only where the plan breaks the slope
+      // rule); farther off: closed ground in the walking direction
+      // near the band (within nearBandM) the crew follows the route: warn only where the plan marks a
+      // steep stretch, not for steep ground a step beside it
+      const m = near.m <= D.nearBandM ? (s.moveDir && s.sinceMoveS <= D.aheadHoldS ? routeAheadClosed(near, D.steepAheadM) : null)
         : aheadHit((j, x, z) => isClosedAt(t, x, z), D.steepAheadM);
       if (m != null) { cur.steepAhead = true; info.steepAhead = { m }; }
     }
@@ -222,9 +228,11 @@ export function createSim(t, route, log) {
     if (s.tb && s.tb.on) { cur.turnBack = true; info.turnBack = { reserveS: s.reserve.seconds, viaSpot: log.phase === 'out' && !log.sample }; }
 
     // broken rules (logged once per stretch)
-    breakRule('slope', 'Slope on foot', cur.steepUnder);
-    breakRule('wayHome', 'Way home', s.reserve.seconds < 0);
-    breakRule('excursion', 'Excursion length', log.tS > RULES.evaLimitH.value * 3600);
+    const movedM = Math.hypot(s.x - lastPos.x, s.z - lastPos.z);
+    lastPos = { x: s.x, z: s.z };
+    breakRule('slope', 'Slope on foot', cur.steepUnder, movedM);
+    breakRule('wayHome', 'Way home', s.reserve.seconds < 0, movedM);
+    breakRule('excursion', 'Excursion length', log.tS > RULES.evaLimitH.value * 3600, movedM);
 
     // warnings log: each onset, where it occurred
     // (a warning that flickers on and off in the same place is logged once)
@@ -245,6 +253,11 @@ export function createSim(t, route, log) {
 
   function takeSample() {
     if (!atTarget()) return false;
+    // the last metres to the spot are walked at planning pace and the crew stands at the spot for the work,
+    // as the plan counts them: the reserve on return stays continuous across the sample (the reserve on
+    // the way out already counted these metres; skipping them made it jump up by their time there and back)
+    const r0 = logPath(log, t, [{ x: s.x, z: s.z }, { x: route.spot.x, z: route.spot.z }], { shadow, spot: route.spot });
+    if (r0) { s.x = route.spot.x; s.z = route.spot.z; s.radio = hasRadio(t, s.x, s.z); }
     log.phase = 'back';
     const p = { x: s.x, y: ground(s.x, s.z), z: s.z };
     s.reserve = logMove(log, t, { from: p, to: p, dtS: spotSeconds(), workW: WORK.spotW.value, radio: s.radio, spot: route.spot });

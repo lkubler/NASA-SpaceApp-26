@@ -4,7 +4,7 @@
 // Dev aid: ?step=5&outcome=home|broken|lost replaces the walk log once with a test log (fixtures.js).
 import './style.css';
 import {
-  h, headline, lede, bigNumber, pillButton, mapPanel, legend, checkItem, labelTag, marker,
+  h, s, headline, lede, bigNumber, pillButton, mapPanel, legend, checkItem, labelTag, marker,
   fmtDistance, fmtDuration,
 } from '../../ui/index.js';
 import { ROVER, spotLabel, spotNumber, ENVIRONMENT, DEMO, RULES } from '../../core/index.js';
@@ -37,6 +37,7 @@ const T = {
   spot: { label: 'model', src: 'WALK_TARGETS', text: 'Sample spot at the foot of a butte; its position is derived from the terrain.' },
   warnings: { label: 'model', src: 'WALK_TERRAIN', text: 'Warnings the helmet raised during the walk from the NASA rules; where = distance from the rover and time into the excursion.' },
   suitEmpty: { label: 'simulated', src: 'NONE', text: 'The suit ran out before the rover. The walk ended there; this is a simulation.' },
+  where: { label: 'model', src: 'WALK_TERRAIN', text: 'Where it happened: straight-line distance and direction from the rover on the 0.5 m terrain grid, and the suit time into the excursion (demo time).' },
   ended: { label: 'model', src: 'WALK_TERRAIN', text: 'You ended the mission with esc before reaching the rover; where = the point you stopped, measured on the terrain grid.' },
 };
 const tag = (k) => labelTag(T[k]);
@@ -154,18 +155,31 @@ export default {
     if (walk && walk.track && walk.track.length) map.path(walk.track, { style: 'walked' });
     if (empty && num(empty.x)) map.path([empty, ROVER], { style: 'walked' }).setAttribute('class', 'map-path dbf-gap');
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Rover' });
-    if (route) map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: spotNumber(route.spotId) || '·', selected: true });
+    const wms = [];
     warnings.forEach((w, i) => {
       if (!num(w.x) || !num(w.z)) return;
-      map.addMarker(w.x, w.z, { kind: 'number', text: String(i + 1) }).classList.add('dbf-wm', `dbf-wm--${w.level}`);
+      const g = map.addMarker(w.x, w.z, { kind: 'number', text: String(i + 1) });
+      g.classList.add('dbf-wm', `dbf-wm--${w.level}`);
+      wms.push(g);
     });
+    // the spot above the warning markers, so its number stays readable
+    const spotG = route ? map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: spotNumber(route.spotId) || '·', selected: true }) : null;
     if (min && num(min.x)) {
       const g = map.addMarker(min.x, min.z, { kind: 'dot', label: 'Closest moment', layer: 'top' });
       g.classList.add('dbf-closest');
-      const lbl = g.querySelector('.map-marker__label');
-      if (lbl) requestAnimationFrame(() => placeClear(map.svg, lbl));
     }
-    if (empty && num(empty.x)) map.addMarker(empty.x, empty.z, { kind: 'dot', label: 'Suit empty', layer: 'top' }).classList.add('dbf-empty');
+    const emptyG = empty && num(empty.x) ? map.addMarker(empty.x, empty.z, { kind: 'dot', label: 'Suit empty', layer: 'top' }) : null;
+    if (emptyG) emptyG.classList.add('dbf-empty');
+    // after layout: markers drawn fully inside the map and warning markers off the spot marker (a leader line
+    // joins a moved marker to its real place), then the labels placed clear of the markers
+    requestAnimationFrame(() => {
+      if (spotG) keepInside(map, spotG);
+      for (const g of wms) { keepInside(map, g); if (spotG) moveOff(map, g, spotG); }
+      for (const g of [map.svg.querySelector('.dbf-closest'), emptyG]) {
+        const lbl = g && g.querySelector('.map-marker__label');
+        if (lbl) placeClear(map.svg, lbl);
+      }
+    });
     zoomToWalk(map, terrain, [
       ...(route ? [...route.out.points, ...route.back.points] : []),
       ...((walk && walk.track) || []), ...warnings, ROVER, min, empty,
@@ -221,7 +235,8 @@ export default {
         tr('Time in radio shadow', cell(dur(plan && plan.radioShadowS), 'planShadow'), cell(dur(walk && walk.radioShadowS), 'walkShadow')),
       ));
     const pad = Math.round((RULES.walkBackRateFactor.value - 1) * 100);
-    const why = h('div.dbf__why', `The plan counts the way home at a ${pad} % higher work rate, so you can reach the rover with more reserve than planned. `, labelTag(RULES.walkBackRateFactor));
+    // the way-home pad only explains a reserve at the rover: not shown when the crew did not return
+    const why = !home ? null : h('div.dbf__why', `The plan counts the way home at a ${pad} % higher work rate, so you can reach the rover with more reserve than planned. `, labelTag(RULES.walkBackRateFactor));
     const demo = h('div.dbf__demo', `Demo time ${DEMO.timeFactor.value}${DEMO.timeFactor.unit}: times are suit time. `, labelTag(DEMO.timeFactor));
 
     // ----- report to Earth -----
@@ -235,7 +250,7 @@ export default {
           marker(i + 1, { tone: w.level }),
           h('div.dbf__wbody',
             h('div.dbf__wtext', w.text || w.id || NO_DATA),
-            h('div.dbf__wwhere.mono', `${fromRover(w)} · ${dur(w.tS)} in`)))))
+            h('div.dbf__wwhere.mono', `${fromRover(w)} · ${dur(w.tS)} in `, tag('where'))))))
         : h('div.dbf__none', wCount === '0' ? 'No warnings during the walk.' : NO_DATA));
 
     // ----- checks: each rule kept or broken on the walk -----
@@ -257,16 +272,17 @@ export default {
       const status = b || lostWay ? 'broken' : endedEarly ? 'caution' : 'ok';
       const where = b ? fromRover(b) : lostWay && stopAt ? fromRover(stopAt) : endedEarly ? `ended early, ${stopAt ? fromRover(stopAt) : NO_DATA}` : '';
       const times = b && b.count > 1 ? ` · ${b.count}×` : '';
-      checks.append(checkItem({ text: c.name, status, detail: where + times + (b && b.carried ? ' (in the plan)' : '') }));
+      checks.append(checkItem({ text: c.name, status, detail: where + times + (b && b.carried ? ' (in the plan)' : ''), tag: where && where !== NO_DATA ? T.where : null }));
     }
-    for (const b of broken) if (!usedBroken.has(b)) checks.append(checkItem({ text: b.name, status: 'broken', detail: fromRover(b) + (b.count > 1 ? ` · ${b.count}×` : '') }));
+    for (const b of broken) if (!usedBroken.has(b)) checks.append(checkItem({ text: b.name, status: 'broken', detail: fromRover(b) + (b.count > 1 ? ` · ${b.count}×` : ''), tag: T.where }));
 
     // ----- main button -----
     const btn = pillButton({
       text: 'New mission', arrow: true,
       onClick: () => {
         const id = ctx.state.request && ctx.state.request.id;
-        if (id && !ctx.state.requestsDone.includes(id)) ctx.set({ requestsDone: [...ctx.state.requestsDone, id] });
+        // only a mission that took the sample and reached the rover finishes the request
+        if (id && home && sample && !ctx.state.requestsDone.includes(id)) ctx.set({ requestsDone: [...ctx.state.requestsDone, id] });
         ctx.newMission();
       },
     });
@@ -299,6 +315,43 @@ export default {
  * Put a marker label where it covers no other marker or label: right, left, above, below, then further
  * out. Measured after layout; keeps the first clear position (or the last tried).
  */
+/** Shift a map marker on screen by (dx, dy) px, with a leader line from its real place. */
+function shiftMarker(map, g, dx, dy) {
+  const k = map.svg.getScreenCTM();
+  if (!k || !k.a) return;
+  const ux = dx / k.a, uy = dy / k.d;
+  const m = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(g.dataset.base || '');
+  g.setAttribute('transform', `translate(${ux.toFixed(2)} ${uy.toFixed(2)}) ${g.getAttribute('transform')}`);
+  if (m) {
+    const x = +m[1], y = +m[2];
+    g.parentNode.insertBefore(s('line', { class: 'dbf-leader', x1: x, y1: y, x2: x + ux, y2: y + uy }), g);
+  }
+}
+/** Keep a marker fully inside the visible map box, a few pixels in from its edge. */
+function keepInside(map, g) {
+  const box = map.el.getBoundingClientRect(), r = g.getBoundingClientRect(), pad = 4;
+  let dx = 0, dy = 0;
+  if (r.left < box.left + pad) dx = box.left + pad - r.left; else if (r.right > box.right - pad) dx = box.right - pad - r.right;
+  if (r.top < box.top + pad) dy = box.top + pad - r.top; else if (r.bottom > box.bottom - pad) dy = box.bottom - pad - r.bottom;
+  if (dx || dy) shiftMarker(map, g, dx, dy);
+}
+/** Move a marker off another one (circles apart), away from its centre, staying inside the map. */
+function moveOff(map, g, other) {
+  const a = g.getBoundingClientRect(), b = other.getBoundingClientRect();
+  const ca = { x: (a.left + a.right) / 2, y: (a.top + a.bottom) / 2 }, cb = { x: (b.left + b.right) / 2, y: (b.top + b.bottom) / 2 };
+  const need = (a.width + b.width) / 2 + 3, d = Math.hypot(ca.x - cb.x, ca.y - cb.y);
+  if (d >= need) return;
+  const box = map.el.getBoundingClientRect();
+  // away from the other marker; towards the map's middle when they sit on top of each other or at the edge
+  let ux = d > 0.5 ? (ca.x - cb.x) / d : -1, uy = d > 0.5 ? (ca.y - cb.y) / d : 0;
+  const nx = cb.x + ux * need, ny = cb.y + uy * need;
+  if (nx - a.width / 2 < box.left || nx + a.width / 2 > box.right || ny - a.height / 2 < box.top || ny + a.height / 2 > box.bottom) {
+    const mx = (box.left + box.right) / 2 - cb.x, my = (box.top + box.bottom) / 2 - cb.y, ml = Math.hypot(mx, my) || 1;
+    ux = mx / ml; uy = my / ml;
+  }
+  shiftMarker(map, g, cb.x + ux * need - ca.x, cb.y + uy * need - ca.y);
+}
+
 function placeClear(svg, lbl) {
   if (!lbl.isConnected) return;
   const others = [...svg.querySelectorAll('.map-marker')].filter((g) => !g.contains(lbl))

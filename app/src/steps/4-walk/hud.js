@@ -21,12 +21,17 @@ const fullTime = timeLeft(fullLevels()).seconds;
 const DIST_TAG = MODEL_TAG('Straight-line distance measured on the 0.5 m walk grid.');
 const ROUTE_TAG = MODEL_TAG('Path distance from where you stand along the fastest way that keeps every rule, measured on the 0.5 m walk grid, and its walking time from the suit model, in demo time.');
 const TIME_TAG = { label: 'model', text: 'Suit time since you left the rover, counted from the rover itself like the plan: walking and work times from the suit model, shown at demo speed. The debrief shows the same clock.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
+const SLOPE_TAG = MODEL_TAG('Slope of the ground here, from the 0.5 m walk grid built from the Access Mars terrain.');
+const AHEAD_TAG = MODEL_TAG('Distance ahead in your walking direction, measured on the 0.5 m walk grid.');
+const OFF_TAG = MODEL_TAG('Distance from you to the nearest point of the planned route, measured on the 0.5 m walk grid.');
+const LAST_M_TAG = MODEL_TAG('Straight-line distance from here to the rover, measured on the 0.5 m walk grid.');
+const LAST_S_TAG = { label: 'model', text: 'Walking time of the last metres at planning pace, from the suit model, in demo time. It is added to the clock when you end the excursion.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
+const RESERVE_TAG = { label: 'model', moon: true, text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
 export function createHud(el) {
-  // frame and the mark on it
+  // frame; the "AI-generated image" mark is drawn into the image pixels (bottom left of the frame)
   const frame = h('img.walk-frame', { src: frameUrl, alt: '', draggable: 'false' });
-  const aiMark = h('div.walk-aimark.mono', 'AI-generated image');
   // the ground Access Mars has only grey imagery for is tinted in our own colour (core/groundColor.js)
   const groundMark = h('div.walk-groundmark.mono', 'Ground colour ', tag(GROUND_TAG));
 
@@ -71,7 +76,7 @@ export function createHud(el) {
   const resLeft = h('div.walk-reserve__left.mono');
   const resBar = h('div.walk-reserve__bar', h('span'));
   const reserve = h('div.walk-reserve',
-    h('div.walk-reserve__head', h('span', 'Reserve on return'), tag({ label: 'model', moon: true, text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } })),
+    h('div.walk-reserve__head', h('span', 'Reserve on return'), tag(RESERVE_TAG)),
     h('div.walk-reserve__main', resVal, resLeft), resSub, resBar);
 
   // centre: alert, reticle, look card, prompt
@@ -95,7 +100,7 @@ export function createHud(el) {
   const loading = h('div.walk-loading.mono', 'Loading terrain…');
 
   const hud = h('div.walk-hud', compass, mini, bodyCard, reserve, missionCard, alertEl, reticle, lookCard, prompt, hint);
-  el.append(marks, frame, aiMark, groundMark, hud, escHint, modal, loading);
+  el.append(marks, frame, groundMark, hud, escHint, modal, loading);
 
   // ---------- minimap background (once): shaded relief, closed ground darker ----------
   let reliefCv = null, terr = null;
@@ -161,7 +166,12 @@ export function createHud(el) {
     g.save();
     g.clearRect(0, 0, w, H);
     g.beginPath(); g.arc(R, R, R, 0, Math.PI * 2); g.clip();
-    g.fillStyle = '#1a0f08'; g.fillRect(0, 0, w, H);
+    // outside the mapped square: a neutral "no data" fill (grey with fine diagonal lines), not black
+    g.fillStyle = '#4a4846'; g.fillRect(0, 0, w, H);
+    g.strokeStyle = 'rgba(255,255,255,0.16)'; g.lineWidth = dpr;
+    g.beginPath();
+    for (let d = -H; d < w; d += 6 * dpr) { g.moveTo(d, H); g.lineTo(d + H, 0); }
+    g.stroke();
     const [ox, oy] = toPx(t.min, t.max);
     g.imageSmoothingEnabled = true;
     g.drawImage(reliefCv, ox, oy, t.extent * k, t.extent * k);
@@ -239,14 +249,15 @@ export function createHud(el) {
 
     // alert: one at a time, most urgent first
     const id = s.modal ? null : s.alert;
-    const key = id ? id + alertDetail(id, s) : '';
+    const parts = id ? alertDetail(id, s) : [];
+    const key = id ? id + parts.filter((x) => typeof x === 'string').join('') : '';
     if (key !== lastAlert) {
       lastAlert = key;
       alertEl.replaceChildren();
       if (id) {
         const A = ALERTS[id];
         alertEl.append(h(`div.alert.alert--${A.level}.walk-alert__box`,
-          h('div.walk-alert__lvl.mono', A.level), h('div.alert__title', A.title), h('div.alert__text', alertDetail(id, s))));
+          h('div.walk-alert__lvl.mono', A.level), h('div.alert__title', A.title), h('div.alert__text', parts.map((x) => (typeof x === 'string' ? x : tag(x.tag))))));
       }
     }
 
@@ -263,30 +274,31 @@ export function createHud(el) {
     if (p !== lastPrompt) {
       lastPrompt = p;
       prompt.replaceChildren();
-      if (p === 'take') prompt.append(h('kbd', 'E'), h('span', `Take sample · ${fmtDuration(spotSeconds())} of work`));
+      if (p === 'take') prompt.append(h('kbd', 'E'), h('span', `Take sample · ${fmtDuration(spotSeconds())} of work `, tag(DEMO.spotWorkMin)));
       if (p.startsWith('end|')) {
         const [, m, d] = p.split('|');
-        prompt.append(h('kbd', 'E'), h('span', `End excursion · last ${m} to the rover, ${d}`));
+        prompt.append(h('kbd', 'E'), h('span', `End excursion · last ${m} `, tag(LAST_M_TAG), ` to the rover, ${d} `, tag(LAST_S_TAG)));
       }
       prompt.classList.toggle('is-on', !!p);
     }
     hint.classList.toggle('is-off', s.started);
   }
 
+  /** Alert text as parts (strings and { tag } specs, made into value tags when shown); the strings alone are its identity. */
   function alertDetail(id, s) {
     const i = s.alertInfo[id] || {};
+    const lim = `${RULES.slopeMaxDeg.value}°`;
     switch (id) {
       case 'turnBack': return i.viaSpot
-        ? `Reserve on return ${fmtDuration(i.reserveS)} if you go on to the spot and back. Head for the rover.`
-        : `Reserve on return ${fmtDuration(i.reserveS)}. Head for the rover.`;
-      case 'steepUnder': return i.offRoute
-        ? `${Math.round(i.slopeDeg)}° here, off the checked route. Rule broken: slope on foot, at most ${RULES.slopeMaxDeg.value}°.`
-        : `${Math.round(i.slopeDeg)}° here, on the planned route. Rule broken: slope on foot, at most ${RULES.slopeMaxDeg.value}°.`;
-      case 'edge': return 'The mapped terrain ends here.';
-      case 'steepAhead': return `Ground over ${RULES.slopeMaxDeg.value}° in ${Math.max(1, Math.round(i.m))} m. Closed to the route.`;
-      case 'offPath': return `${Math.round(i.m)} m from the planned route.`;
-      case 'radioAhead': return `No line of sight to the rover in ${Math.max(1, Math.round(i.m))} m.`;
-      default: return '';
+        ? ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, ' if you go on to the spot and back. Head for the rover.']
+        : ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, '. Head for the rover.'];
+      case 'steepUnder': return [`${Math.round(i.slopeDeg)}° here `, { tag: SLOPE_TAG },
+        i.offRoute ? ', off the checked route.' : ', on the planned route.', ` Rule broken: slope on foot, at most ${lim} `, { tag: RULES.slopeMaxDeg }, '.'];
+      case 'edge': return ['The mapped terrain ends here.'];
+      case 'steepAhead': return [`Ground over ${lim} `, { tag: RULES.slopeMaxDeg }, ` in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '. Closed to the route.'];
+      case 'offPath': return [`${Math.round(i.m)} m `, { tag: OFF_TAG }, ' from the planned route.'];
+      case 'radioAhead': return [`No line of sight to the rover in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '.'];
+      default: return [];
     }
   }
 

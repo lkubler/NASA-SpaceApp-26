@@ -5,9 +5,9 @@
 .walk-layer { position: absolute; inset: 0; pointer-events: none; }
 .walk-layer button, .walk-layer .vlabel { pointer-events: auto; }
 
-/* helmet frame over the view: the keyed image (docs/design/helmet-frame.png, green removed) */
+/* helmet frame over the view: the keyed image (docs/design/helmet-frame.png, green removed);
+   "AI-generated image" is drawn into its pixels, bottom left; object-fit: fill never crops it */
 .walk-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; }
-.walk-aimark { position: absolute; left: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
 .walk-groundmark { position: absolute; right: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
 
 /* HUD sits inside the visor */
@@ -50,6 +50,13 @@
 .walk-row__v { white-space: nowrap; font-size: var(--fs-mono); }
 .walk-row__v b { font-family: var(--font-display); font-weight: 600; font-size: 1.35em; letter-spacing: -0.01em; }
 .walk-row__v small { color: var(--text-2); font-family: var(--font-mono); font-size: var(--fs-tag); margin-left: 0.35em; }
+/* status texts on the light translucent cards: on a dark backing in their level colour, readable on bright sky */
+.walk-row__v.tone-accent, .walk-row__v.tone-advisory, .walk-row__v.tone-warning {
+  font-weight: 600; border-radius: 5px; padding: 0.05em 0.45em; border: 1px solid currentColor; text-shadow: none;
+}
+.walk-row__v.tone-accent { color: #7fdcff; background: rgba(0, 22, 32, 0.78); }
+.walk-row__v.tone-advisory { color: #9db8ff; background: rgba(8, 14, 40, 0.82); }
+.walk-row__v.tone-warning { color: #ff8a8c; background: rgba(70, 6, 8, 0.82); border-color: var(--warning); }
 
 /* reserve chip, lower left */
 .walk-reserve {
@@ -76,9 +83,10 @@
 /* reticle and look-at card */
 .walk-reticle { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 1.5px solid rgba(255, 255, 255, 0.8); border-radius: 50%; }
 .walk-reticle::after { content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 2px; margin: -1px 0 0 -1px; background: #fff; border-radius: 50%; }
-.walk-look { position: absolute; left: calc(50% + 22px); top: 50%; transform: translateY(-1.2em); display: none; align-items: flex-start; }
+/* above the reticle line (its line at the card's foot): clear of the mission card and the E prompt below */
+.walk-look { position: absolute; left: calc(50% + 22px); bottom: 50%; transform: translateY(1.2em); display: none; align-items: flex-end; }
 .walk-look.is-on { display: flex; animation: fade-in var(--fade) both; }
-.walk-look::before { content: ''; width: 3.6em; height: 1px; background: rgba(255, 255, 255, 0.6); margin-top: 1.2em; flex: none; }
+.walk-look::before { content: ''; width: 3.6em; height: 1px; background: rgba(255, 255, 255, 0.6); margin-bottom: 1.2em; flex: none; }
 .walk-look__card { background: var(--helmet-card); border: 1px solid var(--helmet-line); border-radius: 12px; padding: 0.7em 0.95em; max-width: 19em; backdrop-filter: blur(6px); }
 .walk-look__title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); }
 .walk-look__text { margin-top: 0.3em; font-size: var(--fs-small); color: rgba(255, 255, 255, 0.9); }

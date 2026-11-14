@@ -71,6 +71,10 @@ export const DOCS = {
     title: 'No source: placeholder chosen by the team for the demo',
     url: '',
   },
+  TEAM: {
+    title: 'Assumption',
+    url: '',
+  },
 };
 
 // Datasets shown on the sources page.
@@ -134,7 +138,7 @@ export const TOOLS = [
   { name: 'Draco decoder (2017 build from Access Mars)', use: 'Decodes the compressed terrain mesh', licence: 'Apache-2.0', url: 'https://github.com/google/draco' },
   { name: 'Space Grotesk, Inter, JetBrains Mono (via Fontsource)', use: 'Typefaces', licence: 'SIL Open Font License 1.1', url: 'https://fontsource.org' },
   { name: 'Python with numpy, Pillow, DracoPy', use: 'Offline data preparation (scripts/preprocess)', licence: 'BSD / HPND / Apache-2.0', url: 'https://numpy.org' },
-  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4; marked “AI-generated image” on screen', licence: 'Generated for this project; no NASA branding', url: '' },
+  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4; marked “AI-generated image” in the image pixels', licence: 'Generated for this project; no NASA branding', url: '' },
   { name: 'Claude Code (Anthropic)', use: 'AI coding agent: research notes, app code, data preparation scripts and unit tests, written under the team’s specs', licence: 'AI tool; output noted in the project description', url: 'https://www.anthropic.com/claude-code' },
 ];
 

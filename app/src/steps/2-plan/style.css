@@ -31,6 +31,7 @@
 .step--plan .plan-broken circle { fill: var(--warning); r: 3; }
 .step--plan .plan-broken .map-marker__label { fill: var(--warning); }
 .step--plan .map-marker--point circle { r: 3.4; }
+.step--plan .plan-leader { stroke: #fff; stroke-width: 0.7; opacity: 0.85; pointer-events: none; }
 
 /* hover / pinned info on the map */
 .step--plan .plan-tip {
@@ -73,6 +74,7 @@
 .step--plan .map-marker--number circle.plan-ring { fill: rgba(0, 0, 0, 0.25); stroke: var(--accent); stroke-width: 1.1; stroke-dasharray: 2 1.6; }
 .step--plan .sw--cheapest { width: 0.95em; height: 0.95em; border-radius: 50%; border: 1.5px dashed var(--accent); }
 .step--plan .plan-totals .bignum__label { display: block; }
+.step--plan .plan-totals .bignum__label .vlabel { padding-left: 0; } /* a wrapped tag starts flush with the label */
 .step--plan .map-path--broken { stroke-width: 5; stroke-dasharray: 0.1 4; }
 /* short screens: the panel tightens so a broken-rule alert never pushes the totals under the button */
 @media (max-height: 800px) {

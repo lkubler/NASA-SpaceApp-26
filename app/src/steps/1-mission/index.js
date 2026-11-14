@@ -136,7 +136,7 @@ export default {
       panel.append(
         h('div.m1-panel__head',
           h('div.m1-panel__kicker.mono', 'Murray Buttes · requests from Earth'),
-          h('p.m1-panel__lede', 'Any answer from Earth takes at least ', h('span.mono', `${DELAY.value} min`), ' ', labelTag(DELAY),
+          h('p.m1-panel__lede', 'Any answer from Earth takes at least ', h('span.m1-panel__delay', `${DELAY.value} min `, labelTag(DELAY)),
             ' to arrive, so the crew plans this excursion alone. Choose one request.')),
         list,
         h('div.m1-panel__action', btn));
@@ -159,7 +159,7 @@ export default {
           h('div.m1-req__signal.mono',
             h('span', `Sent ${fmtTimeOfDay(r.sentAt)}`), h('span.m1-req__sep', '·'),
             h('span', `received ${fmtTimeOfDay(received)}`), h('span.m1-req__sep', '·'),
-            h('span', `${r.delayMin} min delay `), labelTag(DELAY))));
+            h('span.m1-req__delay', `${r.delayMin} min delay `, labelTag(DELAY)))));
       el.dataset.id = r.id;
       return el;
     }
