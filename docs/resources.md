@@ -6,6 +6,9 @@ Links collected by the team (migrated from `links.md`). Humans and agents may ad
 - Challenge page: https://www.spaceappschallenge.org/2026/challenges/interplanetary-survival-guide-martian-map/?tab=details
   - Note: from this machine, curl/WebFetch fail on spaceappschallenge.org with an SSL certificate error (other sites work). Use a browser, or have a human paste the text into `docs/challenge.md`.
 
+- Heilbronn local event schedule: https://www.spaceappschallenge.org/2026/local-events/heilbronn/?tab=schedule (final submission Sun 23:59)
+- Submission rules: `docs/rules-2026.md`
+
 ## Resources listed by the challenge
 - NASA Mars Trek (global/regional map viewer): https://trek.nasa.gov/mars/
 - USGS Astrogeology interactive Mars maps: https://astrogeology-usgs.hub.arcgis.com/pages/interactive-maps-mars

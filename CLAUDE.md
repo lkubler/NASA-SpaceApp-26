@@ -3,6 +3,8 @@
 Challenge: "Interplanetary Survival Guide: Martian Map" (`docs/challenge.md`, links in `docs/resources.md`).
 Humans generate ideas and make decisions. Agents research, build, design, test, and pre-sort.
 
+**Hard rule (2026 rules):** AI must not be used to come up with the idea for solving the challenge. Agents never invent the core idea. They research, evaluate, and implement the humans' ideas from `notes.md`, and may suggest features, fixes, and improvements to it. Log what AI did in `docs/ai-use.md` for the submission.
+
 ## Time
 You don't know the current time. Run `python3 scripts/now.py` at the start of every task. It prints the phase and countdowns. It always reads deadlines from the main checkout, so worktrees see the same values.
 
@@ -17,20 +19,23 @@ You don't know the current time. Run `python3 scripts/now.py` at the start of ev
 - The product, demo, and submission are English only. No German strings in the app.
 
 ## Judging (equal weight)
-- Influence: size of the problem, how many it helps
+- Impact: size of the problem, how many it helps
 - Creativity: new vs. incremental
 - Validity: scientifically sound, works in the real world
 - Relevance: answers the challenge, complete, feasible, usable
 - Presentation: how well the problem, solution, and why it matters are communicated
 
 ## Submission rules
-From the 2025 guide; `docs/rules-2026.md` overrides if present.
-- Demo: video ≤ 30 s with English subtitles, or ≤ 7 slides including title. Longer is ineligible.
-- Public links, no login. Everything in English.
-- Must use NASA data and explain how.
-- List all external data, code, images, text.
-- Disclose AI use (tools and purpose). AI images/video need a visible watermark; label AI-generated code and data.
-- No NASA branding in AI-generated content.
+Summary of `docs/rules-2026.md` (full text there; it wins if they differ).
+- Deadline: "Submit for Judging" clicked before Sun 15.11. 23:59 local time. Resubmitting is allowed until then.
+- Demo: video ≤ 30 s (English subtitles if spoken in another language) or ≤ 7 slides including title and intro. Longer is ineligible.
+- Public links, no login, password, or permission. Test in a private window. The project page takes no video or document uploads, only images ≤ 10 MB.
+- Everything in English.
+- Must use at least one NASA dataset or resource and explain how. Space agency partner data (e.g. ESA) is encouraged.
+- List all external data, code, images, text, and tools.
+- AI ("Super Intelligence") use must be disclosed: images and video need a visible watermark; audio, code, and data need a note in descriptive text and metadata. No NASA branding (logos, flags, mission identifiers) in generated content.
+- No images, video, audio, or likeness of persons under 18.
+- All team members must be confirmed at the same local event (Heilbronn).
 
 ## Shared files
 | Path | Purpose |
