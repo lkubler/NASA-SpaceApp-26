@@ -234,8 +234,10 @@ export default {
           pinned = p.id; showTip(p.x, p.z, pointTip(p), { wide: true });
         });
       }
-      // the chosen spot ends its route: drawn above everything, the broken stretch included
+      // the chosen spot sits above the other markers; the broken stretch stays above all markers
       if (selG) map.layer('top').append(selG);
+      const top = map.layer('top');
+      for (const el of [...top.querySelectorAll('.map-path--broken')]) top.append(el);
     }
 
     function renderPanel() {
