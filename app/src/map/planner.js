@@ -1,6 +1,8 @@
 // Route planning: A* on a grid (pure, no DOM), slope cost, leg statistics.
 // Cost model (ASSUMPTIONS, ours): hard limit 20 deg, comfortable < 15 deg, no-data blocked.
 
+import { speedMult, WALK_SPEED_MS } from '../model/speed.js';
+
 export const SLOPE_HARD_DEG = 20;
 export const SLOPE_PREFER_DEG = 15;
 
@@ -12,10 +14,7 @@ export function slopeCost(deg) {
   return 2.5 + (deg - SLOPE_PREFER_DEG) * 3; // steep but allowed: strong penalty 2.5..17.5
 }
 
-/** Walking speed multiplier for slope in travel direction (deg, +uphill). Same model as the Walk view. */
-export function speedMult(deg) {
-  return deg > 0 ? Math.max(0.25, 1 - 0.0375 * deg) : Math.min(1.15, 1 - 0.01 * deg);
-}
+export { speedMult };
 
 class MinHeap {
   constructor() { this.k = []; this.v = []; }
@@ -74,6 +73,32 @@ export function astar(grid, start, goal) {
   return { path, cost: gs[g] };
 }
 
+/**
+ * Dijkstra from one goal cell over the whole grid (the cost grid is symmetric, so this is the cheapest way
+ * from EVERY cell to the goal). Used for the walk home: no heuristic, one pass.
+ * @returns {{cost:Float32Array, from:Int32Array, width:number, height:number}} from[i] = next cell towards the goal (-1 = goal/unreachable)
+ */
+export function costField(grid, goal) {
+  const { width: W, height: Hh, cost } = grid;
+  const g = goal[1] * W + goal[0], SQ = Math.SQRT2;
+  const gs = new Float32Array(W * Hh).fill(Infinity), from = new Int32Array(W * Hh).fill(-1), done = new Uint8Array(W * Hh);
+  if (!Number.isFinite(cost[g])) return { cost: gs, from, width: W, height: Hh };
+  const open = new MinHeap(); gs[g] = 0; open.push(0, g);
+  while (open.size) {
+    const cur = open.pop(); if (done[cur]) continue; done[cur] = 1;
+    const cx = cur % W, cy = (cur / W) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= Hh) continue;
+      const n = ny * W + nx; if (done[n] || !Number.isFinite(cost[n])) continue;
+      if (dx && dy && (!Number.isFinite(cost[cy * W + nx]) || !Number.isFinite(cost[ny * W + cx]))) continue;
+      const ng = gs[cur] + (dx && dy ? SQ : 1) * (cost[cur] + cost[n]) / 2;
+      if (ng < gs[n]) { gs[n] = ng; from[n] = cur; open.push(ng, n); }
+    }
+  }
+  return { cost: gs, from, width: W, height: Hh };
+}
+
 /** Cost grid for a heightmap + slope grid (deg). Reuse it across replans. */
 export function costGrid(hm, slopeDeg) {
   const cost = new Float32Array(hm.width * hm.height);
@@ -86,7 +111,7 @@ export function costGrid(hm, slopeDeg) {
  * @returns {{points:{x,y,elev_m,dist_m,time_s,slope_deg}[], legs:object[], total:object}}
  *  x,y in grid-local metres. A leg that cannot be routed is {feasible:false, reason}.
  */
-export function planRoute(hm, slopeDeg, waypoints, { speedMs = 3.5 / 3.6, grid } = {}) {
+export function planRoute(hm, slopeDeg, waypoints, { speedMs = WALK_SPEED_MS, grid } = {}) {
   const { width: W, cellSize_m: cs } = hm;
   grid = grid || costGrid(hm, slopeDeg);
   const cost = grid.cost;

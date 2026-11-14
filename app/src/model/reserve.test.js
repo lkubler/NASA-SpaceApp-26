@@ -64,11 +64,11 @@ test('flat route: energy matches P*t, remaining and symmetric return cost', () =
   assert.equal(r.turnBackIndex, -1); // 748 - 252 = 496 > 200
 });
 
-test('turn-back index: first point where remaining - return < buffer', () => {
-  // each 100 m step = 25.2 kJ. margin(i) = 1000 - 2*25.2*i - 200 < 0 -> i > 15.87 -> 16
+test('turn-back index: last point where remaining - return >= buffer', () => {
+  // each 100 m step = 25.2 kJ. margin(i) = 1000 - 2*25.2*i - 200 < 0 -> i > 15.87, so 15 is the last safe point
   const p = { ...base, capacityKJ: 1000, bufferFrac: 0.2 };
   const r = computeReserve(flat(30), p);
-  assert.equal(r.turnBackIndex, 16);
+  assert.equal(r.turnBackIndex, 15); assert.equal(r.turnBack.kind, 'walk');
   assert.ok(!r.points[15].mustTurnBack && r.points[16].mustTurnBack);
 });
 
@@ -112,4 +112,30 @@ test('station time: energy at stationRateW, clock and fraction, turn-back emerge
   assert.equal(flat.turnBackIndex, -1);
   pts[1].stationS = 7 * 3600; // 7 h of work: cannot also walk home with the 20 % buffer
   assert.equal(computeReserve(pts, { stationRateW: 360 }).turnBackIndex, 1);
+});
+
+test('true return cost: a supplied returnKJ replaces the reversed outbound path', () => {
+  const p = { ...base, capacityKJ: 1000, bufferFrac: 0.2 };
+  const pts = flat(11); pts.forEach((q) => { q.returnKJ = 10; });
+  const r = computeReserve(pts, p);
+  near(r.points[10].returnCostKJ, 10); // reversed path would be 252
+  assert.equal(computeReserve(flat(30).map((q) => ({ ...q, returnKJ: 10 })), p).turnBackIndex, -1);
+});
+
+test('turn-back at a station: work time left and the clock to leave', () => {
+  // capacity 1000 kJ, buffer 200. Walk 100 m (25.2 kJ), station at 360 W for 4 h would need 5184 kJ.
+  const pts = [0, 100].map((d) => ({ dist_m: d, elev_m: 0, terrain: 'hardpan' }));
+  pts[1].stationS = 4 * 3600; pts[1].returnKJ = 25.2;
+  const r = computeReserve(pts, { ...base, capacityKJ: 1000, bufferFrac: 0.2, stationRateW: 360 });
+  assert.equal(r.turnBack.kind, 'station'); assert.equal(r.turnBackIndex, 1);
+  // arrival remaining = 1000 - 25.2; margin = 974.8 - 25.2 - 200 = 749.6 kJ -> 749.6/0.36 s of work
+  near(r.turnBack.workS, 749.6 / 0.36, 1e-6);
+  near(r.turnBack.leaveElapsed_s, 100 + r.turnBack.workS, 1e-6); // arrival at 100 s (1 m/s)
+});
+
+test('slope-dependent speed: climbing takes longer than level, same model as the planner', () => {
+  const up = [{ dist_m: 0, elev_m: 0 }, { dist_m: 100, elev_m: 15 }];
+  const lvl = [{ dist_m: 0, elev_m: 0 }, { dist_m: 100, elev_m: 0 }];
+  const a = computeReserve(up, base).points[1], b = computeReserve(lvl, base).points[1];
+  assert.ok(a.usedKJ > b.usedKJ);
 });
