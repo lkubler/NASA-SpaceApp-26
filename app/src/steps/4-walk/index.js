@@ -296,7 +296,7 @@ export default {
       advance: (seconds, render = false) => { let left = seconds; while (left > 0 && !finished) { const d = Math.min(D.maxFrameS, left); advance(d); left -= d; } if (render && !finished) frame(); return window.__walk.info(); },
       /** Stop (true) or resume (false) the real-time loop, so a test alone moves the clock. */
       hold: (on) => { held = !!on; },
-      v3,
+      v3, sim,
       info: () => ({
         x: sim.s.x, z: sim.s.z, yaw: sim.s.yaw, pitch: sim.s.pitch, eyeY: t.heightAt(sim.s.x, sim.s.z) + RADIO.eyeHeightM.value,
         look: look && look.title, points: vis.filter((v) => v.on).map((v) => ({ name: v.point.name, x: v.point.x, y: Math.max(v.point.y, t.heightAt(v.point.x, v.point.z)), z: v.point.z })),

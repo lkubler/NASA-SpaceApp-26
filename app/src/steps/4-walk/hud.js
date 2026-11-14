@@ -29,13 +29,19 @@ const LAST_S_TAG = { label: 'model', text: 'Walking time of the last metres at p
 const RESERVE_TAG = { label: 'model', moon: true, text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the suit model (Pandolf effort equation under Mars gravity): faster walking costs more per metre. ' + ASTRONAUT.fastPaceFactor.text, source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Suit model (src/core/suit.js), planner (src/core/planner.js)', url: '', where: '' } };
+const STEEP_CUE_TAG = MODEL_TAG(`Thin lines rising from the edge of ground steeper than ${RULES.slopeMaxDeg.value}° (closed to the route), shown within about ${D.cueFadeMaxM} m of you. The edge is the planner's slope test on the 0.5 m walk grid.`);
+const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your eye to the rover antenna), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
 export function createHud(el) {
   // frame; the "AI-generated image" mark is drawn into the image pixels (bottom left of the frame)
   const frame = h('img.walk-frame', { src: frameUrl, alt: '', draggable: 'false' });
   // the ground Access Mars has only grey imagery for is tinted in our own colour (core/groundColor.js)
-  const groundMark = h('div.walk-groundmark.mono', 'Ground colour ', tag(GROUND_TAG));
+  // the ground cues near the walker (scene3d.js): steep lines and radio shadow dots, each labelled model
+  const groundMark = h('div.walk-groundmark.mono',
+    h('div', h('span.walk-cue.walk-cue--steep'), `Over ${RULES.slopeMaxDeg.value}° `, tag(STEEP_CUE_TAG)),
+    h('div', h('span.walk-cue.walk-cue--radio'), 'Radio shadow edge ', tag(RADIO_CUE_TAG)),
+    h('div', 'Ground colour ', tag(GROUND_TAG)));
 
   // compass
   const compassCv = h('canvas.walk-compass__cv');
@@ -223,7 +229,7 @@ export function createHud(el) {
   }
 
   // ---------- per-frame text ----------
-  let lastAlert = '', lastPrompt = '', lastLook = '';
+  let lastAlert = '', lastAlertMain = '', lastPrompt = '', lastLook = '';
   function update(sim, headingDeg) {
     const { s, log } = sim;
     drawCompass(headingDeg);
@@ -257,17 +263,27 @@ export function createHud(el) {
     mVals.radio.className = 'walk-row__v mono ' + (s.radio ? 'tone-accent' : 'tone-advisory');
     mVals.demo.textContent = `${DEMO.timeFactor.value}${DEMO.timeFactor.unit}`;
 
-    // alert: one at a time, most urgent first
-    const id = s.modal ? null : s.alert;
+    // alerts: the most important one large; every other active one stays visible as a small chip beside it
+    const ids = s.modal ? [] : (s.alerts || (s.alert ? [s.alert] : []));
+    const id = ids[0] || null, rest = ids.slice(1);
     const parts = id ? alertDetail(id, s) : [];
-    const key = id ? id + parts.filter((x) => typeof x === 'string').join('') : '';
+    const key = id ? id + parts.filter((x) => typeof x === 'string').join('') + '|' + rest.join(',') : '';
     if (key !== lastAlert) {
+      const sameMain = id && lastAlertMain === id + parts.filter((x) => typeof x === 'string').join('');
       lastAlert = key;
+      lastAlertMain = id ? id + parts.filter((x) => typeof x === 'string').join('') : '';
       alertEl.replaceChildren();
       if (id) {
         const A = ALERTS[id];
-        alertEl.append(h(`div.alert.alert--${A.level}.walk-alert__box`,
-          h('div.walk-alert__lvl.mono', A.level), h('div.alert__title', A.title), h('div.alert__text', parts.map((x) => (typeof x === 'string' ? x : tag(x.tag))))));
+        const box = h(`div.alert.alert--${A.level}.walk-alert__box`,
+          h('div.walk-alert__lvl.mono', A.level), h('div.alert__title', A.title), h('div.alert__text', parts.map((x) => (typeof x === 'string' ? x : tag(x.tag)))));
+        // only a new large warning slides in; a chip coming or going does not replay it
+        if (sameMain) box.classList.add('is-still');
+        alertEl.append(box);
+        if (rest.length) {
+          alertEl.append(h('div.walk-alert__chips', rest.map((r) => h(`div.walk-alert__chip.is-${ALERTS[r].level}`,
+            h('span.walk-alert__dot'), h('span', ALERTS[r].title)))));
+        }
       }
     }
 
@@ -350,10 +366,17 @@ export function createHud(el) {
     const pad = 12;
     if (overlaps(r, { left: block.left - pad, right: block.right + pad, top: block.top - pad, bottom: block.bottom + pad })) m.classList.add('is-right');
   }
+  /** The warning area: the large warning and its chips together, or null. */
+  function warnArea() {
+    if (!alertEl.firstChild) return null;
+    const rs = [...alertEl.children].map((c) => c.getBoundingClientRect());
+    return { left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) };
+  }
   let lastRoverTxt = '', lastTgtTxt = '';
   function setMarks(target, roverP, roverOn, points) {
-    const box = alertEl.firstChild && alertEl.firstChild.getBoundingClientRect();
-    minY = Math.max(window.innerHeight * 0.27, box ? box.bottom + 40 : 0);
+    const box = warnArea();
+    // markers stay below the compass strip; at the warning they stay where they are and hide (below)
+    minY = window.innerHeight * 0.27;
     const toRover = target.kind === 'rover';
     place(tgtMark, target.p, !toRover);
     if (!toRover) {
@@ -375,6 +398,14 @@ export function createHud(el) {
     sideAwayFrom(tgtMark, { left: Math.min(mr.left, tr.left), right: Math.max(mr.right, tr.right), top: Math.min(mr.top, tr.top), bottom: Math.max(mr.bottom, tr.bottom) });
     quietIfCovering(tgtMark, blocks);
     quietIfCovering(roverMark, blocks);
+    // the aim marker's label (distance or "not reachable") is hidden inside the warning area too
+    if (aimMark.classList.contains('is-on')) aimMark.classList.toggle('is-quiet', !!box && overlaps(aimLabel.getBoundingClientRect(), box));
+    // inside the warning area nothing projected from the scene shows through: a diamond or point dot there is hidden as well
+    const pad = 6, area = box && { left: box.left - pad, right: box.right + pad, top: box.top - pad, bottom: box.bottom + pad };
+    for (const m of [tgtMark, roverMark, ...pointMarks]) {
+      const dot = m.lastChild || m.firstChild;
+      m.classList.toggle('is-under', !!area && m.classList.contains('is-on') && overlaps(dot.getBoundingClientRect(), area));
+    }
   }
 
   // ---------- modals ----------

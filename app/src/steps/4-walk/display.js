@@ -56,4 +56,14 @@ export const DISPLAY = {
   bandWidthM: 0.4,        // route band on the ground
   bandFadeNearM: 2.2,     // the band fades in from this far in front of the eye ...
   bandFadeFullM: 6,       // ... to full strength here, so it stays a calm, even band
+  // ground cues (specs/feedback-1.md, Walk: display); all assumption: display choices, not measurements
+  cueFadeFullM: 8,        // steep lines and radio dots at full strength up to this far from the walker (assumption) ...
+  cueFadeMaxM: 15,        // ... fading out to nothing here, not visible beyond (assumption; spec: about 15 m)
+  steepLineHeightM: 1.5,  // steep ground: vertical lines rise this high from the edge of the closed area (assumption; spec: about 1.5 m)
+  steepLineBelowM: 0.3,   // ... and start this far below the walk grid, so they never float where the Access Mars mesh lies lower (assumption)
+  steepLineWidthPx: 2,    // ... each this many drawing-buffer pixels wide: thin, still seen on the orange ground (assumption)
+  steepLineSpacingM: 0.7, // ... at most one line per this many metres of edge (assumption)
+  radioDotSpacingM: 0.6,  // radio shadow: one dot per this many metres of the shadow edge (assumption)
+  radioDotRadiusM: 0.07,  // ... dot radius on the ground (assumption)
+  radioDotLiftM: 0.07,    // ... lifted this far above the walk grid, like the route band (assumption)
 };
