@@ -1,0 +1,7 @@
+# Agent heartbeats and hook state are local
+status/*
+!status/.gitkeep
+# Raw datasets (DTMs, imagery) are too large for git
+data/raw/
+__pycache__/
+.DS_Store

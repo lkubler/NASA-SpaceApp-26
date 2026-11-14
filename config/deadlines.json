@@ -1,0 +1,12 @@
+{
+  "_comment": "ISO 8601 with offset. TODO = unknown. Empty feature_freeze is estimated as 6h before the earliest submission.",
+  "start": "2026-11-14T09:00:00+01:00",
+  "idea_decision": "2026-11-14T14:00:00+01:00",
+  "feature_freeze": "TODO",
+  "submission_local": "TODO",
+  "submission_global": "2026-11-15T23:59:00+01:00",
+  "milestones": [
+    { "name": "Local check-in / interim pitch", "at": "TODO" },
+    { "name": "Local final presentation", "at": "TODO" }
+  ]
+}
