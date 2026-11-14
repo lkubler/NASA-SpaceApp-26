@@ -9,7 +9,7 @@
 // keys to turn and look, Shift held fast walk, Shift twice demo speed, F aim and click to jump, E to act,
 // esc twice to end the mission.
 import './style.css';
-import { newWalkLog, simulateWalk, ROVER, RADIO, roverField, spotField } from '../../core/index.js';
+import { newWalkLog, simulateWalk, ROVER, RADIO, roverField, spotField, stopsOf } from '../../core/index.js';
 import { createSim } from './sim.js';
 import { createScene3d } from './scene3d.js';
 import { createHud } from './hud.js';
@@ -45,13 +45,25 @@ export default {
     if (!route) { hud.setLoading('No route planned. Start from step 1.'); return; }
     hud.setTerrain(t);
     hud.setPlanBroken(ctx.state.plan && ctx.state.plan.brokenRules);
-    // cost fields to the rover and the spot: built once here, read every step
-    roverField(t); spotField(t, route.spot);
+    // cost fields to the rover and to every stop: built once here, read every step
+    roverField(t); for (const st of stopsOf(route)) spotField(t, st);
     const sim = createSim(t, route, log);
-    const v3 = createScene3d(view, t);
+    // the steep border keeps its corridors open along the legs of a round too (steepBorder.js); one stop:
+    // its legs are the candidate routes already kept open, the border as before
+    const roundLegs = route.legs && route.legs.length > 2 ? route.legs.map((l) => l.cells) : [];
+    const v3 = createScene3d(view, t, { keepOpen: roundLegs });
     disposers.push(() => v3.dispose());
-    v3.setBand('out', route.out.points, true);
-    v3.setBand('back', route.back.points, false);
+    // the route band: the leg to the current target only (the next stop, then the rover); it switches
+    // after each sample and when "Turn back now" skips the remaining stops
+    let bandKey = null;
+    const showBand = () => {
+      const lg = sim.leg();
+      if (lg.key === bandKey) return;
+      if (bandKey) v3.setBand(bandKey, null, false);
+      v3.setBand(lg.key, lg.points, true);
+      bandKey = lg.key;
+    };
+    showBand();
     v3.placeRover((D.roverHeadingDeg * Math.PI) / 180, D.roverShiftM);
 
     // ---------- input ----------
@@ -258,9 +270,8 @@ export default {
         const rq = ctx.state.request;
         if (rq && rq.photo) Object.assign(log.sample, { photo: rq.photo, photoTitle: rq.photoCaption, photoCredit: rq.photoCredit, photoMeta: rq.photoMeta, photoUrl: rq.photoUrl });
         ctx.set({ walk: log });
-        v3.setBand('out', route.out.points, false);
-        v3.setBand('back', route.back.points, true);
-        if (sim.s.modal === 'sample') hud.showSample(route, log);
+        showBand();
+        if (sim.s.modal === 'sample') hud.showSample(sim, log);
         else if (sim.s.modal === 'empty') hud.showEmpty(log);
         return;
       }
@@ -329,6 +340,7 @@ export default {
     let frameNo = 0, look = null, vis = visiblePoints(t, sim.s);
     function frame() {
       const s = sim.s;
+      showBand();
       v3.setPose(s.x, s.z, s.yaw, s.pitch);
       const heading = ((((s.yaw * 180) / Math.PI) % 360) + 360) % 360; // 0 = north, 90 = east
       const eye = { x: s.x, y: v3.cam.position.y, z: s.z };
