@@ -7,8 +7,8 @@
 // Visibility codes: 0 hidden, 1 visible, 2 unknown (no-data; never treated as blocking).
 
 // The one name for the comms source, used on the map, in Walk toasts and on the Sources page.
-// Geometric line of sight to a relay rover parked on high ground; the lander is not the source.
-export const COMMS_SOURCE_NAME = 'relay rover';
+// Geometric line of sight to a relay unit parked on high ground; the lander is not the source.
+export const COMMS_SOURCE_NAME = 'relay unit';
 
 export const HIDDEN = 0, VISIBLE = 1, UNKNOWN = 2;
 export const MARS_RADIUS_M = 3389500;
