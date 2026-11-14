@@ -117,8 +117,8 @@ export function craterView(wrap, { meta, heights, color }) {
   const dir = new THREE.Vector3().subVectors(sharp, murray).setY(0);
   const dist = dir.length(); dir.normalize();
   const cam = new THREE.PerspectiveCamera(42, 1, 0.5, 1500);
-  const restPos = murray.clone().addScaledVector(dir, -1.1 * dist).setY(murray.y + 1.05 * dist);
-  const restTarget = murray.clone().addScaledVector(dir, 0.28 * dist).setY(murray.y);
+  const restPos = murray.clone().addScaledVector(dir, -1.45 * dist).setY(murray.y + 1.3 * dist);
+  const restTarget = murray.clone().addScaledVector(dir, 0.22 * dist).setY(murray.y); // the sites near the screen middle, Mount Sharp still in view
   const restUp = new THREE.Vector3(0, 1, 0);
   const restDist = restPos.distanceTo(restTarget);
   cam.position.copy(restPos);

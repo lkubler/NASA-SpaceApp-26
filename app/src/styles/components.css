@@ -99,14 +99,12 @@ button.check:hover .check__text { text-decoration: underline; text-underline-off
 
 /* value label: real / model / simulated / assumption */
 .vlabel {
-  font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-2); letter-spacing: 0.02em;
-  padding: 0.05em 0.35em; border-radius: 4px; border: 1px solid transparent; line-height: 1.4; vertical-align: middle; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center; width: 1.25em; height: 1.25em; padding: 0; margin: 0 0.1em;
+  font-size: 0.85em; color: var(--text-3); background: none; border: 0; border-radius: 50%; line-height: 1;
+  vertical-align: -0.12em; cursor: help; transition: color var(--fade);
 }
-.vlabel:hover { border-color: var(--line-strong); color: var(--text); }
-.vlabel--real { color: #b9b9be; }
-.vlabel--model { color: #b9b9be; }
-.vlabel--simulated { color: #9a9aa0; font-style: italic; }
-.vlabel--assumption { color: #9a9aa0; }
+.vlabel:hover, .vlabel:focus-visible { color: var(--text); outline: none; }
+.vlabel svg { display: block; }
 .vlabel-pop {
   position: fixed; z-index: 100; max-width: 340px; background: #101012; border: 1px solid var(--line-strong);
   border-radius: 12px; padding: 0.9em 1em; font-size: var(--fs-small); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);

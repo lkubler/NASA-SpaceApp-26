@@ -35,8 +35,10 @@ Helmet frame => `app/public/helm.webp` (grey), green keyed out, "AI-generated im
 ## Walk: display
 Several warnings at once => the most important one large, in this order: turn back, rule broken, steep, radio, off path; all others stay visible as small chips at the side
 3D labels => hidden inside the warning area
+Warnings, how long they show => a warning stays as long as its cause lasts and at least about 2 s after it ends; a cause that flickers at its limit does not make the warning blink; it fades in and out softly, about 0.3 s; the same for the small chips
 Steep ground (over 20°) => one continuous border along the edge of the closed area, like a low translucent wall about 1.5 m high: a clear line at the ground, fading out upwards, in the colour the maps use for steep ground; it follows the outline smoothly, small patches get no border of their own; not visible beyond about 15 m, fading in when closer; label model
 Radio shadow => a dotted blue line on the ground at the shadow edge, fading in the same way; label model
+Target beacon => a thin vertical beam of light in the accent blue at the current target, with a soft ring on the ground; visible across the whole site; fades out within about 5 m so it does not cover the sample spot; only the current target has one, after the last sample the rover; same look as the steep border (clear core, translucent glow); label model
 
 ## Opening
 While the planet and the crater load => the screen looks intended: text and Begin are there at once, the planet fades in when ready, nothing pops or jumps

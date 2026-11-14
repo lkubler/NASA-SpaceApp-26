@@ -115,12 +115,12 @@ export default {
     const demo = h('div.plan-demo', 'Demo time: clock and suit run ', String(DEMO.timeFactor.value), DEMO.timeFactor.unit, ' faster ', labelTag(DEMO.timeFactor));
     const btn = pillButton({ text: 'Confirm route', onClick: () => ctx.next(), disabled: !ctx.state.route });
     const req = ctx.state.request;
-    const reqBox = req ? h('div.plan-req',
-      h('div.plan-req__kicker.mono', 'Request from Earth · ', req.from || ''),
-      h('div.plan-req__title', req.title)) : null;
+    // the goal is set by the request from step 1; this step only plans the route to it
+    const reqBox = req ? h('div.plan-chip', { title: req.titleLong || req.title },
+      h('span.plan-chip__dot'), h('span.plan-chip__k', 'Request'), h('span.plan-chip__v', req.title)) : null;
     // one short line that says what a click does now (and why a click did nothing)
     const hint = h('div.plan-hint', { role: 'status', 'aria-live': 'polite', tabindex: '-1' });
-    Lay.panel.append(headline('Plan your mission.'), reqBox, hint, cards, legs, h('div.plan-spacer'), totals, demo);
+    Lay.panel.append(reqBox, headline('Plan your mission.'), hint, cards, legs, h('div.plan-spacer'), totals, demo);
     Lay.action.append(btn);
 
     cards.append(card({ title: 'Calculating routes…', sub: 'Fastest route to every spot that keeps every rule.' }));
@@ -222,7 +222,7 @@ export default {
     ];
 
     const tipRow = (label, value, tone = null) => h(`div.plan-tip__row${tone ? '.tone-' + tone : ''}`,
-      h('span.muted', label), h('span.mono', value), ' ', h('span.vlabel', 'model'));
+      h('span.muted', label), h('span.mono', value));
     /**
      * Hover on a spot: what a click does, and what the spot costs. Not chosen: its own round trip and, with
      * stops chosen, the round with this spot added (a preview of the next click). Chosen: its place in the order.
@@ -481,6 +481,11 @@ export default {
     const kept = stopIds();
     if (kept.some((id) => !candOf(id))) ctx.set({ stops: [], spotId: null, route: null, plan: null });
     else if (kept.length && !(ctx.state.stops && ctx.state.stops.length)) ctx.set({ stops: kept });
+    // first visit: the spot that fits the request (requests.js spotId) is the first stop; the crew may change it
+    if (!stopIds().length && req && req.spotId && candOf(req.spotId)) {
+      const r = roundOf([req.spotId]);
+      ctx.set({ stops: [req.spotId], spotId: req.spotId, route: r.route, plan: r.plan });
+    }
     render();
     drawnOnce = true;
     revealWhenReady();
