@@ -5,8 +5,8 @@ import './style.css';
 import { h, s, splitLayout, headline, card, pillButton, mapPanel, legend, marker, row, bigNumber, alertBox, labelTag,
   fmtDuration, fmtDistance, fmtDeg } from '../../ui/index.js';
 import { planAllCandidates, ROVER, ACCESS_MARS_POINTS, RULES, DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA,
-  closedMask, radioShadowMask, sourceOf, spotNumber } from '../../core/index.js';
-import { paintGround, composeGround, paintOverlays } from './ground.js';
+  sourceOf, spotNumber } from '../../core/index.js';
+import { paintGround, composeGround, hatchPattern, dotPattern } from './ground.js';
 import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
 import { GROUND_TAG } from '../../core/groundColor.js';
 
@@ -69,20 +69,19 @@ export default {
     if (root !== el) return;
 
     // ----- map -----
-    const map = mapPanel(terrain, { steep: false, shadow: false });
+    // too steep (hatched) and radio shadow (dotted) are drawn by the shared map at screen size, so they
+    // stay right at every zoom; the ground under them is this step's own render
+    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8 });
     const tip = h('div.plan-tip', { hidden: true });
     map.el.append(tip);
     // wide map, cropped north and south (slice) only as far as every marker and route stays in view
     map.svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-    const steepMask = closedMask(terrain);
-    const shadowMask = radioShadowMask(terrain);
     const cv = map.canvas.getContext('2d');
     const relief = cv.getImageData(0, 0, map.canvas.width, map.canvas.height);
-    paintOverlays(cv, steepMask, shadowMask);
     paintGround(terrain, map.canvas.width).then((img) => {
       if (root !== el || !img) return;
       composeGround(cv, relief, img);
-      paintOverlays(cv, steepMask, shadowMask);
+      map.redraw();
     }).catch((e) => console.warn('top-down terrain render failed, keeping the relief', e));
 
     const leg = legend([
@@ -161,6 +160,8 @@ export default {
       tip.hidden = false;
     };
     const hideTip = () => { if (!pinned) tip.hidden = true; };
+    // the tip belongs to a place on the map: it closes when the map moves or zooms
+    map.onView(() => { pinned = null; tip.hidden = true; });
 
     const select = (id) => {
       const c = cands.find((x) => x.candidate.id === id);
@@ -240,11 +241,9 @@ export default {
         }
         px = Math.min(view.x1 - POINT_INSET, Math.max(view.x0 + POINT_INSET, px));
         py = Math.min(view.y1 - POINT_INSET, Math.max(view.y0 + POINT_INSET, py));
-        if (Math.hypot(px - q.px, py - q.py) > 0.5) {
-          map.layer('top').append(s('line', { class: 'plan-leader', x1: q.px, y1: q.py, x2: px, y2: py }));
-        }
-        const at = map.unproject(px, py);
-        const g = map.addMarker(at.x, at.z, { kind: 'point', label: p.name, layer: 'top' });
+        // drawn at its real place, then moved off by a screen offset that keeps its size at every zoom
+        const g = map.addMarker(p.x, p.z, { kind: 'point', label: p.name, layer: 'top' });
+        if (Math.hypot(px - q.px, py - q.py) > 0.5) map.offsetMarker(g, px - q.px, py - q.py, { unit: 'map', leaderClass: 'plan-leader' });
         const lab = g.querySelector('.map-marker__label');
         const fx = px / terrain.n;
         // label beside the point, not below, so it stays clear of the numbered markers;

@@ -87,32 +87,8 @@ function brokenOf(walk, plan) {
 }
 const brokenName = (b) => b.name + (b.count > 1 ? ` (${b.count}×)` : b.carried ? ' (in the plan)' : '');
 function spotName(id) { return (id && spotLabel(id)) || id || NO_DATA; }
-/**
- * Zoom the map panel onto the walk (same terrain, closer view): scale the relief and the vector
- * layer together, keep markers at a readable size, and size the scale bar for the zoom.
- * Works on this instance only (the shared mapPanel has no zoom).
- */
-const ZOOM_MAX = 3, ZOOM_MARGIN = 0.18; // view layout only
-function zoomToWalk(map, terrain, pts) {
-  const ps = pts.filter((p) => p && num(p.x) && num(p.z));
-  const ext = terrain.extent;
-  let k = 1, tx = 0, ty = 0;
-  if (ps.length) {
-    const fx = ps.map((p) => (p.x - terrain.min) / ext), fy = ps.map((p) => (terrain.max - p.z) / ext);
-    const x0 = Math.min(...fx), x1 = Math.max(...fx), y0 = Math.min(...fy), y1 = Math.max(...fy);
-    const span = Math.max(x1 - x0, y1 - y0) * (1 + 2 * ZOOM_MARGIN);
-    k = Math.max(1, Math.min(ZOOM_MAX, 1 / Math.max(span, 1e-6)));
-    const clampT = (t) => Math.min(0, Math.max(1 - k, t));
-    tx = clampT(0.5 - k * (x0 + x1) / 2);
-    ty = clampT(0.5 - k * (y0 + y1) / 2);
-  }
-  const tf = `translate(${(tx * 100).toFixed(3)}%, ${(ty * 100).toFixed(3)}%) scale(${k.toFixed(4)})`;
-  for (const el of [map.canvas, map.svg]) Object.assign(el.style, { transformOrigin: '0 0', transform: tf });
-  map.svg.querySelectorAll('.map-marker').forEach((g) => {
-    g.setAttribute('transform', `${g.getAttribute('transform')} scale(${(1.25 / k).toFixed(4)})`);
-  });
-  map.fitScale(k); // scale bar sized for this zoom
-}
+// the map opens framed on the walk (its "reset" view): margin around it, at most this zoom (view layout only)
+const HOME_MAX_ZOOM = 3, HOME_MARGIN = 0.18, MARKER_SIZE = 1.25, FOCUS_ZOOM = 2.5;
 
 let _photos = null;
 function loadPhotos() {
@@ -156,11 +132,13 @@ export default {
     if (empty && num(empty.x)) map.path([empty, ROVER], { style: 'walked' }).setAttribute('class', 'map-path dbf-gap');
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Rover' });
     const wms = [];
+    const wmOf = new Map(); // warning index -> its map marker
     warnings.forEach((w, i) => {
       if (!num(w.x) || !num(w.z)) return;
       const g = map.addMarker(w.x, w.z, { kind: 'number', text: String(i + 1) });
       g.classList.add('dbf-wm', `dbf-wm--${w.level}`);
       wms.push(g);
+      wmOf.set(i, g);
     });
     // the spot above the warning markers, so its number stays readable
     const spotG = route ? map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: spotNumber(route.spotId) || '·', selected: true }) : null;
@@ -172,7 +150,7 @@ export default {
     if (emptyG) emptyG.classList.add('dbf-empty');
     // after layout: markers drawn fully inside the map and warning markers off the spot marker (a leader line
     // joins a moved marker to its real place), then the labels placed clear of the markers
-    requestAnimationFrame(() => {
+    map.whenReady(() => {
       if (spotG) keepInside(map, spotG);
       for (const g of wms) { keepInside(map, g); if (spotG) moveOff(map, g, spotG); }
       for (const g of [map.svg.querySelector('.dbf-closest'), emptyG]) {
@@ -180,10 +158,11 @@ export default {
         if (lbl) placeClear(map.svg, lbl);
       }
     });
-    zoomToWalk(map, terrain, [
+    map.setMarkerScale(MARKER_SIZE);
+    map.setHome([
       ...(route ? [...route.out.points, ...route.back.points] : []),
       ...((walk && walk.track) || []), ...warnings, ROVER, min, empty,
-    ]);
+    ].filter((p) => p && num(p.x) && num(p.z)), { margin: HOME_MARGIN, maxK: HOME_MAX_ZOOM });
     const legendItems = [{ kind: 'foot', text: 'Planned' }, { kind: 'walked', text: 'Walked' }, { kind: 'rover', text: 'Rover' },
       { kind: 'selected', text: 'Spot' }, { kind: 'closest', text: 'Closest moment' }];
     if (empty) legendItems.push({ kind: 'empty', text: 'Suit empty' });
@@ -246,12 +225,26 @@ export default {
     const wlist = h('div.dbf__warn',
       h('div.dbf__sec', `Warnings · ${wCount}`, ' ', tag('warnings')),
       warnings.length
-        ? h('ol.dbf__wl', warnings.map((w, i) => h(`li.dbf__wi.dbf__wi--${w.level || 'caution'}`,
+        ? h('ol.dbf__wl', warnings.map((w, i) => h(`li.dbf__wi.dbf__wi--${w.level || 'caution'}${wmOf.has(i) ? '.is-link' : ''}`,
+          wmOf.has(i) ? { tabindex: '0', role: 'button', title: 'Show on the map', onclick: () => focusWarning(i), onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); focusWarning(i); } } } : null,
           marker(i + 1, { tone: w.level }),
           h('div.dbf__wbody',
             h('div.dbf__wtext', w.text || w.id || NO_DATA),
             h('div.dbf__wwhere.mono', `${fromRover(w)} · ${dur(w.tS)} in `, tag('where'))))))
         : h('div.dbf__none', wCount === '0' ? 'No warnings during the walk.' : NO_DATA));
+
+    // a warning clicked in the list: the map centres on it and both are highlighted
+    function focusWarning(i) {
+      const w = warnings[i], g = wmOf.get(i);
+      if (!w || !g) return;
+      map.svg.querySelectorAll('.dbf-wm.is-focus').forEach((x) => x.classList.remove('is-focus'));
+      wlist.querySelectorAll('.dbf__wi.is-focus').forEach((x) => x.classList.remove('is-focus'));
+      g.classList.add('is-focus');
+      g.parentNode.append(g); // above the other markers
+      const li = wlist.querySelectorAll('.dbf__wi')[i];
+      if (li) li.classList.add('is-focus');
+      map.centreOn(w.x, w.z, { minK: FOCUS_ZOOM });
+    }
 
     // ----- checks: each rule kept or broken on the walk -----
     const checks = h('div.dbf__checks');
@@ -315,17 +308,9 @@ export default {
  * Put a marker label where it covers no other marker or label: right, left, above, below, then further
  * out. Measured after layout; keeps the first clear position (or the last tried).
  */
-/** Shift a map marker on screen by (dx, dy) px, with a leader line from its real place. */
+/** Shift a map marker on screen by (dx, dy) px, with a leader line from its real place (kept at every zoom). */
 function shiftMarker(map, g, dx, dy) {
-  const k = map.svg.getScreenCTM();
-  if (!k || !k.a) return;
-  const ux = dx / k.a, uy = dy / k.d;
-  const m = /translate\(([-\d.]+) ([-\d.]+)\)/.exec(g.dataset.base || '');
-  g.setAttribute('transform', `translate(${ux.toFixed(2)} ${uy.toFixed(2)}) ${g.getAttribute('transform')}`);
-  if (m) {
-    const x = +m[1], y = +m[2];
-    g.parentNode.insertBefore(s('line', { class: 'dbf-leader', x1: x, y1: y, x2: x + ux, y2: y + uy }), g);
-  }
+  map.offsetMarker(g, dx, dy, { unit: 'px', leaderClass: 'dbf-leader' });
 }
 /** Keep a marker fully inside the visible map box, a few pixels in from its edge. */
 function keepInside(map, g) {

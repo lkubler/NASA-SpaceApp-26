@@ -4,7 +4,6 @@
 .step--plan .split { grid-template-columns: minmax(0, 1fr) clamp(340px, 30vw, 520px); }
 .step--plan .split__map { height: auto; aspect-ratio: auto; max-width: none; width: 100%; }
 .step--plan .split__map > .map { flex: 1 1 auto; height: auto; width: 100%; aspect-ratio: auto; min-height: 0; }
-.step--plan .split__map .map__canvas { object-fit: cover; }
 .step--plan .split__side { max-width: none; }
 .step--plan .plan-req { border-left: 2px solid var(--accent); padding: 0.1em 0 0.1em 0.8em; }
 .step--plan .plan-req__kicker { font-size: var(--fs-tag); color: var(--text-2); }
@@ -31,7 +30,7 @@
 .step--plan .plan-broken circle { fill: var(--warning); r: 3; }
 .step--plan .plan-broken .map-marker__label { fill: var(--warning); }
 .step--plan .map-marker--point circle { r: 3.4; }
-.step--plan .plan-leader { stroke: #fff; stroke-width: 0.7; opacity: 0.85; pointer-events: none; }
+.step--plan .plan-leader { stroke: #fff; stroke-width: 1.2; opacity: 0.85; pointer-events: none; }
 
 /* hover / pinned info on the map */
 .step--plan .plan-tip {

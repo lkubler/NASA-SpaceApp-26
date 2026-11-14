@@ -1,6 +1,6 @@
 // The map ground for step 2: a top-down render of the Access Mars mesh with its own textures
-// (the same terrain the visitor walks), plus the too-steep hatching and the radio-shadow dots.
-// Masks come from the core (closedMask, radioShadowMask); nothing is computed here.
+// (the same terrain the visitor walks), and the patterns of the too-steep hatching and the radio-shadow dots
+// the shared map lays over it (masks from the core: closedMask, radioShadowMask); nothing is computed here.
 import * as THREE from 'three';
 import { getTerrainScene, setGreyTint } from '../../core/terrainScene.js';
 
@@ -84,13 +84,8 @@ export function composeGround(ctx, relief, ground) {
   ctx.putImageData(out, 0, 0);
 }
 
-/** Hatch the too-steep cells and dot the radio-shadow cells onto the map canvas. */
-export function paintOverlays(ctx, steepMask, shadowMask) {
-  overlay(ctx, steepMask, hatchPattern(ctx));
-  overlay(ctx, shadowMask, dotPattern(ctx));
-}
-
-function hatchPattern(ctx) {
+/** Patterns of the too-steep hatching and the radio-shadow dots (drawn by the shared map at screen size). */
+export function hatchPattern(ctx) {
   const c = document.createElement('canvas'); c.width = c.height = 10;
   const g = c.getContext('2d');
   g.fillStyle = 'rgba(120, 50, 20, 0.30)'; g.fillRect(0, 0, 10, 10);
@@ -99,30 +94,10 @@ function hatchPattern(ctx) {
   return ctx.createPattern(c, 'repeat');
 }
 
-function dotPattern(ctx) {
+export function dotPattern(ctx) {
   const c = document.createElement('canvas'); c.width = c.height = 8;
   const g = c.getContext('2d');
   g.fillStyle = 'rgba(0, 0, 0, 0.22)'; g.fillRect(0, 0, 8, 8);
   g.fillStyle = 'rgba(255, 255, 255, 0.85)'; g.beginPath(); g.arc(4, 4, 1.15, 0, Math.PI * 2); g.fill();
   return ctx.createPattern(c, 'repeat');
-}
-
-/** Paint `pattern` where mask[i] = 1 (grid order: row = z from south; drawn north up). */
-function overlay(ctx, mask, pattern) {
-  const n = Math.sqrt(mask.length) | 0;
-  const W = ctx.canvas.width;
-  const m = document.createElement('canvas'); m.width = m.height = W;
-  const g = m.getContext('2d');
-  g.fillStyle = pattern; g.fillRect(0, 0, W, W);
-  const a = document.createElement('canvas'); a.width = a.height = n;
-  const ag = a.getContext('2d');
-  const id = ag.createImageData(n, n);
-  for (let row = 0; row < n; row++) for (let col = 0; col < n; col++) {
-    id.data[4 * ((n - 1 - row) * n + col) + 3] = mask[row * n + col] ? 255 : 0;
-  }
-  ag.putImageData(id, 0, 0);
-  g.globalCompositeOperation = 'destination-in';
-  g.imageSmoothingEnabled = false;
-  g.drawImage(a, 0, 0, W, W);
-  ctx.drawImage(m, 0, 0);
 }
