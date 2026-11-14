@@ -1,6 +1,127 @@
-/* Styles of step 4-walk only. Prefix classes with .step--walk or walk-. */
-.step--walk { background: #000 center / cover no-repeat; }
-.walk-ph__view { position: absolute; inset: 0; }
-.walk-ph__view canvas { display: block; width: 100%; height: 100%; }
-.walk-ph__panel { position: absolute; right: var(--gutter); bottom: var(--gutter); width: min(380px, 40vw); display: flex; flex-direction: column; gap: 12px; }
-.walk-ph__status { font-size: var(--fs-tag); color: var(--text-2); }
+/* Styles of step 4-walk only. Prefix classes with .step--walk or walk-. Layout follows docs/mockups/04. */
+.step--walk { background: #000; }
+.walk-view { position: absolute; inset: 0; cursor: crosshair; }
+.walk-view canvas { display: block; width: 100%; height: 100%; }
+.walk-layer { position: absolute; inset: 0; pointer-events: none; }
+.walk-layer button, .walk-layer .vlabel { pointer-events: auto; }
+
+/* helmet frame over the view: the keyed image (docs/design/helmet-frame.png, green removed) */
+.walk-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; }
+.walk-aimark { position: absolute; left: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
+
+/* HUD sits inside the visor */
+.walk-hud { position: absolute; inset: 0; color: var(--text); font-size: var(--fs-small); }
+.walk-hud kbd, .walk-esc kbd, .walk-modal kbd {
+  font-family: var(--font-mono); font-size: var(--fs-tag); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 5px;
+  padding: 0.1em 0.45em; background: rgba(0, 0, 0, 0.35);
+}
+.walk-hud > * { text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+
+/* compass: strip at the top */
+.walk-compass { position: absolute; top: 11%; left: 50%; width: 31%; transform: translateX(-50%); text-align: center; }
+.walk-compass__cv { display: block; width: 100%; height: clamp(26px, 3.8vh, 40px); }
+.walk-compass__deg { font-size: var(--fs-mono); margin-top: 0.15em; }
+
+/* minimap: round, top left; target below */
+.walk-mini { position: absolute; left: 8.6%; top: 17%; width: clamp(118px, 10vw, 196px); }
+.walk-mini__disc { position: relative; width: 100%; aspect-ratio: 1; border-radius: 50%; box-shadow: 0 0 0 1px var(--helmet-line), 0 4px 18px rgba(0, 0, 0, 0.35); }
+.walk-mini__cv { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.walk-mini__n { position: absolute; top: -1.35em; left: 50%; transform: translateX(-50%); font-size: var(--fs-tag); }
+.walk-target { margin-top: 0.9em; width: 150%; }
+.walk-target__name { font-weight: 600; font-size: var(--fs-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.walk-target__line { font-size: var(--fs-mono); margin-top: 0.2em; }
+.walk-target__bar { height: 3px; background: rgba(255, 255, 255, 0.25); border-radius: 2px; margin-top: 0.5em; width: 100%; overflow: hidden; }
+.walk-target__bar span { display: block; height: 100%; width: 0; background: var(--accent); }
+
+/* cards: translucent over the terrain */
+.walk-card {
+  position: absolute; background: rgba(12, 10, 9, 0.42); border: 1px solid var(--helmet-line); border-radius: var(--radius-card);
+  padding: 0.8em 1em; backdrop-filter: blur(6px); min-width: 13.5em;
+}
+.walk-card--body { right: 8.6%; top: 17%; }
+.walk-card--mission { right: 9.6%; bottom: 23%; background: var(--helmet-card); min-width: 15.5em; }
+.walk-card__head { display: flex; align-items: center; justify-content: space-between; gap: 1em; color: rgba(255, 255, 255, 0.72); font-size: var(--fs-tag); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35em; }
+.walk-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1.2em; padding: 0.18em 0; }
+.walk-row__l { color: rgba(255, 255, 255, 0.82); white-space: nowrap; }
+.walk-row__l .vlabel { font-size: calc(var(--fs-tag) * 0.9); color: rgba(255, 255, 255, 0.6); }
+.walk-card__head .vlabel { color: rgba(255, 255, 255, 0.7); }
+.walk-row__v { white-space: nowrap; font-size: var(--fs-mono); }
+.walk-row__v b { font-family: var(--font-display); font-weight: 600; font-size: 1.35em; letter-spacing: -0.01em; }
+.walk-row__v small { color: var(--text-2); font-family: var(--font-mono); font-size: var(--fs-tag); margin-left: 0.35em; }
+
+/* reserve chip, lower left */
+.walk-reserve {
+  position: absolute; left: 11.5%; bottom: 25%; min-width: 15em; padding: 0.7em 1em 0.8em;
+  background: var(--helmet-card); border: 1px solid var(--helmet-line); border-radius: var(--radius-card); backdrop-filter: blur(6px);
+}
+.walk-reserve__head { display: flex; align-items: center; justify-content: space-between; gap: 1em; color: rgba(255, 255, 255, 0.78); font-size: var(--fs-tag); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.walk-reserve__main { display: flex; align-items: baseline; justify-content: space-between; gap: 1.2em; margin-top: 0.1em; }
+.walk-reserve__val { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-big); letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
+.walk-reserve__left { font-size: var(--fs-mono); color: rgba(255, 255, 255, 0.85); white-space: nowrap; }
+.walk-reserve__sub { color: rgba(255, 255, 255, 0.78); font-size: var(--fs-small); }
+.walk-reserve__bar { height: 3px; background: rgba(255, 255, 255, 0.22); border-radius: 2px; margin-top: 0.55em; overflow: hidden; }
+.walk-reserve__bar span { display: block; height: 100%; background: var(--accent); }
+.walk-reserve.is-warning { border-color: var(--warning); background: rgba(90, 10, 12, 0.55); }
+.walk-reserve.is-warning .walk-reserve__val { color: var(--warning); }
+.walk-reserve.is-warning .walk-reserve__bar span { background: var(--warning); }
+
+/* one alert at a time, upper centre (keeps the ground ahead clear) */
+.walk-alert { position: absolute; top: 21%; left: 50%; transform: translateX(-50%); width: min(30em, 34%); }
+.walk-alert__box { text-shadow: none; animation: slide-up var(--slide) both; background: rgba(0, 0, 0, 0.6); }
+.walk-alert__lvl { font-size: var(--fs-tag); text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+.walk-alert .alert__text { color: var(--text); }
+
+/* reticle and look-at card */
+.walk-reticle { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 1.5px solid rgba(255, 255, 255, 0.8); border-radius: 50%; }
+.walk-reticle::after { content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 2px; margin: -1px 0 0 -1px; background: #fff; border-radius: 50%; }
+.walk-look { position: absolute; left: calc(50% + 22px); top: 50%; transform: translateY(-1.2em); display: none; align-items: flex-start; }
+.walk-look.is-on { display: flex; animation: fade-in var(--fade) both; }
+.walk-look::before { content: ''; width: 3.6em; height: 1px; background: rgba(255, 255, 255, 0.6); margin-top: 1.2em; flex: none; }
+.walk-look__card { background: var(--helmet-card); border: 1px solid var(--helmet-line); border-radius: 12px; padding: 0.7em 0.95em; max-width: 19em; backdrop-filter: blur(6px); }
+.walk-look__title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); }
+.walk-look__text { margin-top: 0.3em; font-size: var(--fs-small); color: rgba(255, 255, 255, 0.9); }
+.walk-look__size { margin-top: 0.4em; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.78); }
+
+/* prompt and start hint, just under the reticle */
+.walk-prompt, .walk-hint { position: absolute; left: 50%; top: 57%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6em; white-space: nowrap; }
+.walk-prompt { display: none; background: rgba(0, 0, 0, 0.55); border: 1px solid var(--accent); border-radius: var(--radius-pill); padding: 0.45em 1.1em; font-size: var(--fs-text); text-shadow: none; }
+.walk-prompt.is-on { display: flex; animation: fade-in var(--fade) both; }
+.walk-prompt kbd { border-color: var(--accent); color: var(--accent); }
+.walk-hint { top: 62%; color: rgba(255, 255, 255, 0.9); background: rgba(0, 0, 0, 0.4); border-radius: var(--radius-pill); padding: 0.45em 1.1em; transition: opacity var(--fade); text-shadow: none; }
+.walk-hint i { font-style: normal; color: var(--text-2); }
+.walk-hint.is-off { opacity: 0; }
+
+/* esc hint on the frame bottom */
+.walk-esc { position: absolute; left: 50%; bottom: 2.2%; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6em; color: var(--text-2); font-size: var(--fs-small); white-space: nowrap; }
+.walk-esc.is-armed { color: var(--text); }
+.walk-esc.is-armed kbd { border-color: var(--text); }
+
+/* markers projected from the 3D scene */
+.walk-marks { position: absolute; inset: 0; overflow: hidden; }
+.walk-mark { position: absolute; left: 0; top: 0; display: none; will-change: transform; }
+.walk-mark.is-on { display: block; }
+.walk-mark--target .walk-mark__dia { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border: 2px solid var(--accent); transform: rotate(45deg); box-shadow: 0 0 10px rgba(79, 203, 255, 0.55); }
+.walk-mark--target .walk-mark__label { position: absolute; right: 16px; bottom: 14px; white-space: nowrap; font-size: var(--fs-small); font-weight: 500; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.walk-mark--target .walk-mark__label b { color: var(--accent); font-weight: 600; font-size: var(--fs-mono); }
+.walk-mark--rover .walk-mark__label { position: absolute; left: -2.5em; bottom: 4px; white-space: nowrap; font-size: var(--fs-small); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.walk-mark--rover .vlabel { color: #fff; background: rgba(0, 0, 0, 0.35); }
+.walk-mark--rover b { color: var(--accent); font-weight: 600; font-size: var(--fs-mono); }
+.walk-mark--rover .walk-mark__dia { display: none; position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border: 2px solid var(--accent); transform: rotate(45deg); box-shadow: 0 0 10px rgba(79, 203, 255, 0.55); }
+.walk-mark--rover.is-target .walk-mark__dia { display: block; }
+.walk-mark--rover.is-target .walk-mark__label { bottom: 14px; }
+.walk-mark--point .walk-mark__dot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.45); }
+
+/* modal: sample taken, suit empty */
+.walk-modal { position: absolute; inset: 0; display: none; place-items: center; }
+.walk-modal.is-on { display: grid; animation: fade-in var(--fade) both; }
+.walk-modal__card { width: min(30em, 40%); background: rgba(12, 10, 9, 0.78); border: 1px solid var(--helmet-line); border-radius: var(--radius-card); padding: 1.2em 1.4em; backdrop-filter: blur(8px); }
+.walk-modal__card.is-warning { border-color: var(--warning); }
+.walk-modal__card.is-warning .walk-modal__title { color: var(--warning); }
+.walk-modal__kicker { font-size: var(--fs-tag); color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.walk-modal__title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-headline); letter-spacing: -0.02em; margin-top: 0.15em; }
+.walk-modal__text { margin: 0.5em 0 0; }
+.walk-modal__note { margin: 0.5em 0 0; color: var(--text-2); font-size: var(--fs-small); }
+.walk-modal__next { margin-top: 1em; color: var(--text-2); font-size: var(--fs-small); display: flex; align-items: center; gap: 0.5em; }
+
+.walk-loading { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: var(--text-2); font-size: var(--fs-mono); }
+.walk-loading.is-off { display: none; }
