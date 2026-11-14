@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OldDracoLoader } from './oldDraco.js';
 import { app } from '../state.js';
 import { mountHud } from './hud.js';
+import { initSky } from './sky.js';
 
 const BASE = import.meta.env.BASE_URL + 'murray/';
 const CELL = 0.5, HALF = 64, N = (HALF * 2) / CELL; // 256 x 256 cells
@@ -21,7 +22,7 @@ scene.fog = new THREE.FogExp2(0xc98e68, 0.006);
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 6000);
 scene.add(camera);
 
-scene.add(new THREE.HemisphereLight(0xe9b896, 0x6b3a22, 0.9));
+const hemi = new THREE.HemisphereLight(0xe9b896, 0x6b3a22, 0.9); scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff0e0, 3.2);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -31,7 +32,9 @@ scene.add(sun, sun.target);
 const SUN_DIR = new THREE.Vector3(-0.5, 0.55, -0.4).normalize(); // placeholder; real value from Mars24 later
 function placeSun() { sun.position.copy(camera.position).addScaledVector(SUN_DIR, 120); sun.target.position.copy(camera.position); sun.target.updateMatrixWorld(); }
 
+let sky; // sky.js: Mars24 sun, sky dome, fog, day/dust controls (created after state)
 const state = { tiles: [], ready: false, yaw: 0, pitch: 0, pos: new THREE.Vector3(), eyeY: 0, keys: {}, speed: 0, slope: 0, mult: 1 };
+sky = initSky({ scene, sun, hemi, container: document.getElementById('walk-view') });
 const hud = mountHud(document.getElementById('hud')), msg = document.getElementById('msg');
 const stats = { heightmapMs: 0, gridCells: N * N, tris: 0, texLoaded: 0 };
 
@@ -179,7 +182,7 @@ function frame(now) {
     step(dt);
     camera.position.set(state.pos.x, state.eyeY, state.pos.z);
     camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
-    placeSun();
+    sky.update(camera.position);
   }
   renderer.render(scene, camera);
   stat.frames++;
@@ -190,7 +193,7 @@ requestAnimationFrame(frame);
 
 // ---- test API (used by the headless check) ----
 const api = {
-  state, stats, H, hAt, gradient, groundRaycast, N, CELL, maxDiff: () => maxDiff, fps: () => stat.fps,
+  sky, state, stats, H, hAt, gradient, groundRaycast, N, CELL, maxDiff: () => maxDiff, fps: () => stat.fps,
   tp(x, z, yaw = 0, pitch = 0) { state.pos.set(x, groundRaycast(x, z) ?? 0, z); state.eyeY = state.pos.y + EYE; state.yaw = yaw; state.pitch = pitch; },
   key(c, v) { state.keys[c] = v; },
   gridVsRay() { let s = 0, mx = 0, n = 0; for (let i = 0; i < 2000; i++) { const x = (Math.random() - 0.5) * 120, z = (Math.random() - 0.5) * 120; const r = groundRaycast(x, z); if (r === null) continue; const d = Math.abs(r - hAt(x, z)); s += d; mx = Math.max(mx, d); n++; } return { meanAbs: s / n, max: mx, n }; },
