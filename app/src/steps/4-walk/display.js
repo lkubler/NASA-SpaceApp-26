@@ -14,12 +14,19 @@ export const DISPLAY = {
   atTargetM: 2.5,         // close enough to take the sample
   atRoverM: 4,            // close enough to end the excursion
   leftRoverM: 6,          // the visitor has left the rover (before that, no "end excursion")
-  roverClearM: 2.8,       // the visitor cannot walk into the rover model
+  roverClearM: 2.8,       // look-at cards: the rover model hides points within this distance of its centre (minus 0.8 m)
+  // the visitor cannot walk into the rover model: its footprint (scene3d.js roverModel, arm to power
+  // unit and wheel to wheel) plus a margin for the suit
+  roverHalfLenM: 2.3,
+  roverHalfWidthM: 1.45,
+  roverMarginM: 0.4,
+  lockSettleMs: 150,      // after the pointer lock is taken, mouse moves are ignored this long (the first event can carry a jump)
+  mouseJumpPx: 300,       // a single mouse move larger than this is a jump (seen right after the lock), not a look: ignored
   startClearM: 3.6,       // start this far along the route, beside the rover
   turnDegS: 80,           // arrow keys: turning speed
   pitchDegS: 50,
   mouseRadPerPx: 0.0022,
-  pitchMaxDeg: 60,
+  pitchMaxDeg: 25,        // looking up or down: the horizon stays in view (vertical field of view 66°)
   lookMaxM: 110,          // look-at cards: farthest point
   lookAngleDeg: 5,        // look-at cards: an Access Mars point within this angle of the reticle
   // look-at cards: a butte wall as in research/walk-targets.md §3 (wall >= 30°, rising >= 3 m within 6 m)

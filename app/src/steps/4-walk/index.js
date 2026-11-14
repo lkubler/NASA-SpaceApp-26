@@ -50,7 +50,7 @@ export default {
 
     // ---------- input ----------
     const keys = new Set();
-    let escArmedUntil = 0, unlockedAt = 0;
+    let escArmedUntil = 0, unlockedAt = 0, lockedAt = 0;
     const mouse = { dx: 0, dy: 0 };
     const isLocked = () => document.pointerLockElement === view;
     const onKeyDown = (e) => {
@@ -63,9 +63,16 @@ export default {
     };
     const onKeyUp = (e) => keys.delete(e.code);
     const onBlur = () => keys.clear();
-    const onMouseMove = (e) => { if (isLocked()) { mouse.dx += e.movementX || 0; mouse.dy += e.movementY || 0; } };
+    const onMouseMove = (e) => {
+      if (!isLocked()) return;
+      // the first events after the lock is taken can carry a jump (the cursor's way to the centre): ignored,
+      // as is any single move too large to be a look
+      const mx = e.movementX || 0, my = e.movementY || 0;
+      if (performance.now() - lockedAt < D.lockSettleMs || Math.abs(mx) > D.mouseJumpPx || Math.abs(my) > D.mouseJumpPx) return;
+      mouse.dx += mx; mouse.dy += my;
+    };
     const onClick = () => { if (!isLocked() && !log.ended && view.requestPointerLock) { try { const p = view.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch { /* not allowed */ } } };
-    const onLockChange = () => { if (!isLocked()) unlockedAt = performance.now(); };
+    const onLockChange = () => { if (isLocked()) { lockedAt = performance.now(); mouse.dx = mouse.dy = 0; } else unlockedAt = performance.now(); };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
