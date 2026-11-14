@@ -1,0 +1,61 @@
+:root {
+  /* surfaces (light UI) */
+  --paper: #FBF8F5;
+  --paper-2: #F2ECE7;
+  --hairline: #DDD2CB;
+  --ink: #241613;
+  --ink-muted: #6B5A54;
+
+  /* brand */
+  --mars: #B02E17;
+  --mars-deep: #6E1D10;
+  --rust: #D9572F;
+  --dust: #E9B58F;
+
+  /* HUD (dark glass) */
+  --scrim-solid: #1C0F0C;
+  --scrim: rgba(28, 15, 12, 0.72);
+  --hud-line: rgba(255, 255, 255, 0.28);
+  --hud-text: #FFFFFF;
+
+  /* states, on dark */
+  --ok: #58D68D;
+  --warn: #FFB224;
+  --danger: #FF5A4D;
+  /* states, on paper */
+  --ok-ink: #1E7A46;
+  --warn-ink: #8A5A00;
+  --danger-ink: #B3261E;
+
+  /* data provenance, on dark / on paper */
+  --prov-measured: #4CC9F0;
+  --prov-measured-ink: #0A6C8C;
+  --prov-modelled: #B3A9FF;
+  --prov-modelled-ink: #5B4BC4;
+  --prov-sim: #CFC4BE;
+  --prov-sim-ink: #5E5550;
+
+  /* map and scene */
+  --route: #FFFFFF;
+  --route-casing: #1C0F0C;
+  --comms-shadow: #FF4FA0;
+  --turnback: #FFB224;
+  --terrain-lo: #4A1D14;
+  --terrain-hi: #D98B62;
+  --sky-zenith: #3B2A33;
+  --sky-horizon: #D9A07A;
+
+  /* type */
+  --font-display: "Barlow Semi Condensed", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* spacing, shape, motion */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px; --s-7: 48px;
+  --radius: 4px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 120ms; --t-mid: 240ms; --t-slow: 600ms; --t-draw: 2400ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-fast: 0ms; --t-mid: 0ms; --t-slow: 0ms; --t-draw: 0ms; }
+}
