@@ -86,3 +86,49 @@ Orientierung & Hintergrund
 
 Noch offen
 - Sonnenstand berechnen (Mars24-Algorithmus, NASA GISS) – Link noch suchen
+
+- Storyline: Im Dashboard plant man 1–3 Forschungsanfragen von Ground Control → so landet der User garantiert an einer unserer verfügbaren 3D-Locations
+  - Verfügbar aus Access Mars: Landing Site, Pahrump Hills, Marias Pass, Murray Buttes (live_site = Curiosity-Position 2017, Lage undokumentiert → weglassen)
+  - Rover-Daten brauchen wir nur für die Sols, in denen Curiosity an diesen 4 Orten war
+
+
+### Risiken / technische Klärung
+
+Risiko 1: Access-Mars-Mesh ↔ HiRISE-DTM ausrichten
+- Kleiner als gedacht: Dashboard und EVA sind durch die Fahrt-Cutscene getrennte Szenen → kein nahtloses Einpassen nötig, nur ein Marker an ungefähr richtiger Stelle im Dashboard
+- Rover-Position pro Ort holen:
+  - Perseverance-Wegpunkte gibt es als JSON (Felder u. a. site, drive, sol, easting, northing, lon, lat): https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints.json
+  - Curiosity vermutlich analog: https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json (TODO: prüfen, ob es die Datei gibt)
+  - Fallback: Analyst's Notebook (Karte nutzt PLACES-Positionsdaten)
+- 128×128-m-Bereich als Rechteck um die Position ins Dashboard legen
+- Optional: Drehung von Hand am HiRISE-Orthobild prüfen (Butte-Kanten im Mesh vs. Orthobild)
+- ±10 m Genauigkeit reicht, Orbitallayer sind eh gröber
+
+Risiko 2: 833-MB-DTM
+- TODO zuerst: Deckt das DTM alle 4 Orte ab? (Murray Buttes ↔ Landestelle mehrere km auseinander) → falls nicht: gröberes Modell (CTX-DEM / MOLA) für den Ort, ehrlich als niedrigere Auflösung kennzeichnen
+- GDAL-Pipeline, einmal offline:
+  - gdalwarp -te … → Ausschnitt pro Ort (z. B. 3×3 km)
+  - gdaldem slope → Steigungsraster vorberechnen
+  - Export als Float32-Binary oder 16-bit-PNG + kleine JSON (Ausdehnung, Auflösung, Höhenbereich)
+- Ergebnis: wenige MB pro Ort, A* läuft direkt auf dem Steigungsraster
+- Kann eine Person parallel erledigen
+
+Risiko 3: Steigungslimit Anzug
+- Quelle: NASA xEMU Concept of Operations (Artemis, EVA-EXP-0075): Gehen auf/ab/quer am Hang bis 20°, Strecken bis 2 km vom Lander; Apollo 15 ging auf Hängen von ca. 17°
+  - https://www.nasa.gov/wp-content/uploads/2020/01/topic_1-_eva_lunar_surface_concept_of_operations.pdf
+- Unser Modell:
+  - Harte Grenze 20° (mit Quelle, aber als Mond-Anforderung kennzeichnen; Mars-Schwerkraft gut 2× Mond → eher optimistisch)
+  - Weiche Kosten ab ca. 10°, quadratisch steigend bis 20°
+  - Mit Last sinkt die Grenze, z. B. auf 15° → unsere Annahme, so beschriften
+- Pitch-Argument für Funklöcher: NASA-Präsentation zur Mond-EVA-Planung nennt als operative Grenzwerte u. a. max. sichere Steigung, max. Zeit ohne Sichtverbindung zum Lander, Grenzwerte für Verbrauchsgüter → unser Highlight bildet einen echten NASA-Planungsparameter ab
+  - https://ntrs.nasa.gov/api/citations/20250006988/downloads/ASCEND%20presentation%20-%20Planning%20Lunar%20EVAs.pdf
+
+
+### Platzhalter-Prinzip
+Nichts soll einfach reingeworfen wirken. Jeder Platzhalter bekommt im UI ein Label „Simuliert“ + im Info-Panel 1–2 Sätze: woher die Daten kämen + wie sie verarbeitet würden.
+
+- Wetter: Simulierte Vorhersage. In der Mission würden Orbiterdaten (Staub/Wolken) mit vorab aufgestellten Wetterstationen im Einsatzgebiet kombiniert (ähnlich REMS auf Curiosity), um ein lokales Zeitfenster für den EVA vorherzusagen.
+- Weltraumwetter: Simulierte Warnung. Sonnenteilchen-Ereignisse würden von Sonnenbeobachtungssatelliten früh erkannt, Ankunftszeit am Mars vorhergesagt und mit Strahlungsmessungen am Boden (wie RAD) abgeglichen.
+- Sauerstoff/Energie: Vereinfachtes Modell, Verbrauch abhängig von Steigung, Untergrund und Last. Real kämen die Werte live aus den Anzugsensoren.
+- Funk: Berechnet aus dem Geländemodell (Sichtlinie zum Rover). Ein reales System würde zusätzlich Relais-Satelliten und deren Überflugzeiten einbeziehen.
+→ Zeigt der Jury, dass wir zwischen echten Daten, Modellen und Simulation unterscheiden
