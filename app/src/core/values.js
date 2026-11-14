@@ -61,6 +61,9 @@ export const WORK = {
   spotW: v(1050 * BTU_H_TO_W, 'W', 'model', 'BELL', 'p.1 assumption 5 (1050 BTU/h)',
     'Work rate while working at the sample spot, about 310 W (Apollo planning: 1050 BTU/h).',
     { moon: true }),
+  restW: v(700 * BTU_H_TO_W, 'W', 'assumption', 'BELL', 'p.1 assumption 6 (700 BTU/h, LRV riding)',
+    'Work rate while standing still on the walk, about 205 W. Our sources give no standing rate; the closest is the Apollo planning rate for riding the rover (700 BTU/h), used here as a stand-in.',
+    { moon: true }),
   terrainEta: v(1.2, '', 'assumption', 'PANDOLF_ETA', 'terrain coefficient table',
     'Terrain coefficient of the effort equation for loose, uneven ground. No value for Mars regolith exists.'),
   // Pandolf load-carriage equation coefficients (KIM: MP = 1.5 W + 2.0 (W+L)(L/W)^2 + eta (W+L)(1.5 V^2 + 0.35 V G))

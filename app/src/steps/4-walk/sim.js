@@ -41,7 +41,7 @@ export function createSim(t, route, log) {
     x: a.x, z: a.z, yaw: Math.atan2(b.x - a.x, b.z - a.z), pitch: -6 * DEG,
     started: false, paused: false, modal: null, // modal: 'sample' | 'empty' | null
     moveDir: null, sinceMoveS: Infinity, moving: false,
-    workW: WORK.spotW.value, radio: true,
+    workW: WORK.restW.value, radio: true,
     reserve: null, timeLeft: null,
     active: {}, alert: null, alertInfo: {},
     tb: null, leftRover: false, atEdge: false,
@@ -96,7 +96,7 @@ export function createSim(t, route, log) {
       s.workW = workRate(Math.atan2(to.y - from.y, horiz) / DEG);
     } else {
       s.sinceMoveS += dt;
-      s.workW = WORK.spotW.value; // standing: the lowest work rate of the suit model
+      s.workW = WORK.restW.value; // standing still: resting work rate (core, label assumption)
     }
     s.x = nx; s.z = nz;
     s.radio = hasRadio(t, s.x, s.z);
