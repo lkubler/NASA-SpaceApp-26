@@ -26,3 +26,8 @@ Routenlogik
 - Optional Rover-Segmente: Der Rover trägt das Gerät bis zum Rand des steilen Geländes, das letzte Stück geht man zu Fuß.
 
 --> vorallem Funklöcher / Blocker, Reserve sehr serh interessant. könnte uniques highlight werdem
+
+
+- Missionbriefing während der Fahrt Cutscene: Ziele der Mission, Gefahren, z.B. Perseverance war hier vor so und so vielen Jahren, ein paar Bilder einblenden
+
+- Potentielles live rerouting falls man den Pfad verlässt (mit Warnung) + neu Berechnung oder kurze Gefahren Ansicht und Hinweise, falls man sich spontan entscheidet eine Detour zu nehmen
