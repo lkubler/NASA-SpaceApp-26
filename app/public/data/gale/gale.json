@@ -1,0 +1,65 @@
+{
+ "file": "gale_height.i16.bin",
+ "format": "int16 little-endian, metres above the MOLA areoid; row 0 = north edge, col 0 = west edge",
+ "cols": 464,
+ "rows": 464,
+ "pixels_per_degree": 128,
+ "km_per_pixel": 0.4631,
+ "bounds": {
+  "lon_west": 136.0,
+  "lon_east": 139.625,
+  "lat_north": -3.5625,
+  "lat_south": -7.1875
+ },
+ "width_km": 214.9,
+ "elev_min_m": -4648,
+ "elev_max_m": 1412,
+ "sites": [
+  {
+   "id": "murray",
+   "name": "Murray Buttes",
+   "lon": 137.35562,
+   "lat": -4.69565,
+   "src": "Scene origin of the Access Mars Murray Buttes terrain fitted to the HiRISE DTM (scripts/preprocess/README.md, murray.json)",
+   "col": 173.52,
+   "row": 145.04,
+   "elev_m": -4360
+  },
+  {
+   "id": "marias",
+   "name": "Marias Pass",
+   "lon": 137.3701,
+   "lat": -4.668,
+   "src": "Curiosity waypoints sols 1042-1056, MSL_waypoints.json (research/data-sites.md)",
+   "col": 175.37,
+   "row": 141.5,
+   "elev_m": -4435
+  },
+  {
+   "id": "pahrump",
+   "name": "Pahrump Hills",
+   "lon": 137.3774,
+   "lat": -4.6635,
+   "src": "Curiosity waypoints sols 896-926, MSL_waypoints.json (research/data-sites.md)",
+   "col": 176.31,
+   "row": 140.93,
+   "elev_m": -4450
+  }
+ ],
+ "mount_sharp": {
+  "id": "sharp",
+  "name": "Mount Sharp",
+  "lon": 137.8555,
+  "lat": -5.3711,
+  "elev_m": 787,
+  "src": "Highest MOLA MEGDR cell of the central mound in this grid (within 30 km of the crop centre)",
+  "col": 237.5,
+  "row": 231.5
+ },
+ "source": {
+  "title": "MGS MOLA Mission Experiment Gridded Data Record (MEGDR), 128 pixels per degree, MEGT00N090HB",
+  "url": "https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg128/megt00n090hb.img",
+  "credit": "NASA/GSFC MOLA Science Team, NASA PDS Geosciences Node",
+  "license": "NASA PDS, public domain"
+ }
+}
