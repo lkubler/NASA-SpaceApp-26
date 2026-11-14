@@ -14,6 +14,7 @@ import { createScene3d } from './scene3d.js';
 import { createHud } from './hud.js';
 import { lookAt, visiblePoints, rayHit } from './look.js';
 import { DISPLAY as D } from './display.js';
+import { createIntro } from './intro.js'; // x-intro
 
 let cleanup = null;
 
@@ -39,6 +40,8 @@ export default {
     const hudRoot = el.appendChild(document.createElement('div'));
     hudRoot.className = 'walk-layer';
     const hud = createHud(hudRoot);
+    const intro = createIntro(el, hudRoot, ctx); // x-intro: film now, stepping out once the scene is loaded
+    disposers.push(() => intro.stop());
 
     const t = await ctx.getTerrain();
     if (!alive) return;
@@ -279,11 +282,13 @@ export default {
     try { await v3.loadTerrain(); } catch (e) { console.error(e); }
     if (!alive) return;
     hud.setLoading('');
+    intro.ready({ v3, sim, t }); // x-intro
 
     let raf = 0, last = performance.now(), held = false;
     const loop = (now) => {
       if (!alive) return;
       if (held) { last = now; raf = requestAnimationFrame(loop); return; }
+      if (intro.frame(now)) { last = now; raf = requestAnimationFrame(loop); return; } // x-intro: sim and HUD wait
       advance((now - last) / 1000); last = now;
       frame();
       raf = requestAnimationFrame(loop);

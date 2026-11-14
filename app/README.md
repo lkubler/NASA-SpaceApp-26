@@ -27,6 +27,15 @@ npm run dev &
 PW=/path/to/node_modules/playwright/index.mjs node scripts/journey.mjs http://localhost:5173/ [near-1280 far-1280 far-1920]
 ```
 
+## Intro (`specs/x-intro.md`, `src/steps/4-walk/intro.js`)
+The first walk of a session (a module flag; a reload is a new session) opens with the intro: part A, the team's
+film `public/egress/egress.mp4`, fetched as a blob while Go / no-go is open (`src/ui/introFilm.js`) and left out
+when it cannot play through at the click (still loading, blocked, no H.264 decoder: Playwright's bundled
+Chromium); part B, the live walk camera stepping out of the rover hatch to the walk's start pose (about 4 s, fade
+only with `prefers-reduced-motion`), helmet frame only; then the display fades in and the controls are handed
+over. The sim, the suit clock and the walk log stand still until then. Skip button, any key or a click ends it at
+once. Test hook: `window.__intro` (`phase`: a, hold, b, hud, done; `path`; `skip()`).
+
 ## Walk keys
 Hold the mouse button and drag to look around; Chromium also captures the mouse on that press (pointer lock), so
 moving it alone turns the view. Firefox on Linux gets no pointer lock (its lock reports movement as the offset
@@ -38,6 +47,9 @@ Test hook: `window.__walk` (`advance`, `hold`, `info`).
 
 ## Dev jump and test states (URL parameters; never reached by a visitor)
 - `?step=N` opens step N with the state the earlier steps would have produced (each step's `devFixture`).
+- `?step=4` opens the walk without the intro (`specs/x-intro.md`); `?step=4&intro=1` plays it anyway. Go / no-go is
+  skipped there, so the film is not preloaded and only part B (stepping out) plays; for the full intro open
+  `?step=3&spot=F1` and click "Start excursion".
 - `&spot=F7` picks the spot in step 2 (default F3). Example: `?step=5&spot=F7`.
 - `&stops=F3,F7,F1` picks a round of up to three stops in that order (wins over `spot`). Example: `?step=3&stops=F3,F7,F1`.
   Plain `?step=2` opens Plan with no stop chosen.

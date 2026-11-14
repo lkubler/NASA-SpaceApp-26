@@ -9,6 +9,7 @@ import { ROVER, RULES, ASTRONAUT, spotNumber, stopsOf, stopOrdinal } from '../..
 import { heightProfile, ranges } from './profile.js';
 import { L } from './labels.js';
 import { brokenFixture } from './dev/broken.js';
+import { preloadIntroFilm } from '../../ui/introFilm.js';
 
 let root = null;
 let offResize = null;
@@ -79,6 +80,7 @@ export default {
 
   async mount(el, ctx) {
     root = el;
+    preloadIntroFilm(); // x-intro: the walk's intro film loads while this step is open
     const terrain = await ctx.getTerrain();
     if (root !== el) return;
     const { plan, route } = ctx.state;
