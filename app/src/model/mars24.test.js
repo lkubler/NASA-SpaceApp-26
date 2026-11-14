@@ -17,3 +17,12 @@ test('Murray Buttes sol 1440: Ls ~210, noon high, dawn low, night below horizon'
   const n = sunAtLtst(12), r = sunAtLtst(6), s = sunAtLtst(18.5);
   near(n.Ls, 210, 1.5, 'Ls'); assert.ok(n.elevation > 70 && n.elevation < 85); near(r.elevation, 1, 2, 'dawn'); assert.ok(s.elevation < 0);
 });
+
+import { sunSceneDir } from './mars24.js';
+test('azimuth to scene vector: +x east, +z north, 2.4 deg rotation', () => {
+  const v = (az, el = 0) => sunSceneDir(az, el, 0);
+  const eq = (a, b) => a.forEach((x, i) => near(x, b[i], 1e-9, 'vec'));
+  eq(v(0), [0, 0, 1]); eq(v(90), [1, 0, 0]); eq(v(180), [0, 0, -1]); eq(v(270), [-1, 0, 0]); eq(v(0, 90), [0, 1, 0]);
+  const w = sunSceneDir(0, 0); near(w[0], -Math.sin(2.4 * Math.PI / 180), 1e-9, 'x'); near(w[2], Math.cos(2.4 * Math.PI / 180), 1e-9, 'z');
+  near(Math.hypot(...sunSceneDir(123, 33)), 1, 1e-9, 'unit');
+});

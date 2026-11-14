@@ -38,3 +38,11 @@ export function sunAtLtst(hour, latDeg = MURRAY.latDeg, lonE = MURRAY.lonE, base
   for (let i = 0; i < 4; i++) { const s = sunAt(ms, latDeg, lonW); let d = hour - s.ltst; d = mod(d + 12, 24) - 12; ms += d / 24 * SOL_MS; }
   return { ms, ...sunAt(ms, latDeg, lonW) };
 }
+
+/** Sun direction (unit vector) in the walk scene frame. Scene: +x east, +y up, +z NORTH (mirrored), rotated
+ *  thetaDeg=2.4 (task 002 NCC fit): east = cos t x + sin t z, north = -sin t x + cos t z. Inverse used here. */
+export function sunSceneDir(azDeg, elDeg, thetaDeg = 2.4) {
+  const a = azDeg * R, e = elDeg * R, t = thetaDeg * R;
+  const E = Math.sin(a) * Math.cos(e), N = Math.cos(a) * Math.cos(e);
+  return [Math.cos(t) * E - Math.sin(t) * N, Math.sin(e), Math.sin(t) * E + Math.cos(t) * N];
+}

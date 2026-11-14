@@ -1,9 +1,9 @@
 // Sky, sun light, shadows, fog and the day/dust controls for Walk (docs/design.md moments 3 and 4).
 // Sun direction: Mars24 (src/model/mars24.js) for Murray Buttes on sol 1440 -> MODELLED.
-// Dust: tau presets drive fog / light / sky -> SIMULATED. Scene axes assumption: -Z = north, +X = east
-// (glb orientation is undocumented; shadows are right in relative terms, absolute heading is approximate).
+// Dust: tau presets drive fog / light / sky -> SIMULATED. Scene axes: +X east, +Z north, 2.4 deg rotation
+// (task 002 NCC fit: scene +x = east, +z = NORTH, rotated 2.4 deg; see sunSceneDir in model/mars24.js).
 import * as THREE from 'three';
-import { sunAtLtst } from '../model/mars24.js';
+import { sunAtLtst, sunSceneDir } from '../model/mars24.js';
 import { chip } from '../ui/components.js';
 import '../styles/sky.css';
 
@@ -58,7 +58,7 @@ export function initSky({ scene, sun, hemi, container, state }) {
     new THREE.ShaderMaterial({ uniforms: u, vertexShader: VERT, fragmentShader: FRAG, side: THREE.BackSide, depthWrite: false, fog: false }));
   dome.frustumCulled = false; dome.renderOrder = -10; scene.add(dome);
   scene.background = null;
-  scene.fog = new THREE.FogExp2(0xd9a57a, 0.0025);
+  scene.fog = new THREE.Fog(0xd9a57a, 60, 1600);
   hemi.groundColor.set(0x6b3a22);
 
   const st = { hour: 9, dustIdx: 0, sun: null, bgMats: null };
@@ -66,8 +66,8 @@ export function initSky({ scene, sun, hemi, container, state }) {
 
   function compute() {
     const s = sunAtLtst(st.hour), tau = DUST[st.dustIdx].tau;
-    const el = s.elevation, az = s.azimuth * Math.PI / 180, e = el * Math.PI / 180;
-    dir.set(Math.sin(az) * Math.cos(e), Math.sin(e), -Math.cos(az) * Math.cos(e)); // -Z north, +X east
+    const el = s.elevation, e = el * Math.PI / 180;
+    const sv = sunSceneDir(s.azimuth, el); dir.set(sv[0], sv[1], sv[2]);
     const dayK = sstep(-4, 12, el), twi = sstep(-9, -1, el) * (1 - sstep(4, 18, el)), night = 1 - sstep(-9, -2, el);
     const dustK = 1 - Math.exp(-tau / 3.2);                       // 0 clear .. ~.93 storm
     const sinEl = Math.max(Math.sin(e), 0.12);
@@ -78,16 +78,18 @@ export function initSky({ scene, sun, hemi, container, state }) {
     tmp.copy(PAL.zenithDusk).lerp(PAL.zenithDay, dayK); u.cZen.value.copy(tmp).lerp(PAL.night, night * 0.95);
     u.sunDir.value.copy(dir); u.day.value = dayK; u.twi.value = twi; u.night.value = night; u.dust.value = dustK; u.sunI.value = direct;
     // fog follows the horizon colour, density from visibility (FogExp2: ~2% contrast at 2/density)
-    fogCol.copy(u.cHor.value).lerp(PAL.dust.clone().multiplyScalar(0.25 + 0.75 * dayK), dustK * 0.8);
-    scene.fog.color.copy(fogCol); scene.fog.density = 1.98 / st.sun.vis;
+    fogCol.copy(u.cHor.value).lerp(PAL.dust.clone().multiplyScalar(0.45 + 0.55 * dayK), dustK * 0.9);
+    scene.fog.color.copy(fogCol); // linear fog so short range is hazed too: near 60 m (clear) -> 1 m (storm), far = (2 - 1.5 dustK) x visibility
+    scene.fog.near = 60 * Math.pow(1 / 60, dustK); scene.fog.far = st.sun.vis * (2 - 1.5 * dustK);
     // lights
     sun.color.setRGB(1, 0.93 - 0.18 * (1 - sstep(0, 25, el)), 0.84 - 0.34 * (1 - sstep(0, 25, el)));
-    sun.intensity = 3.2 * direct; sun.castShadow = direct > 0.02;
-    hemi.intensity = 0.06 + 0.9 * dayK * (1 - 0.35 * dustK) + 0.25 * twi;
+    sun.intensity = 4.2 * direct; sun.castShadow = direct > 0.02;
+    hemi.intensity = 0.06 + 1.3 * dayK * (1 - 0.35 * dustK) + 0.25 * twi;
     hemi.color.copy(u.cHor.value).lerp(new THREE.Color(0xffffff), 0.3);
     // mute the backdrop photo with the light level and haze
     if (!st.bgMats) { st.bgMats = []; scene.traverse((o) => { if (o.isMesh && o.material && o.material.isMeshBasicMaterial && o.material.fog === false) st.bgMats.push(o.material); }); }
-    for (const m of st.bgMats) m.color.setRGB(1, 0.84, 0.7).multiplyScalar(0.06 + 0.94 * dayK * (1 - 0.6 * dustK)).lerp(fogCol, Math.min(1, dustK * 1.05));
+    for (const m of st.bgMats) m.color.setRGB(1, 0.84, 0.7).multiplyScalar(0.06 + 0.94 * dayK * (1 - 0.6 * dustK));
+    for (const m of st.bgMats) { m.transparent = true; m.opacity = 1 - 0.95 * dustK; } // backdrop photo dissolves into the dust sky
     ui.sync();
   }
 
@@ -104,6 +106,7 @@ export function initSky({ scene, sun, hemi, container, state }) {
     const btns = DUST.map((d, i) => { const b = mk('button', 'sky-opt'); b.append(mk('b', null, d.label), mk('span', null, 'tau ' + d.tau)); b.title = d.note; b.addEventListener('click', () => { st.dustIdx = i; compute(); }); seg.append(b); return b; });
     const vis = mk('div', 'sky-vis'), hint = mk('div', 'sky-hint', 'T: sun +1 h   G: next dust scenario   Esc to use the sliders');
     root.append(h1, time, sub, range, h2, seg, vis, hint);
+    const dustWarn = mk('div', 'sky-dustwarn'); dustWarn.hidden = true; container.append(dustWarn);
     container.append(root);
     for (const ev of ['keydown', 'keyup', 'mousedown']) root.addEventListener(ev, (e) => e.stopPropagation());
     const fmt = (h) => { const m = Math.round(h * 60) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
@@ -112,6 +115,7 @@ export function initSky({ scene, sun, hemi, container, state }) {
       sub.textContent = (s.elevation >= 0 ? 'Sun ' + s.elevation.toFixed(0) + '° up' : 'Sun below horizon') + ' · az ' + s.azimuth.toFixed(0) + '° · Ls ' + s.Ls.toFixed(0) + '°';
       btns.forEach((b, i) => b.classList.toggle('on', i === st.dustIdx)); range.value = st.hour;
       vis.textContent = 'Visibility ~' + Math.round(s.vis) + ' m · direct sun ' + Math.round(s.direct * 100) + ' %';
+      dustWarn.hidden = s.tau < 8; dustWarn.textContent = '\u25a0 DUST: visibility ' + Math.round(s.vis) + ' m [SIMULATED]';
       vis.dataset.level = s.tau >= 8 ? 'danger' : s.tau >= 3 ? 'warn' : 'ok';
     } };
   })();
