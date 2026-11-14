@@ -1,0 +1,21 @@
+{
+  "published": {
+    "value_pct": 19,
+    "what": "Fraction of the sky blocked by Butte M12 while Curiosity was parked at Quela (MSL sols 1456-1467), RAD view",
+    "dose_effect": "RAD dose rate 4 % below expected (7.5 % for neutral particles) in Ehresmann et al. 2021; 5 +- 1 % in Guo et al. 2021",
+    "source": "Ehresmann et al. 2021, JGR Planets 126(8), doi:10.1029/2021JE006851 (abstract confirmed; full text not readable, publisher blocks scripts)"
+  },
+  "definition": "Published definition taken from the same group's method (Guo et al. 2026, doi:10.1029/2026JE009704, Sect. 3): viewpoint 1 m above ground, horizon elevation per azimuth (0.25 deg bins, 20 km radius) from the 1 m HiRISE/CTX Gale DEM; ROS(theta) = obstructed share of azimuths at zenith angle theta; the table value is ROS integrated over theta. Whether it is solid-angle weighted is not stated.",
+  "ours": {
+    "solid_angle_pct": 10.0,
+    "zenith_mean_unweighted_pct": 6.4,
+    "cosine_weighted_pct": 2.1,
+    "offset_range_pm5m_solid_angle_pct": [8.7, 11.6],
+    "max_horizon_elevation_deg": 17.7,
+    "viewpoint": "137.3530064 E, -4.69520223 (sol 1455 waypoint), 1 m above DTM",
+    "dtm": "HiRISE DTEEC_040770_1755_039280_1755_U01, 1 m crop to 400 m, 5 m regional grid to 2 km"
+  },
+  "verdict": "Not reproduced. Our terrain gives about half the published value (10 % vs 19 %, 6 % under the other definition), and +-5 m of position changes it only by 1-2 points.",
+  "caveat": "DTM registration is about +-2 m. The waypoint is the end of the sol 1455 drive, not a surveyed pose for sols 1456-1467. The DTM has no data 320-400 m to the west-north-west (azimuth 230-300 deg), which we treat as open, so our value is a lower bound there. The paper's exact integral could not be read.",
+  "source": "research/quela-sky.md"
+}
