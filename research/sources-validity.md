@@ -94,3 +94,17 @@ Load effect on speed and slope:
 
 ## Not verified / open
 - pextant repo and license; Johnson 2010 paper full text (slope constraint value, whether comms or reserve is modeled); Marquez thesis; Pandolf 1977 original; NASA/TP-2009-214796 numbers; TN D-7883; Bellcomm 19700009560; core.ac.uk PDFs returned 403 or were not downloadable here.
+
+## Addendum (after orchestrator update, notes.md pulled)
+
+**Quela / Murray Butte 12 check (1 line):** NASA blog "Sols 1456-1458: Settling in at Quela" (https://science.nasa.gov/blog/sols-1456-1458-settling-in-at-quela/, 9 Sep 2016) confirms Quela is "right at the base of one of the Murray Buttes", and mentions Stimson block "Uutapi" (sol 1458) and fallen blocks "Cuimba". The page does **not** say "Murray Butte 12" or mention cross-bedding; those two need another source (e.g. the Quela sol-1464 drill reports) before the pitch states them. Drill success sol 1464 is from the Planetary Society update (V). Sol window 1383-1455 is consistent with my sources (arrival about sol 1373-1405, buttes sol 1428-1455, Quela from 1456); Quela drilling itself is sols 1461-1464, so "1383-1455" excludes the drill sol, say "to about sol 1464" if Quela is included.
+
+**Correction to note on walkback (notes.md "10 km maximum distance"):** 10 km is the distance of the NASA JSC Walkback Test (Mark III, 1/6 g; Vos, ICES 2007-01-3133; NASA/TP-2009-214796), a feasibility test, not a stated mission limit. NASA suit-sizing practice assumes a walkback of 30 min or 1 h at 2.2 mph, i.e. a radius of **1.1 mi (1.8 km) or 2.2 mi (3.5 km)** (Ogilvie et al., ICES-2026-127, V). That is consistent with the xEMU ConOps "up to 2 km from lander" the team already cites. Recommend wording "10 km Walkback Test demonstrated feasibility for the Moon; planning radius is about 2 km (xEMU ConOps) to 3.5 km". A 10 km Mars rover-failure walkback is more optimistic than NASA's own sizing; flag it as a stretch assumption.
+
+**Mapping sources to the reserve model (base x slope x terrain x load):**
+- Base: 1200 BTU/hr (about 350 W) planetary EVA average; walking/walkback 1700 BTU/hr average crew, 2300 BTU/hr 95th percentile (ICES-2026-127, V). 6+/-2 h EVA from the xEMU ConOps is the team's own citation, not re-verified here.
+- Slope factor: use Pandolf term eta(W+L)(0.35 V G) relative to the flat term (Kim et al. 2024, V). Worked example (our arithmetic, W=82 kg, L=23 kg, V=0.9 m/s, eta=1.2): flat 1.5V^2 part adds 1.2*105*1.215 = 153 W; 15% grade adds 1.2*105*0.35*0.9*15 = 595 W; so a 15% (8.5 deg) grade roughly quintuples the speed-dependent term. Values are Earth-gravity Pandolf outputs; label as "simplified model".
+- Terrain factor: eta 1.0-1.5 (S, secondary). Load factor: Pandolf load terms, 50 lbm (23 kg) carry assumption (V).
+- Slope-linked speed: no NASA table found; Marquez/SEXTANT uses one constant velocity per slope (Kluis, V). Linking speed to slope in the demo is consistent with that precedent.
+- Slope limit: the team's xEMU ConOps 20 deg and Apollo 15 about 17 deg are consistent with my finds (15 deg below-threshold in EPSC 2024, 22.1 deg max traversed incl. LRV in LROC). Load-dependent limit remains our own construct, no NASA source.
+- Comms: NASA statement is qualitative (EVA white paper section 9). The notes' claim that NASA names "max time without line of sight to lander" as an operational limit is not verified by me; the slide deck is not in my sources. Get its title or NTRS link from the humans before citing.
