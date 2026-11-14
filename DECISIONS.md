@@ -6,9 +6,11 @@ Per entry: topic, status (PROPOSED / DECIDED), decision, reason, rejected altern
 DECIDED: Interplanetary Survival Guide: Martian Map
 
 ## Idea
-DECIDED (Sat 13:16, human in chat; confirm at 14:00): EVA route planner at Murray Buttes (plus the other Access Mars sites from notes.md) with the signature set comms shadow + return reserve, a first-person 3D walk with strong visuals (lighting, day/night, dust/weather), and as many extra features as time allows.
+DECIDED (Sat 13:16, human in chat; CONFIRMED by human Sat 13:42): EVA route planner at Murray Buttes (plus the other Access Mars sites from notes.md) with the signature set comms shadow + return reserve, a first-person 3D walk with strong visuals (lighting, day/night, dust/weather), and as many extra features as time allows.
 Reason: jury's strongest configuration (`research/jury-idea.md`), the humans' own priority list in notes.md.
-Open: Live Site in or out; demo format (video vs slides) decided later; story/pitch .md files must exist either way.
+Live Site: OUT (agents, 13:42). Its position is undocumented (notes.md storyline item already says drop it); the four documented sites are enough.
+Quela: kept as a Murray Buttes research target; if it falls outside the 3D detail area, the 3D walk targets the nearest in-area outcrop and the map marks Quela itself (agents decide placement).
+Demo format: humans decide later; `pitch` provides story/pitch .md files when started.
 
 ## Constraints (Sat 13:16, human in chat)
 - Deadline: work to the local 15:45 (global 23:59 is not ours).
@@ -16,7 +18,7 @@ Open: Live Site in or out; demo format (video vs slides) decided later; story/pi
 - Desktop first: judges view on PC. No QR code, no phone fallback.
 
 ## Stack
-PROPOSED by orchestrator (13:16), human agreed in principle: static web app, Three.js/WebGL for 3D and visual effects, data preprocessed offline in Python (slope, line of sight, heightmaps), routing in browser JS. No WebAssembly: GPU effects come from WebGL shaders; CPU work is precomputed or small. Revisit only if in-browser routing is measurably slow.
+DECIDED (human confirmed Sat 13:42; proposed by orchestrator 13:16): static web app, Three.js/WebGL for 3D and visual effects, data preprocessed offline in Python (slope, line of sight, heightmaps), routing in browser JS. No WebAssembly: GPU effects come from WebGL shaders; CPU work is precomputed or small. Revisit only if in-browser routing is measurably slow.
 Hosting: GitHub Pages from a public repo (human OK to make public), mirrored on Cloudflare Pages as backup against outages; offline demo video as last fallback.
 
 ## Visual theme
