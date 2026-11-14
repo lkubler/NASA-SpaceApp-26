@@ -1,7 +1,7 @@
 # Blocked sky at Quela vs. Ehresmann et al. 2021 (task 030, data-scout, Sat 14.11.)
 
 ## Verdict
-**Not reproduced.** Published: 19 % of the sky blocked at Quela. Ours from the 1 m DTM: 10.0 % of the hemisphere (solid angle), 6.4 % by the unweighted zenith-mean definition. About a factor 2 low under every reading. Do not claim "our code reproduces RAD's number". The honest line: "terrain at Quela blocks 6-10 % of the sky in our DTM, against 19 % published; the same buttes, the same direction (blocked toward E/SE), but our value is lower and we could not read the paper's exact integral."
+**Not reproduced.** Published: 19 % of the sky blocked at Quela. Ours, max horizon over three DEM tiers out to 20 km (1 m HiRISE DTM, 5 m regional grid, MOLA 463 m): 10.6 % of the hemisphere (solid angle), 6.8 % by the unweighted zenith-mean definition. About a factor 2 low under every reading. A first run with only the 2 km DTM gave 10.0 %; the 20 km far field (Mount Sharp, Gale rim) adds just 0.6 points. Do not claim "our code reproduces RAD's number". The honest line: "terrain at Quela blocks 7-11 % of the sky in our DTM, against 19 % published; the same buttes, the same direction (blocked toward NE to SE), but our value is lower and we could not read the paper's exact integral."
 
 ## Step 1: what is published (partly confirmed)
 - **Confirmed (V, publisher abstract via Crossref API `api.crossref.org/works/10.1029/2021JE006851`):** "Curiosity was parked close to Butte M12 in the Murray Buttes formation, which blocked out 19% of the surrounding sky view ... MSL sol 1456-1467 ... a decrease of 4% in the expected dose rate, and 7.5% in the neutral particle environment." So "Butte M12" is the butte at Quela (sols 1456-1467 sit inside the Quela stay, 1455-1468). Guo et al. 2021 GRL (doi 10.1029/2021GL093912): 5 +- 1 % at 19 % obstruction (abstract via search, S).
@@ -33,8 +33,25 @@ Horizon elevation by azimuth (deg, every 30 deg from N): 6.1, 5.5, 12.9, 16.3, 1
 4. Rover self-shielding and the exact RAD field of view (65 deg half angle is cited elsewhere, S) are not part of the terrain-only number.
 5. The HiRISE DTM (1 m posting, 25 cm ortho) smooths steep butte walls, so the near-vertical flank may read lower than the real butte.
 
+
+## Update: far field to 20 km (coordinator request)
+The paper uses a 20 km radius; the first run stopped at 2 km. Added a third tier: **MOLA MEGDR 128 ppd (463 m)**, tile `megt00n090hb` (lat 0 to -44, lon 90-180) of `pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg128/`, read by HTTP Range (rows 480-760, 6.5 MB, `data/raw/quela/mola_rows.bin`, not committed; PDS public data, MOLA team / GSFC). Datum check: MOLA at the waypoint -4385 m vs DTM -4377 m (same MOLA-areoid datum). Rays 463 m to 20 km in 231 m steps; planet curvature d^2/2R subtracted; per azimuth bin the maximum over crop, regional and MOLA tiers. Script reproduces it with no extra install (`python3 scripts/preprocess/quela_sky.py`, 7 s).
+
+| Definition | DTM only (2 km) | + MOLA to 20 km | MOLA tier alone | Published |
+|---|---|---|---|---|
+| Solid-angle fraction | 10.0 % | **10.6 %** | 4.9 % | 19 % |
+| Unweighted zenith mean | 6.4 % | **6.8 %** | 3.1 % | 19 % |
+| Cosine weighted | 2.1 % | 2.2 % | 0.6 % | n/a |
+| Max horizon elevation | 17.7 deg | 17.7 deg | 11.3 deg | n/a |
+
+- +-5 m offset range with all tiers: 9.5-12.2 % (solid angle), 6.1-7.9 % (unweighted).
+- **Azimuths that changed** (raised by more than 0.05 deg; 56 % of bins, max +4.5 deg): about 137-170 deg (SE, only by tenths of a degree where the butte already dominates), and 179-348 deg (S, W, NW). At 180/210/240/270/300/330 deg the horizon goes from -0.3/-2.8/-4.3/-3.2/-1.5 deg to 2.1/-0.6/-0.4/0.1/0.6 deg, i.e. from open to a low far horizon of 0-2 deg (Mount Sharp and the rim as seen through 463 m cells). NE to E (0-120 deg) did not change: the butte (12-17 deg) is higher than anything beyond.
+- Mount Sharp's flanks rise only 2-6 deg seen from Quela, so they add little compared with the 12-17 deg butte. The coordinator's guess (20 km radius) is therefore tested and **does not explain the gap**: 10.0 to 10.6 %.
+- Limits: MOLA bins are 463 m with gaps up to 12 km between tracks in the equatorial region (interpolated), so ridges narrower than a few hundred metres are smoothed; this makes the far field a lower bound, but 8 points more from it is not plausible given the 11.3 deg maximum.
+- Remaining candidates for the gap: the paper's normalisation (not readable), the true parked pose, butte walls smoothed in the 1 m DTM.
+
 ## Use in the app
-Show it as "published 19 % blocked; our DTM 6-10 %; not reproduced" in the "Check against Curiosity and RAD data" fold, or leave it out. Do not tell judges it validates the terrain code. `app/public/data/murray/quela_sky.json` carries the numbers and caveat. License: HiRISE DTM public domain (NASA/JPL/University of Arizona/USGS); papers are cited, not redistributed.
+Show it as "published 19 % blocked; our DTM 7-11 %; not reproduced" in the "Check against Curiosity and RAD data" fold, or leave it out. Do not tell judges it validates the terrain code. `app/public/data/murray/quela_sky.json` carries the numbers and caveat. License: HiRISE DTM public domain (NASA/JPL/University of Arizona/USGS); papers are cited, not redistributed.
 
 ## Sources
 - Ehresmann et al. 2021, JGR Planets 126(8), doi:10.1029/2021JE006851, abstract via https://api.crossref.org/works/10.1029/2021JE006851
