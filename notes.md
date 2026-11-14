@@ -146,3 +146,95 @@ Nichts soll einfach reingeworfen wirken. Jeder Platzhalter bekommt im UI ein Lab
 
 Access mars visualisierung
 https://experiments.withgoogle.com/access-mars
+
+
+### Konsistenz-Check (Stand nach User Story)
+- Ortswahl (User Story Schritt 2) und Ground-Control-Anfragen zusammenführen: Ortswahl = Auswahl einer Forschungsanfrage. Jede Anfrage gehört zu genau einem 3D-Ort → User wählt "Was soll erforscht werden?", der Ort folgt daraus
+- Routenlogik Zeile "drei Boxwork-Aufschlüsse" passt nicht: an keinem unserer 4 Orte gibt es Boxwork → durch die Ziele unten ersetzen
+- Spaziergang-Route (Schritt 5) auf dem Access-Mars-Mesh berechnen, nicht auf dem HiRISE-DTM: Mesh auf ein Raster sampeln (z. B. 0,5 m) → Steigung daraus. Sonst passen 2D-Plan und HUD-Warnungen im 3D nicht zusammen
+- HiRISE-DTM wird damit vor allem für die Rover-Route (Schritt 4) gebraucht → Risiko 2 (Abdeckung aller Orte) betrifft genau diesen Schritt
+- Live Site steht in der User Story noch als Option, im Storyline-Punkt als "weglassen" → entscheiden
+
+
+### Forschungsanfragen pro Ort (Ground Control)
+Format: Ziel / warum dort / Ausrüstung / Gefahr vor Ort
+TODO: Prüfen, welche der genannten Stellen tatsächlich im 128×128-m-Detailbereich liegen
+
+Murray Buttes (Hauptort)
+- Ziel: Kreuzschichtung im Stimson-Sandstein vermessen → Windrichtung und Form alter Dünen rekonstruieren; Probe am Fuß eines Buttes
+- Warum dort: Buttes = Erosionsreste von windabgelagertem Sandstein über dem Murray-Tonstein; Curiosity war dort ca. Sol 1383–1455 (2016) und hat am Fuß von "Murray Butte 12" gebohrt (Ziel "Quela")
+- Ausrüstung: Kamera mit Maßstab, Kompass/Neigungsmesser, Probenbohrer
+- Gefahr: am Butte-Fuß liegen abgestürzte Blöcke → Hindernisse/Steinschlagzone, Buttes blockieren Funk-Sichtlinie
+- Quellen: https://science.nasa.gov/blog/sols-1456-1458-settling-in-at-quela/ , https://svs.gsfc.nasa.gov/30812
+
+Marias Pass
+- Ziel: Hochsilika-Gestein beproben + Kontakt Murray-Tonstein / Stimson-Sandstein dokumentieren
+- Warum dort: Curiosity fand hier ungewöhnlich hohe Silika-Werte; Bohrprobe "Buckskin" enthielt Tridymit (auf der Erde v. a. aus Vulkanen bekannt, Herkunft auf dem Mars ungeklärt). Hohe Silika-Gehalte setzen viel Wasser voraus
+- Ausrüstung: tragbares Spektrometer (Chemie vor Ort), Probenbohrer, Probenbehälter
+- Gefahr: Anstieg zum Pass → Steigung
+- Quellen: https://www.jpl.nasa.gov/news/rocks-rich-in-silica-present-puzzles-for-mars-rover-team/
+
+Pahrump Hills
+- Ziel: Profil durch die Schichten von unten nach oben beproben (ca. 12 m mächtiger Abschnitt) → wie sich das Wasser im alten See verändert hat
+- Warum dort: Basis von Mount Sharp, Murray-Formation; Curiosity hat hier 3 Proben gebohrt (Confidence Hills, Mojave 2, Telegraph Peak), Jarosit deutet auf saures Wasser hin
+- Ausrüstung: Probenbohrer mit niedriger Schlagstärke (Gestein ist brüchig, Curiosity musste dafür extra sanfter bohren)
+- Passt gut zum Routing: Probenpunkte liegen übereinander → Route mit Höhengewinn
+- Quellen: https://ntrs.nasa.gov/citations/20150006016 , https://www.jpl.nasa.gov/news/nasas-curiosity-analyzing-sample-of-martian-mountain/
+
+Landing Site (Bradbury Landing)
+- Ziel: alte Flussablagerungen untersuchen → Korngröße und Rundung der Kiesel ergeben Tiefe und Geschwindigkeit des früheren Flusses
+- Warum dort: Konglomerat "Goulburn" direkt an der Landestelle, "Link" und "Hottah" ca. 50 und 100 m südöstlich; erste Flussbett-Kiesel, die auf dem Mars gefunden wurden
+- Ausrüstung: Kamera mit Maßstab, Probenbeutel
+- Zusatzauftrag: Wetterstation aufstellen → verknüpft mit Platzhalter "Wetter" (Sensorstationen im Einsatzgebiet)
+- Quelle: https://www.jpl.nasa.gov/news/pebbly-rocks-testify-to-old-streambed-on-mars/
+
+
+### Reserve-Modell (Highlight)
+- Startwert: EVA-Dauer 8 h (xEMU ConOps: 6±2 h) → Anteil davon für den Spaziergang, Rest für Fahrt + Puffer
+- Verbrauch pro Wegabschnitt = Basisverbrauch × Faktor Steigung × Faktor Untergrund × Faktor Last
+  - Faktoren sind unsere Annahmen → so beschriften (Platzhalter-Prinzip: "Vereinfachtes Modell")
+- Umkehrpunkt: sobald Reserve < Kosten des Rückwegs × Sicherheitsfaktor (z. B. 1,5) → HUD "Umkehren in X m"
+- Rückweg wird richtungsabhängig berechnet (bergab ≠ bergauf)
+- Walkback-Regel für die Rover-Route: Fällt der Rover aus, muss der Rückweg zur Basis zu Fuß machbar sein. NASA nimmt auf Basis der Apollo-Erfahrung 10 km als maximale Entfernung an (Lunar Walkback Test) → Basis höchstens 10 km vom 3D-Ort
+  - Quelle: https://core.ac.uk/works/15254764
+
+
+### Rover-Route (User Story Schritt 4)
+- Eigene Grenzwerte, als Annahme beschriften (Steigung z. B. 15°, Sanddünen tabu)
+- Bei Murray Buttes passt das gut: Curiosity fuhr durch einen sandfreien Streifen zwischen den Buttes und dem Dünenfeld → Dünen sind dort echtes Hindernis
+  - Quelle: https://www.planetary.org/articles/09181704-curiosity-update-sols-1073-1107
+- Dünen erkennen: aus HiRISE-Orthobild (manuell eingezeichnet reicht) oder THEMIS (niedrige Thermal Inertia = lockerer Sand)
+- Stats für Routen-Übersicht: Fahrstrecke, Fahrzeit, Energie, Walkback-Distanz
+
+
+### HUD-Elemente
+- Normalmodus: Pfeile auf dem Gelände, Distanz zum nächsten POI, kleine Reserve-Anzeige, Funk-Status
+- Warnmodus (nur bei Bedarf): steile Passage voraus, Funkschatten voraus (Länge in m), Umkehrpunkt erreicht, Pfad verlassen
+- Am POI: echtes Rover-Foto der Stelle + Kurzinfo (Ziel aus der Forschungsanfrage, wonach suchen)
+- Optional: Partner-Position + Sichtkontakt (Zweierteam), Customizer
+
+
+### Priorisierung (fest / optional / Roadmap)
+- fest: Forschungsanfrage wählen (= Ortswahl), Spaziergang-Route, Routen-Übersicht, 3D-Ansicht mit HUD, Reserve + Funklöcher
+- fest, aber einfach: Rover-Route (wenige Wegpunkte, Grenzwerte)
+- optional: Scroll-Animationen Start + Landung (aufwändig, siehe Abgabe), Live-Rerouting, nächster Ort
+- Roadmap (nur Folie): HUD-Customizer, Zweierteam-Logik, Rover-Dimensionierung, echte Wetter-/Weltraumwetter-Feeds
+
+
+### EVA-Steuerung
+- WASD + Maus, Höhe über das Kollisionsmesh aus Access Mars (SIMPLE-Node im glb)
+- Gehgeschwindigkeit an Steigung koppeln (bergauf langsamer) → macht die Steigung im Demo spürbar
+
+
+### Sonnenstand (offener Punkt)
+- Mars24 (NASA GISS): https://www.giss.nasa.gov/tools/mars24/
+- Algorithmus: Allison & McEwen (2000), Doku: https://marstime.readthedocs.io/en/latest/marstime.html
+- Fertige JS-Implementierung (BSD-Lizenz): https://github.com/ashima/pyMarsTime
+
+
+### Abgabe Space Apps
+- Pflicht: Projekt-Demo als Video (max. 30 s) oder Folien (max. 7 inkl. Titel), extern gehostet, öffentlich verlinkt
+- Video: englische Untertitel; Folien: Englisch
+- Muss zeigen, wie offene Daten der Raumfahrtagenturen das Projekt ermöglicht haben → Datenquellen sichtbar machen
+- TODO: Guide 2026 prüfen (bisher nur Version von 2025 gefunden): https://www.spaceappschallenge.org/resources/project-submission-guide/
+- Folge für uns: 30 s sind sehr kurz → Video-Storyboard früh planen; die Scroll-Animationen bekommen darin höchstens ein paar Sekunden
