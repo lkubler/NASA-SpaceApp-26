@@ -76,3 +76,11 @@ python3 scripts/preprocess/build_photos.py    # downloads 6 images, resizes to <
 - Registration check: the waypoint elevations vs. the DTM heights at the same pixel differ by a constant 7.4 m (vertical datum difference) with std 3.7 m; shifting the track by up to +-30 px does not improve it materially (best std 3.2 m), so the track is used unshifted. The `lat` convention (planetocentric vs graphic) was not independently proven, the check above shows no visible offset.
 ## Photos
 See `photos/credits.json` (each entry: id, station, sol, camera, credit, source_url, file, license). License basis: JPL Image Policy (`jpl.nasa.gov/imagepolicy`): "may be used for any purpose without prior permission", credit line "Courtesy NASA/JPL-Caltech" unless the caption says otherwise; no NASA/JPL logos; do not imply endorsement. For the Mastcam and MAHLI frames the NASA captions credit "NASA/JPL-Caltech/MSSS" (verified on the science.nasa.gov page for PIA21042); MSSS's own policy asks for commercial-use permission, not relevant to a non-commercial hackathon. Raw frames carry no caption, so the credit for them follows the same convention; the raw-image site was not machine-readable for an explicit rights statement (the page returned only a title), so say "raw, unprocessed" in the UI.
+
+# Regional layer (~4 km), `build_regional.py`
+Same DTM as `dtm_*`, block-averaged 5 x 5 (5.059 m cells, 800 x 800 = 4.05 km) so it is an exact multiple of the 1 km grid. Files in `app/public/data/murray/`: `regional_height.u16.bin`, `regional_slope.u8.bin` (same encodings as `dtm_*`, slope over 2 cells = 10 m), `regional_hillshade.png`, `regional_ortho.jpg` (same grid, 1 m ortho resampled), `regional.json` (grid, nodata, quadrant validity, `relation_to_1km_grid`). Total about 2.4 MB.
+Relation: `col_1km = col_reg*5 - 700`, `row_1km = row_reg*5 - 1488` (cell corners; centres: `(c+0.5)*5 - 700 - 0.5`). The 1 km crop lies at regional cols 140-345, rows 298-502.
+```
+python3 scripts/preprocess/build_regional.py   # HTTP Range read of 4000 DTM rows (~100 MB, cached in data/raw/regional_window.npy); needs the ortho JP2 from build_ortho.py (~1 min)
+```
+Block mean: cells with under half valid sub-pixels are no-data. Grid cannot be centred on the crop: the DTM west edge (DTM col 0) cuts it, so it is shifted east.
