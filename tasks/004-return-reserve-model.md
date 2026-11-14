@@ -1,6 +1,6 @@
 # 004 Return reserve model
 owner: builder
-state: open
+state: done
 area: app/src/model/reserve.js
 
 ## Goal
@@ -8,3 +8,6 @@ Pure JS module: Pandolf/Santee metabolic rate with grade, Mars gravity, suit + l
 
 ## Done when
 Unit tests with hand-checked values; documented in a short block at the top of the file. Wave 1, independent.
+
+## How to test
+`node --test app/src/model/reserve.test.js` (13 tests, no dependencies). API: `computeReserve(points, params)` in app/src/model/reserve.js, branch task-004-reserve.
