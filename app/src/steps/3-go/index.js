@@ -95,8 +95,10 @@ export default {
     const seq = stops.map((st) => `${num(st.id)} ${st.name || 'Spot'}`).join(' → ');
 
     // --- intro and big numbers
+    const head = headline(broken ? 'Route breaks a rule.' : 'Route ready.', { size: 'hero' });
+    head.dataset.enter = '1'; // x-transitions: entry order of the blocks (styles/frame.css)
     const intro = h('section.go__intro',
-      headline(broken ? 'Route breaks a rule.' : 'Route ready.', { size: 'hero' }),
+      head,
       lede(several
         ? (broken
           ? `The best round, rover → ${seq} → rover, breaks ${plural(broken, 'NASA rule')}. Every other limit is checked below.`
@@ -105,7 +107,7 @@ export default {
           ? `The best route to ${spotName.toLowerCase()} breaks ${plural(broken, 'NASA rule')}. Every other limit is checked below.`
           : `Rover to ${spotName.toLowerCase()} on foot and back, checked against every NASA rule.`,
       h('span.go__demo', ' Demo time ', h('span.mono', `${L.demo.value}${L.demo.unit}`), ' ', labelTag(L.demo))),
-      h('div.go__nums',
+      h('div.go__nums', { 'data-enter': 2 },
         bigNumber({ label: 'Distance', value: fmtDistance(plan.distanceM), tag: L.distance }),
         bigNumber({ label: 'Duration', value: fmtDuration(plan.timeS, { approx: true }), tag: L.duration }),
         bigNumber({ label: 'Steepest slope', value: fmtDeg(plan.steepestDeg), tag: L.steepest, tone: plan.checks.find((c) => c.id === 'slope').status === 'broken' ? 'warning' : null }),
@@ -129,7 +131,7 @@ export default {
       }
     });
     const hasShadow = plan.radioStretches.length > 0;
-    const mapBox = h('section.go__map', map.el, legend([
+    const mapBox = h('section.go__map', { 'data-enter': 3 }, map.el, legend([
       { kind: 'rover', text: 'Rover' },
       { kind: 'foot', text: 'On foot' },
       { kind: 'selected', text: several ? 'Stops, visiting order' : 'Spot' },
@@ -142,7 +144,7 @@ export default {
     const prof = heightProfile(plan, several
       ? { stops: plan.stops.map((st) => ({ sM: st.sM, label: `${stopOrdinal(st.order)} · ${num(st.id)} ${st.name}` })) }
       : { spotName });
-    const profBox = h('section.go__profile', prof.el);
+    const profBox = h('section.go__profile', { 'data-enter': 3 }, prof.el);
 
     // --- checks: one per rule in the row; the radio shadow is not a rule, so it gets its own "Caution" line
     let active = null;
@@ -221,11 +223,11 @@ export default {
       onClick: () => ctx.next(),
     });
     const bottom = h('section.go__bottom',
-      h('div.go__checks',
+      h('div.go__checks', { 'data-enter': 4 },
         h('div.go__checkshead', h('span.go__checkstitle', broken ? `${plural(broken, 'rule')} broken.` : 'Every rule kept.'), h('span.muted', 'Click a check to see where it occurs on the route.')),
         h('div.go__rulechecks', ruleChecks),
         cautionLine, suitChecks, crew),
-      h('div.go__action', textLink('Edit route', () => ctx.back()), btn));
+      h('div.go__action', { 'data-enter': 5 }, textLink('Edit route', () => ctx.back()), btn));
 
     el.append(h(`div.go${broken ? '.is-broken' : ''}`, intro, mapBox, profBox, bottom));
     requestAnimationFrame(() => prof.resize());

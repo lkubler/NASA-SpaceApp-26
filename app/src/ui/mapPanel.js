@@ -22,6 +22,9 @@ const RES = 4; // source canvas pixels per grid cell
 const ZOOM_MIN = 1, ZOOM_MAX = 6, ZOOM_STEP = 2, ANIM_MS = 220, DRAG_PX = 4, PATTERN_PX = 0.7;
 const FADE_CAP_MS = 4000; // fade option: longest wait for reveal() before the map is shown anyway
 const NICE_M = [1, 2, 5, 10, 20, 50, 100];
+// route drawing (drawIn): length of the draw, width of the uncovering stroke in grid cells (covers every route style)
+const DRAW_MS = 600, DRAW_MASK_W = 8;
+let drawSeq = 0;
 
 /**
  * @param {Terrain} terrain  from core/terrain.js getTerrain()
@@ -421,6 +424,31 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
       const el = s('path', { d, class: `map-path map-path--${style}`, 'vector-effect': 'non-scaling-stroke' });
       api.layer(layer).append(el);
       return el;
+    },
+    /**
+     * Draw route paths in along their way once (specs/x-transitions.md: a newly chosen route draws along its
+     * path): a mask stroke over `points` (scene {x, z} in route order) is uncovered start to end in `ms`, then
+     * removed. Only the given path elements are masked, so markers, pan and zoom are not touched. Nothing
+     * with reduced motion.
+     */
+    drawIn(points, els, { ms = DRAW_MS } = {}) {
+      els = els.filter(Boolean);
+      if (!els.length || points.length < 2) return;
+      if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const d = points.map((p, i) => { const q = api.project(p.x, p.z); return (i ? 'L' : 'M') + q.px.toFixed(2) + ' ' + q.py.toFixed(2); }).join('');
+      const id = `map-draw-${++drawSeq}`;
+      const line = s('path', { d, fill: 'none', stroke: '#fff', 'stroke-width': DRAW_MASK_W, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' });
+      const mask = s('mask', { id, maskUnits: 'userSpaceOnUse', x: -n, y: -n, width: 3 * n, height: 3 * n }, line);
+      let defs = svg.querySelector(':scope > defs');
+      if (!defs) { defs = s('defs'); svg.prepend(defs); }
+      defs.append(mask);
+      const len = line.getTotalLength() + DRAW_MASK_W;
+      line.style.strokeDasharray = `${len} ${len}`;
+      line.style.strokeDashoffset = String(len);
+      els.forEach((e) => e.setAttribute('mask', `url(#${id})`));
+      const done = () => { els.forEach((e) => { if (e.getAttribute('mask') === `url(#${id})`) e.removeAttribute('mask'); }); mask.remove(); };
+      const anim = line.animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: ms, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
+      anim.onfinish = done; anim.oncancel = done;
     },
     /**
      * Put an HTML-like marker at scene x, z. kind: 'number' (text = digits), 'rover' (home square),

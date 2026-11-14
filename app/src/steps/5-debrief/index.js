@@ -296,6 +296,9 @@ export default {
         h('div.dbf__foot-left', h('div.dbf__foot-title', 'Rules on the walk'), checks),
         btn),
     ));
+    // x-transitions: entry order of the main blocks (styles/frame.css [data-enter])
+    [['.dbf__main > .headline', 1], ['.dbf__nums', 2], ['.dbf__lower', 3], ['.dbf__side', 3], ['.dbf__foot', 4]]
+      .forEach(([q, k]) => { const b = el.querySelector(q); if (b) b.dataset.enter = String(k); });
   },
 
   unmount() { root = null; },
