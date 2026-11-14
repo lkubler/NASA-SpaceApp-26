@@ -40,8 +40,8 @@ for (const run of runs) {
   let shotN = 0;
   const shot = async (name) => {
     await page.waitForTimeout(350);
-    const f = `${String(++shotN).padStart(2, '0')}-${name}.png`;
-    await page.screenshot({ path: out + f });
+    const f = `${String(++shotN).padStart(2, '0')}-${name}.jpg`;
+    await page.screenshot({ path: out + f, type: 'jpeg', quality: 70 });
     console.log(`  shot ${f}`);
   };
   const text = (sel) => page.locator(sel).first().innerText();
@@ -222,7 +222,7 @@ for (const run of runs) {
     await page.waitForSelector('.walk-loading.is-off', { state: 'attached', timeout: 60000 });
     await page.evaluate(() => window.__walk.hold(true));
     const w2 = await S();
-    if (w2.walk.tS !== 0 || w2.walk.sample) fail(run, 'second walk did not start fresh');
+    if (w2.walk.sample || w2.walk.distanceM > 6 || w2.walk.warnings.length) fail(run, 'second walk did not start fresh');
     await page.keyboard.down('KeyW');
     await page.evaluate(() => window.__walk.advance(8));
     await page.keyboard.up('KeyW');
@@ -240,7 +240,7 @@ for (const run of runs) {
     if (brokenEnded.length) fail(run, `mission ended early with esc shows broken rules: ${brokenEnded.join(' | ')}`);
   } catch (e) {
     fail(run, `${e.message.split('\n')[0]} (at step ${await step().catch(() => '?')})`);
-    await page.screenshot({ path: out + 'error.png' }).catch(() => {});
+    await page.screenshot({ path: out + 'error.jpg', type: 'jpeg', quality: 70 }).catch(() => {});
   }
   for (const e of errors) fail(run, `console error: ${e}`);
   await page.close();
