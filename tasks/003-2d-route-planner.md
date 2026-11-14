@@ -1,6 +1,6 @@
 # 003 2D route planner
 owner: builder
-state: open
+state: in-progress
 area: app/src/map/
 
 ## Goal
