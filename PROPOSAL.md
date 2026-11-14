@@ -1,87 +1,95 @@
 # Proposal: a map that gets the crew home
 
 ## 1. Why
-A crew on Mars is on its own. A question to Earth takes 4 to 22 minutes each way, so nobody can talk them through a problem.
+A crew on Mars is on its own. A radio signal to Earth takes up to 22 minutes each way.
 
-Going outside is the most dangerous thing they do routinely. NASA rates injury during excursions as a red risk for a Mars mission and plans up to 24 hours outside per person per week.
+Going outside is the most dangerous thing the crew does routinely. NASA rates injury during excursions as a red risk for a Mars mission and plans up to 24 hours outside per person per week.
 
-Of NASA's red risks for Mars, this is the only one that depends on where the crew walks. A map can reduce it.
+During Apollo, flight controllers on Earth tracked by hand how far the astronauts could still walk back. With minutes of delay nobody on Earth can do that for Mars. The suit has to calculate it.
 
 ## 2. The risks of one excursion
 | Risk | What it means |
 |---|---|
-| **Not getting back** | A suit, rover, or medical failure far from the habitat. Six Apollo moonwalks ended with under 10 % oxygen left |
+| **Not getting back** | A suit, rover, or medical failure far from safety |
 | **Falling** | Steep slopes and loose blocks injure a person in a suit |
 | **A partner down** | The other crew member has to get them home |
-| **Solar storm** | Warning can be as short as 30 minutes; the crew must reach shelter |
-| **Losing contact** | Terrain blocks the radio to partner and habitat |
+| **Solar storm** | The warning can be short; the crew must reach shelter |
+| **Losing contact** | Terrain blocks the radio |
 | **Exhaustion** | Climbing in a suit with a load costs far more than walking on the flat |
 
 Most of them come down to one question: **from where I stand, can I still get home?**
 
 ## 3. Our answer
-A map for a single excursion. It plans the route by NASA's rules and answers that question at every step of the walk.
+A map for a single excursion on foot. It plans the route by NASA's rules and answers that question at every step of the walk.
+
+### Mars data and astronaut data
+Whether a way is safe depends on two things: the terrain, and the state of the astronaut and the suit. The map combines both. The question is not "how steep is this slope" but "do I get back with this load from here".
 
 ### Rules first
 Where NASA documents set a limit, the planner treats it as a rule.
 - It proposes only routes that keep every rule.
 - If no such route exists, it shows the best route that breaks rules and marks every broken rule.
+- Plan, go / no-go and helmet display read the same rules.
 
 | Rule | Value | Source |
 |---|---|---|
-| Slope on foot | 20° | Artemis suit operations concept |
+| Slope on foot | at most 20° | NASA suit operations concept for Artemis |
 | Distance on foot from a safe haven | about 2 km, at most 3.5 km | NASA suit sizing, Artemis concept |
-| Reserve kept for an emergency walk back | 20 % | Apollo practice |
-| Length of an excursion | 6 ± 2 hours | Artemis suit operations concept |
+| Way home | must fit into the time left in the suit | NASA walk-back planning |
+| Secondary oxygen | one hour, never planned with | NASA Mars suit studies |
+| Length of an excursion | 6 ± 2 hours | NASA suit operations concept for Artemis |
 
-The values come from NASA's lunar planning and from Apollo.
-
-### Science first
-The route links the research targets the crew chooses.
+The values come from NASA's planning for the Moon and for Mars suits. The parked rover is the safe haven.
 
 ### Always a way home
-At every point the map compares the cost of the way back with what is left in the suit. It tells the crew when to turn back.
+At every point the map compares the way back to the rover with what is left in the suit. It shows the reserve the crew will have on return if it continues like this, and tells it when to turn back.
+
+### The suit
+The suit carries oxygen, battery, cooling water and CO2 removal. The time left is set by whichever runs out first, and the display names it.
 
 ### No surprises
-Steep stretches and radio shadows are shown before the crew reaches them.
+What the plan marks as a risk warns at the same spot during the walk: steep stretches, radio shadows, the turn-back point.
 
-### Fitted to the astronaut and the suit
-The plan and the helmet display use body mass, carried load, the suit, and what is left in it. A heavier load or a weaker suit gives a shorter reach and an earlier turn-back.
+### Real, model, simulated
+Every value carries one of three labels with its source: real (NASA data), model (calculated by us), simulated (placeholder). Values without a source are marked as assumptions. No place on the map is invented.
 
 ## 4. What the visitor experiences
-1. **Launch.** A short rocket launch animation.
-2. **Mission.** Ground Control sends research requests. Choosing one chooses the site.
-3. **Plan.** A map of the site with points of interest. The visitor picks them. The planner proposes the safest route within the rules and shows the risks along it.
-4. **Overview.** Distance, duration, climb, reserve at the end, warnings. Start.
-5. **Walk.** First person on the real terrain with a helmet display.
-   - Always: direction and distance to the next point, reserve, radio status, minimap.
-   - Only when needed: steep stretch ahead, radio shadow ahead, turn back now, off the path.
-   - At a point of interest: the real rover photo of that spot and what to look for.
+1. **Mission.** Research requests arrive from Earth, with the signal delay shown. A request asks for one sample and is worded openly: "a sample from the sandstone at the base of the buttes". The visitor chooses one.
+2. **Plan.** The site from above. The map shows every spot where that sample can be taken, with time, reserve and broken rules for each. The visitor picks one; the planner proposes the route from the rover and back.
+3. **Go / no-go.** Every rule as one line: planned value, limit, status. Start.
+4. **Walk.** First person on the real terrain, through the helmet.
+   - Always: direction and distance to the target, reserve on return, radio status, minimap.
+   - Only when needed: steep stretch ahead, radio shadow ahead, turn back now, off the path, edge of the site.
+   - At the target: take the sample; the real rover photo of that spot.
+5. **Debrief.** Planned against actual: distance, time, reserve on return, time without radio, warnings. A report goes back to Earth.
 
 ### Demo time
-The 3D terrain of a site is a square of 128 by 128 metres. Nobody runs out of suit in 128 metres. In the demo the suit drains faster than in reality, so turning back becomes a real decision inside the site. The helmet display states that time is compressed.
+The 3D terrain of a site is a square of 128 by 128 metres. Nobody runs out of suit in 128 metres. In the demo time runs faster than in reality, so turning back becomes a real decision inside the site. The helmet display states the factor.
 
 ## 5. Built on real data
 | Data | Used for |
 |---|---|
-| HiRISE elevation model, 1 m (NASA/JPL/University of Arizona) | Slope, route, way home, radio line of sight |
-| HiRISE orbital image | The map |
-| Curiosity photos and drive path | Points of interest and what the crew would see |
-| Curiosity weather and radiation instruments | Temperature over the day, dose |
-| Access Mars 3D terrain (built from Curiosity images) | The first-person walk |
+| Access Mars 3D terrain (built from Curiosity images, NASA/JPL) | The plan map and the walk |
+| HiRISE elevation model, 1 m (NASA/JPL/University of Arizona) | Position of the site, slope check |
+| Curiosity photos, targets and drive path | Sample spots and what the crew would see |
+| Curiosity radiation and weather instruments | Dose, temperature |
 
-First site: Murray Buttes in Gale crater, where Curiosity worked in 2016. Anything simulated is labelled as simulated.
+First site: Murray Buttes in Gale crater, where Curiosity worked in 2016. The buttes are wind-blown dune sandstone on top of lake mudstone; the boundary marks the change from a wet to a dry Mars.
 
 ## 6. What comes next
-- More sites: Pahrump Hills, Marias Pass, the landing site.
-- Hazards that do not occur at this site, such as dust storms.
-- The rover drive to the site with a mission briefing.
-- Rerouting when the crew leaves the path.
-- An AI helper in the helmet.
+In this order:
+
+1. Abort key: the fastest safe way back to the rover.
+2. Pace: normal or fast, with advice before a warning.
+3. Placing a device: a radio relay that shrinks the radio shadow.
+4. The route coloured by effort.
+5. Rerouting when the crew leaves the path.
+6. A sudden event: dust storm warning or a cooling fault.
+7. The rover drive from the base, the regional map, the zoom in from the globe.
+8. More sites: Marias Pass, Pahrump Hills, the landing site.
+9. Astronaut and suit settings.
+10. More on the helmet display: elapsed time, breadcrumb trail, the partner.
+11. An AI helper in the helmet.
 
 ## 7. Stack
-Static web app with Three.js, hosted on GitHub Pages. Data prepared offline in Python. Routing runs in the browser.
-
-## 8. Open
-- Does a landing animation follow the launch?
-- Which astronaut and suit values can the visitor change, and which are fixed?
+Static web app with Three.js, hosted on GitHub Pages. Data prepared offline in Python. Routing runs in the browser; nothing is precomputed.

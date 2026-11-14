@@ -1,4 +1,4 @@
-# Agent heartbeats and hook state are local
+# Hook state is local
 status/*
 !status/.gitkeep
 # Raw datasets (DTMs, imagery) are too large for git
