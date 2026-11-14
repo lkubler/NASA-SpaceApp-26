@@ -29,3 +29,8 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Did: data-scout on the humans' site TODOs (Access Mars scenes, targets in detail area, DTM coverage).
 - Result: `research/data-sites.md`. All 4 sites in Access Mars (128×128 m tiles, ~82k verts; SIMPLE collision node only ~4.5 m spacing → sample tile meshes for 0.5 m grid). No georeferencing (±30 m origin estimate, rotation unknown). Inside: Buckskin (high), Pahrump targets, Goulburn; doubtful: Quela, Link, Hottah. No single DTM covers all 4: DTEEC_040770 (Murray/Marias/Pahrump) + DTEEC_018854 (Bradbury); Murray 72% valid → no-data mask.
 - Next: pause until the humans' 14:00 idea/stack decision; then record in DECISIONS.md and start BUILD (designer themes, 3D spike).
+
+## Round 6 — Sat 14.11. 13:16–13:22 (EXPLORE)
+- Did: recorded human chat decisions in DECISIONS.md (idea, stack proposal, hosting, theme, deadline 15:45, walkback 2–3.5 km, desktop only); designer wrote `docs/design.md`; data-scout sourced Quela + dust hazards; builder 3D spike started on `spike-3d`.
+- Result: design system (white paper UI + Mars red, dark glass HUD, provenance colors, magenta comms shadow). Quela "Murray Butte 12" + cross-bedding sourced only via Universe Today (secondary); Access Mars INTERFERENCE POI supports comms shadow. Dust: 2018 storm tau 8.5 at Gale, labelled tau table; winds can't blow people over.
+- Next: 3D spike go/no-go; after 14:00 confirmation create BUILD tasks (designer section 16 list).
