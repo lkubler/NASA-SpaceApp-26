@@ -6,10 +6,21 @@ Per entry: topic, status (PROPOSED / DECIDED), decision, reason, rejected altern
 DECIDED: Interplanetary Survival Guide: Martian Map
 
 ## Idea
-open
+DECIDED (Sat 13:16, human in chat; confirm at 14:00): EVA route planner at Murray Buttes (plus the other Access Mars sites from notes.md) with the signature set comms shadow + return reserve, a first-person 3D walk with strong visuals (lighting, day/night, dust/weather), and as many extra features as time allows.
+Reason: jury's strongest configuration (`research/jury-idea.md`), the humans' own priority list in notes.md.
+Open: Live Site in or out; demo format (video vs slides) decided later; story/pitch .md files must exist either way.
+
+## Constraints (Sat 13:16, human in chat)
+- Deadline: work to the local 15:45 (global 23:59 is not ours).
+- Walkback: 2–3.5 km (NASA suit sizing / xEVA ConOps 2 km), not 10 km. Reserve buffer: 20 % (Apollo, see notes.md references).
+- Desktop first: judges view on PC. No QR code, no phone fallback.
 
 ## Stack
-open
+PROPOSED by orchestrator (13:16), human agreed in principle: static web app, Three.js/WebGL for 3D and visual effects, data preprocessed offline in Python (slope, line of sight, heightmaps), routing in browser JS. No WebAssembly: GPU effects come from WebGL shaders; CPU work is precomputed or small. Revisit only if in-browser routing is measurably slow.
+Hosting: GitHub Pages from a public repo (human OK to make public), mirrored on Cloudflare Pages as backup against outages; offline demo video as last fallback.
+
+## Visual theme
+DECIDED direction (human, 13:16): Mars red + white UI. `designer` turns it into `docs/design.md`.
 
 ## Agent setup (2026-11-14)
 DECIDED during the agent-system port (revise freely)
