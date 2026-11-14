@@ -1,9 +1,9 @@
 # NASA Space Apps 2026
 
 Challenge: "Interplanetary Survival Guide: Martian Map" (`docs/challenge.md`, links in `docs/resources.md`).
-Humans generate ideas and make decisions. Agents research, build, design, test, and pre-sort.
+Humans own the story and make decisions. Agents research, build, and test it, in short steps a human looks at.
 
-**Hard rule (2026 rules):** AI must not be used to come up with the idea for solving the challenge. Agents never invent the core idea. They research, evaluate, and implement the humans' ideas from `notes.md`, and may suggest features, fixes, and improvements to it. Log what AI did in `docs/ai-use.md` for the submission.
+**Hard rule (2026 rules):** AI must not be used to come up with the idea for solving the challenge. Agents never invent the core idea. They research, evaluate, and implement the humans' story in `PLAN.md` (source: `notes.md`), and may suggest features, fixes, and improvements to it. Log what AI did in `docs/ai-use.md` for the submission.
 
 ## Time
 You don't know the current time. Run `python3 scripts/now.py` at the start of every task. It prints the phase and countdowns. It always reads deadlines from the main checkout, so worktrees see the same values.
@@ -38,34 +38,45 @@ Summary of `docs/rules-2026.md` (full text there; it wins if they differ).
 - No images, video, audio, or likeness of persons under 18.
 - All team members must be confirmed at the same local event (Heilbronn).
 
-## Shared files
+## Start here
+Version 1 of this project was archived on Sat 14.11. 16:00 (git tag `archive-v1`) because it did not tell the humans' story. Read these four files before doing anything:
+
 | Path | Purpose |
 |---|---|
-| `notes.md` | Humans' input: ideas, thoughts, direction (often German). Agents read it and never rewrite it. |
-| `docs/resources.md` | Resource links (humans and agents add here) |
-| `research/` | Findings. Read before researching. |
-| `DECISIONS.md` | Decisions and reasons |
-| `tasks/` | One file per task |
-| `docs/design.md` | Visual direction and design system (owned by `designer`) |
-| `status/<agent>.md` | Heartbeat (local, not committed) |
-| `blocked/` | Problems an agent couldn't solve |
+| `PLAN.md` | The story (humans own it), how we build, and the route to submission. Every task names a beat from it. |
+| `KNOWLEDGE.md` | What the research found: data, numbers with sources, prior art, what not to claim. Read before researching. |
+| `SALVAGE.md` | Working data, models, and code from version 1 and how to get them from `archive-v1`. Reuse, do not rebuild. |
+| `LESSONS.md` | Why version 1 failed and the rules that follow. |
+
+Other files:
+| Path | Purpose |
+|---|---|
+| `notes.md` | Humans' raw input (often German). Agents read it and never rewrite it. |
+| `docs/challenge.md`, `docs/rules-2026.md`, `docs/timeline.md`, `docs/resources.md` | Official facts and links |
+| `docs/ai-use.md` | Log of what AI did, for the submission |
 | `config/deadlines.json` | Deadlines read by `now.py` |
 
 ## Rules
-- Heartbeat: keep `status/<agent>.md` current with `state: working|blocked|done`, `task:`, `attempts:` (on the current problem), `updated:`.
-- After 3 failed attempts at the same problem, stop. Write `blocked/<agent>-<topic>.md`, set `state: blocked`.
-- Verify your own work before calling it done: run the tests or the app, open the links, check the sources. Report what you verified and what you couldn't.
-- Write results to files with sources; return a short summary.
-- Humans decide only the big things: idea, stack, major scope cuts, and the overall visual theme (once). Propose them in `DECISIONS.md` as PROPOSED, with a recommendation.
-- Everything else (implementation, UI details, data choices within the stack, task breakdown) is decided by agents. Record notable choices in `DECISIONS.md` or `docs/design.md` instead of asking. The humans don't want to review routine work.
-- Don't edit `notes.md`. To respond to a note, write in `research/` or `DECISIONS.md` and reference it.
+- **Story first.** Build only what is a beat in `PLAN.md` part 1. Never reframe the story, drop a beat, or decide a line marked OPEN (humans). If the story seems wrong or impossible, say so and stop.
+- **Show, do not report.** After every change a user can see, show the human a screenshot or recording and how to open it, then wait for their reaction before the next visible change. Tests and a clean console mean "not broken", not "good".
+- **One screen, one message.** Evidence, caveats, and sources go on a Sources page. If you add an element to a screen, say which one it replaces.
+- **Walking skeleton first**, then depth, and depth goes to the first-person walk first.
+- **The planned terrain is the walked terrain.** No plan the 3D view cannot show.
+- **Reuse.** Check `SALVAGE.md` before writing a model, a data step, or a loader. Check `KNOWLEDGE.md` before researching.
+- **Honest claims.** Label measured, modelled, simulated. Use only facts marked verified in `KNOWLEDGE.md`, or verify first and add the result there with its source.
+- **No autonomous loop and no simulated jury score.** Work in short steps with the human in the room. Start an agent only for a concrete task.
+- **Small and removable.** Prefer the smallest thing that tells the beat. No tiles, folds, or numbers for an imagined expert.
+- After 3 failed attempts at the same problem, stop and tell the human what you tried.
+- Verify your own work in a real browser before showing it. Say what you could not verify (for example real-GPU frame rate).
+- Do not create planning or report files. The state lives in `PLAN.md`, the code, and git. New findings go into `KNOWLEDGE.md`.
+- Don't edit `notes.md`.
 
 ## Git: agents commit their own work
 - Commit when a unit of work is finished: a research file, a task, a fix. Don't save it all for the end.
 - Stage only the files you changed: `git add <paths>`. Never `git add -A` or `git add .`; other agents share this checkout.
 - Message format: `<agent>: <what>`, e.g. `data-scout: HiRISE DTM access for Jezero`.
 - If `.git/index.lock` exists, wait a few seconds and retry; don't delete it.
-- Research, docs, tasks, and decisions: commit on `main`.
+- Docs and knowledge: commit on `main`.
 - Code: commit on your branch or worktree (`git worktree add ../wt-<name> -b <name>`). It reaches `main` only through a merge that keeps `main` runnable.
-- Pushing: `git pull --rebase` then `git push`. The orchestrator pushes `main` every round. Subagents commit but don't push, unless they work alone in their own worktree.
+- Pushing: only when a human says so. On `main` use `git fetch && git merge origin/main`, not `git pull --rebase` (it flattens merge commits).
 - Never force-push, rewrite history, or commit secrets or large raw datasets (use `data/raw/`, which is ignored).
