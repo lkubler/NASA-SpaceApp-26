@@ -1,0 +1,22 @@
+// Task 023 screenshot (needs `vite preview --port 4233`): node shot023.mjs
+import puppeteer from 'puppeteer-core';
+const b = await puppeteer.launch({ executablePath: '/usr/bin/google-chrome', headless: 'new', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const p = await b.newPage(); await p.setViewport({ width: 1280, height: 720 });
+const errs = []; p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); }); p.on('pageerror', (e) => errs.push('PE ' + e.message));
+const sl = (ms) => new Promise((r) => setTimeout(r, ms));
+await p.goto('http://localhost:4233/#/briefing'); await sl(2500);
+await p.evaluate(() => { location.hash = '#/map'; }); await sl(2500);
+await p.evaluate(() => { location.hash = '#/walk'; });
+await p.waitForFunction(() => window.__app?.route3d, { timeout: 60000 }).catch(() => console.log('no route3d'));
+await sl(2000);
+console.log('stations', await p.evaluate(() => window.__app.route3d.stations.list.map((s) => s.id + ' ' + s.x.toFixed(0) + ',' + s.z.toFixed(0))));
+await p.evaluate(() => window.__app.tp(-60, 12, Math.PI / 2, -0.05)); await sl(2500);
+console.log('card', await p.evaluate(() => { const c = document.querySelector('.walk-station'); return c && !c.hidden ? c.innerText.replace(/\n/g, ' | ') : 'hidden'; }));
+await p.screenshot({ path: '../docs/ui-023-walk-card.png' });
+await p.evaluate(() => document.querySelector('.walk-station .poi-x').click()); await sl(800);
+console.log('after close hidden', await p.evaluate(() => document.querySelector('.walk-station').hidden));
+await p.evaluate(() => window.__app.tp(0, 0)); await sl(1500);
+await p.evaluate(() => { location.hash = '#/sources'; }); await sl(1200);
+console.log('src', await p.evaluate(() => [...document.querySelectorAll('.src-a')].map((a) => a.href).filter((h) => /cnsc/.test(h))));
+console.log('ERRORS', errs);
+await b.close(); process.exit(0);

@@ -1,6 +1,6 @@
 # 023 Station cards in Walk; source link fixes
 owner: designer
-state: open
+state: done
 area: app/src/walk/route3d.js, app/src/ui/stationCard.js, app/src/ui/sources.js
 
 ## Goal
