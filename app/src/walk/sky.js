@@ -101,7 +101,7 @@ export function initSky({ scene, sun, hemi, container, state }) {
     const h1 = mk('div', 'sky-h'); h1.append(mk('span', 'label', 'Time of sol'), chip('modelled', 'Sun position: NASA GISS Mars24 algorithm, Murray Buttes (4.70 S, 137.36 E), sol 1440, Ls ~210'));
     const time = mk('div', 'sky-time'), sub = mk('div', 'sky-sub');
     const range = mk('input', 'sky-range'); range.type = 'range'; range.min = 0; range.max = 24; range.step = 0.05; range.value = st.hour; range.setAttribute('aria-label', 'Local true solar time');
-    range.addEventListener('input', () => { st.hour = +range.value; compute(); });
+    range.addEventListener('input', () => { st.manual = true; st.hour = +range.value; compute(); });
     const h2 = mk('div', 'sky-h sky-h2'); h2.append(mk('span', 'label', 'Dust (tau)'), chip('simulated', 'Scenario values, not forecasts. Sources: JPL 2018, Lemmon et al. (Mastcam), Guzewich 2019; see research/sources-validity.md'));
     const seg = mk('div', 'sky-seg'); seg.setAttribute('role', 'group');
     const btns = DUST.map((d, i) => { const b = mk('button', 'sky-opt'); b.append(mk('b', null, d.label), mk('span', null, 'tau ' + d.tau)); b.title = d.note; b.addEventListener('click', () => { st.dustIdx = i; compute(); }); seg.append(b); return b; });
@@ -134,13 +134,13 @@ export function initSky({ scene, sun, hemi, container, state }) {
 
   addEventListener('keydown', (e) => {
     if (document.getElementById('walk-view')?.offsetParent === null) return;
-    if (e.code === 'KeyT') { st.hour = (Math.floor(st.hour) + 1) % 24; compute(); }
+    if (e.code === 'KeyT') { st.manual = true; st.hour = (Math.floor(st.hour) + 1) % 24; compute(); }
     if (e.code === 'KeyG') { st.dustIdx = (st.dustIdx + 1) % DUST.length; compute(); }
   });
   compute();
 
   return {
-    st, compute, setHour(h) { st.hour = h; compute(); }, setDust(i) { st.dustIdx = i; compute(); },
+    st, compute, setHour(h, auto) { if (!auto) st.manual = true; st.hour = h; compute(); }, setDust(i) { st.dustIdx = i; compute(); },
     /** Call per frame: shadow map follows the camera, light placed along the Mars24 sun direction. */
     update(camPos) { sun.position.copy(camPos).addScaledVector(dir, 120); sun.target.position.copy(camPos); sun.target.updateMatrixWorld(); dome.position.copy(camPos); dome.scale.setScalar(4000); },
   };

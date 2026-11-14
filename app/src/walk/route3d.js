@@ -37,6 +37,9 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     clearTimeout(toastT); toastT = setTimeout(() => { warnEl.hidden = true; }, 4500);
   }
 
+  const flashEl = document.createElement('div'); flashEl.className = 'walk-flash'; container.append(flashEl);
+  function flash() { flashEl.classList.remove('on'); void flashEl.offsetWidth; flashEl.classList.add('on'); }
+
   let R = null; // built route
   let routeRef = null, lapseT = 0, guided = false, lastIdx = -1, wasShadow = false, tbPassed = false, slopeAt = -1e9, pubKey = '';
   const btn = document.createElement('button'); btn.className = 'walk-guide'; btn.textContent = 'Guided walk'; btn.hidden = true;
@@ -165,8 +168,8 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     }
     if (sh && !wasShadow) toast('Entering comms shadow: no link to the ' + (comms.COMMS_SOURCE_NAME ?? 'relay rover'), 'danger');
     wasShadow = sh;
-    if (R.tb > 0 && d < 12) {
-      if (i >= R.tb && lastIdx >= 0 && lastIdx < R.tb && !tbPassed) { tbPassed = true; toast('Turn-back point passed: reserve no longer covers the walk back', 'warn'); }
+    if (R.tb > 0 && (guided || d < 12)) {
+      if (i >= R.tb && lastIdx >= 0 && lastIdx < R.tb && !tbPassed) { tbPassed = true; toast('TURN-BACK POINT PASSED: reserve no longer covers the walk back', 'turn'); flash(); }
       if (i < R.tb - 3) tbPassed = false;
     }
     lastIdx = i;
@@ -192,10 +195,11 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     e.stopPropagation();
     if (guided) { stop(); return; }
     guided = true; lapseT = 0; btn.textContent = 'Stop guided walk';
+    spawn(); lastIdx = -1; wasShadow = false; tbPassed = false; // start at the lander so the walk opens with LINK
     if (document.pointerLockElement) document.exitPointerLock();
     const m = document.getElementById('msg'); if (m) m.style.display = 'none';
   });
   app.on((st) => { btn.style.display = st.view === 'walk' && R && R.first >= 0 ? '' : 'none'; if (st.view !== 'walk' && guided) stop(); });
 
-  return { update, spawn, rebuild: build, toast, get built() { return R; }, get guided() { return guided; }, setGuided(v) { if (v !== guided) btn.click(); } };
+  return { update, spawn, rebuild: build, toast, seek(frac) { if (R && R.hasEl) lapseT = R.el[R.el.length - 1] * frac; }, tbFrac() { return R && R.hasEl && R.tb > 0 ? R.el[R.tb] / R.el[R.el.length - 1] : null; }, get built() { return R; }, get guided() { return guided; }, setGuided(v) { if (v !== guided) btn.click(); } };
 }

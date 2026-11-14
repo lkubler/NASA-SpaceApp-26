@@ -118,10 +118,11 @@ function groundRaycast(x, z) {
 addEventListener('keydown', (e) => { if (app.get().view === 'walk') state.keys[e.code] = true; });
 addEventListener('keyup', (e) => { state.keys[e.code] = false; });
 msg.addEventListener('click', () => renderer.domElement.requestPointerLock());
-app.on((st) => { if (st.view !== 'walk') { state.keys = {}; if (document.pointerLockElement) document.exitPointerLock(); } else if (state.ready) { msg.textContent = 'Click to walk (WASD, mouse, Shift = run, Esc = release)'; msg.style.display = 'flex'; } resize(); });
+const guidedNow = () => !!(route3d && route3d.guided);
+app.on((st) => { if (st.view !== 'walk') { state.keys = {}; if (document.pointerLockElement) document.exitPointerLock(); } else if (state.ready && !guidedNow()) { msg.textContent = 'Click to walk (WASD, mouse, Shift = run, Esc = release)'; msg.style.display = 'flex'; } resize(); });
 renderer.domElement.addEventListener('click', () => renderer.domElement.requestPointerLock());
 document.addEventListener('pointerlockchange', () => {
-  if (!state.ready || app.get().view !== 'walk') return;
+  if (!state.ready || app.get().view !== 'walk' || guidedNow()) return;
   msg.textContent = 'Click to walk (WASD, mouse, Shift = run, Esc = release)';
   msg.style.display = document.pointerLockElement ? 'none' : 'flex';
 });
@@ -158,6 +159,16 @@ function step(dt) {
   if (ry !== null) { state.pos.y = ry; maxDiff = Math.max(maxDiff, Math.abs(ry - hAt(state.pos.x, state.pos.z))); }
   state.eyeY += (state.pos.y + EYE - state.eyeY) * Math.min(1, dt * 12);
 }
+// Guided walk: sun time follows the EVA clock (time-lapse lighting); the sky slider overrides until the next guided walk.
+let evaWas = false;
+function syncSkyToEva() {
+  const st = app.get(), ev = st.eva, on = !!(ev && st.route && typeof st.route.startHour === 'number');
+  if (on && !evaWas) sky.st.manual = false;
+  evaWas = on;
+  if (!on || sky.st.manual) return;
+  const h = (((st.route.startHour + ev.elapsed_s / 3600) % 24) + 24) % 24;
+  if (Math.abs(h - sky.st.hour) > 0.005) sky.setHour(h, true);
+}
 function frame(now) {
   requestAnimationFrame(frame);
   if (app.get().view !== 'walk') { last = now; return; }
@@ -166,6 +177,7 @@ function frame(now) {
     step(dt);
     camera.position.set(state.pos.x, state.eyeY, state.pos.z);
     camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
+    syncSkyToEva();
     sky.update(camera.position);
     if (route3d) route3d.update(dt, state.slope);
   }

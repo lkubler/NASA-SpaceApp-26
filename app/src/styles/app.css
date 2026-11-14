@@ -44,6 +44,10 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 /* Walk route: toast + guided-walk button (task 007) */
 .walk-toast { position: absolute; top: calc(var(--s-5) + 56px); left: 50%; transform: translateX(-50%); padding: var(--s-3) var(--s-5); background: var(--scrim); border-left: 6px solid var(--warn); border-radius: var(--radius); color: var(--hud-text); font: 600 14px var(--font-display); letter-spacing: .06em; pointer-events: none; z-index: 5; }
 .walk-toast[data-kind="danger"] { border-left-color: var(--danger); }
+.walk-toast[data-kind="turn"] { border-left-color: var(--turnback); background: rgba(40,26,4,.92); font-size: 18px; padding: var(--s-4) var(--s-6); }
+.walk-flash { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; box-shadow: inset 0 0 160px 40px var(--turnback); }
+.walk-flash.on { animation: tbflash 2.4s ease-out; }
+@keyframes tbflash { 0% { opacity: 0; } 8% { opacity: 1; } 50% { opacity: .55; } 100% { opacity: 0; } }
 .walk-toast[hidden] { display: none; }
 .walk-guide { position: absolute; top: var(--s-5); right: var(--s-5); z-index: 8; height: 44px; padding: 0 var(--s-5); background: var(--mars); color: #fff; border: 1px solid rgba(255,255,255,.6); border-radius: var(--radius); box-shadow: 0 2px 14px rgba(0,0,0,.4); font: 600 15px var(--font-display); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
 .walk-guide:hover { background: var(--mars-deep); }

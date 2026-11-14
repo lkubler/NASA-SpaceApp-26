@@ -1,6 +1,6 @@
 # 021 Sync sky to EVA clock; guided-walk polish
 owner: designer
-state: open
+state: done
 area: app/src/walk/sky.js, app/src/walk/hud.js, app/src/walk/route3d.js, app/src/styles/
 
 ## Goal
