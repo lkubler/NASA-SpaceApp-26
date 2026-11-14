@@ -41,3 +41,15 @@ You may (but are not required to) consider the following:
     Think about whether your mission might use rovers or other robotic systems to help transport the crew and their tools, or whether the astronauts might work in pairs to accomplish more science.
 
 For data and resources related to this challenge, refer to the Resources tab at the top of the page. More resources may be added before the hackathon begins.
+
+## Resources (challenge Resources tab)
+Source: https://www.spaceappschallenge.org/2026/challenges/interplanetary-survival-guide-martian-map/?tab=resources (pasted by a human, 2026-11-14). Links are in `docs/resources.md`.
+
+> NASA does not endorse any non-U.S. Government entity and is not responsible for information contained on non-U.S. Government websites. For non-U.S. Government websites, participants must comply with any data use parameters of that specific website.
+
+NASA Data & Resources
+- **JPL Mars Trek:** NASA web-based portal for exploration of Mars, showcases data collected by NASA at various landing sites.
+- **USGS-NASA Planetary Geologic Mapping Program:** high-quality standardized geologic map of Mars.
+- **Curiosity route map example:** animation of a proposed route for Curiosity climbing lower Mount Sharp; the annotated version labels regions scientists want to explore; a flyover video explains them.
+- **NASA Worldview:** satellite imagery explorer (part of NASA Earthdata; Earth-focused).
+- **Mars Perseverance Raw Images Gallery:** over 1 million images from the rover's traverse.

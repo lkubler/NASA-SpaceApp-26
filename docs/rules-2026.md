@@ -2,7 +2,12 @@
 
 Source: https://www.spaceappschallenge.org/2026/ → Resources → Project Submission Guide (pasted by a human, 2026-11-14). Overrides the rules in CLAUDE.md where they differ.
 
-Still missing: the 2026 Judging and Awards Guide (criteria details, award categories).
+Still missing: the 2026 Judging and Awards Guide (criteria details, award categories). Linked from https://www.spaceappschallenge.org/2026/ → Resources.
+
+## From the 2026 homepage
+- Teams: at most six participants.
+- Submitting gives a participant certificate and Global Judging eligibility.
+- Global Collaborators offer free tools ("Global Offers") for projects: GoDaddy, Google, Meteomatics, Microsoft, Miro. Worth checking for free hosting or credits.
 
 ## Project Submission Guide
 
