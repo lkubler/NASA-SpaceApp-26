@@ -255,6 +255,52 @@ Max. Zeit ohne Sichtkontakt
   → Idee: HUD/Planung schlägt Repeater-Standort vor
 
 
+### Fokus (Stand Samstagabend)
+- Kernsatz: „Eine Karte zeigt, wo es gefährlich ist. Wir zeigen, ob du zurückkommst.“
+- Titelzeile Pitch: „Mission Control für einen Ort, an dem Mission Control zu spät kommt.“
+- Alles, was die Rückkehr-Frage beantwortet, hat Vorrang. Alles andere ist Beiwerk.
+
+
+### Gelände rein, Missionskarte raus (stärker hervorheben)
+Bezug zur Challenge: „a tool or system that generates maps of different locations or with different types of data“.
+
+- Prinzip: Eingabe ist ein Geländemodell + eine Liste echter Punkte. Daraus entstehen alle Layer automatisch (zu steil, kein Funk, Schatten, Belastung, Route). Kein Layer wird von Hand gezeichnet.
+- Pro Gebiet gibt es nur eine kleine Konfigurationsdatei: Pfad zum Gelände, Rover-Parkplatz, Punkte mit Quelle, Einsatzzeit. Kein gebietsspezifischer Code.
+- Beweis in der Demo: dasselbe System auf einem zweiten Gebiet laufen lassen (z. B. Marias Pass). Es muss nicht voll spielbar sein, es reicht die EVA-Planungskarte mit den erzeugten Layern.
+- Im Video: 2 Sekunden Gebietswechsel, die Layer bauen sich sichtbar neu auf.
+- Im UI: beim Laden eines Gebiets kurz anzeigen, was erzeugt wird („Steigung berechnet · Funkabdeckung berechnet · …“). Macht sichtbar, dass gerechnet wird.
+- Auf der Daten-Folie: Schema „Geländemodell + Punkte → Layer → Route → HUD“.
+
+
+### Zugabe: Ortung ohne GPS (Unsicherheitskreis)
+Priorität: erst bauen, wenn der Kern steht (Planung → Freigabe → Einsatz mit Reserve-Prognose).
+Kennzeichnung im UI: `Modell`. Keine KI, kein Bilderkennungs-Etikett.
+
+Warum: Auf dem Mars gibt es kein Satellitennavigationssystem. Aktuell kennt die Minikarte die Position exakt, das ist unrealistisch. Statt das zu verstecken, zeigen wir, wie sicher die Position ist.
+
+Was der User sieht
+- Minikarte: Positionspunkt mit Kreis darum = Unsicherheit ±{m} m.
+- Beim Gehen wächst der Kreis langsam (Schrittzählung driftet).
+- Bei einem erfolgreichen Abgleich schrumpft er sichtbar, kurze Meldung im HUD: „Position bestätigt ±{m} m“.
+- Wird der Kreis zu groß: Hinweis „Position unsicher – stehen bleiben für Horizontabgleich“.
+
+Wie es gerechnet wird
+- Geschätzte Position = letzter bestätigter Punkt + gezählte Schritte in Blickrichtung, mit kleinem Fehler pro Schritt. Die Unsicherheit wächst mit der gegangenen Strecke (Anteil in % als Konfigurationswert, Annahme).
+- Horizontabgleich: Für Rasterpunkte innerhalb des Kreises wird aus dem Geländemodell die Horizontlinie berechnet (Höhenwinkel des Horizonts für z. B. 72 Richtungen). Verglichen wird mit der Horizontlinie, die der Astronaut gerade sieht. Der am besten passende Punkt wird zur neuen Position, der Kreis schrumpft auf den Restfehler.
+- Die Güte hängt vom Gelände ab: Nahe den Buttes ist die Horizontlinie markant → guter Abgleich. Auf flacher Ebene sehen viele Punkte gleich aus → der Kreis bleibt größer. Das ergibt sich aus der Rechnung und wird nicht fest eingestellt.
+- Zweite Quelle: Rover und Funk-Relais als Funkbaken. Bei Sichtverbindung gibt es eine zusätzliche Positionsstütze, im Funkschatten nicht. Ein gesetztes Relais verbessert also Funk **und** Ortung.
+
+Folge für die Sicherheit (der eigentliche Nutzen)
+- Sperrflächen und Zonenrand bekommen einen Sicherheitsabstand in Höhe der aktuellen Unsicherheit. Ist die Position unsicher, warnt das HUD früher vor steilen Flächen.
+- In der Auswertung: größte Unsicherheit während des Einsatzes.
+
+Ehrlichkeit
+- In der Demo stammt die „gesehene“ Horizontlinie aus demselben Geländemodell, mit etwas Messrauschen. Real käme sie aus der Helmkamera. So steht es im Info-Text.
+- Die echte Position der Simulation wird nur zum Erzeugen der gesehenen Horizontlinie verwendet, nie direkt für die Minikarte.
+
+Kleinste sinnvolle Version, falls die Zeit knapp wird
+- Nur der wachsende Kreis + Schrumpfen bei Sichtverbindung zu Rover/Relais, ohne Horizontabgleich. Der Horizontabgleich steht dann als Roadmap-Punkt mit zwei Sätzen Erklärung.
+
 ### AI USECASE
 wahrscheinlich erhöht es die win chances wenn wir ki in unser Projekt einbauen. wir haben aber gerade noch keinen guten usecase gefunden. 
 potentielle usecases:
