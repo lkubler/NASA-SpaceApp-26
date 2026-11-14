@@ -189,6 +189,29 @@ describe('plan numbers', () => {
       expect(Math.abs(r.seconds - plan.reserveS) / 60, candidate.id).toBeLessThan(10);
     }
   });
+  it('reserve a few metres beside the route changes smoothly, by about the extra walk (Walk off the band)', () => {
+    for (const { candidate, route } of all) {
+      const P = route.out.points, k = Math.floor(P.length / 2);
+      const a = P[k - 1], b = P[k + 1];
+      const len = Math.hypot(b.x - a.x, b.z - a.z);
+      const nx = -(b.z - a.z) / len, nz = (b.x - a.x) / len; // perpendicular to the route
+      const base = reserveFrom(t, fullLevels(), { x: P[k].x, z: P[k].z, phase: 'out', spot: candidate });
+      for (const side of [1, -1]) {
+        let prev = base.seconds;
+        for (let d = 0.5; d <= 3; d += 0.5) {
+          const x = P[k].x + side * nx * d, z = P[k].z + side * nz * d;
+          if (isClosedAt(t, x, z)) break; // closed ground beside the route: off limits anyway
+          const r = reserveFrom(t, fullLevels(), { x, z, phase: 'out', spot: candidate });
+          if (r.closedM > 0) break;
+          // never a jump: one half-metre step changes it by at most the walk of about one metre
+          expect(Math.abs(r.seconds - prev), `${candidate.id} ${side * d} m`).toBeLessThan(2 * walkSeconds(1));
+          // in total no more than the extra walk there and back, at the walk-back rate, on a slope
+          expect(base.seconds - r.seconds, `${candidate.id} ${side * d} m`).toBeLessThan(2 * walkSeconds(d + 0.75) * 1.5);
+          prev = r.seconds;
+        }
+      }
+    }
+  });
   it('simulated walk ends home with the planned reserve', () => {
     const { route, plan } = all[2];
     const log = simulateWalk(t, route);

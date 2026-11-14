@@ -22,7 +22,7 @@ function walker(terrain, route) {
   const log = newWalkLog();
   log.started = true;
   const shadow = radioShadowMask(terrain);
-  let inShadow = false, turnBackShown = false, steepShown = false;
+  let inShadow = false, turnBackShown = false, steepShown = false, inSteep = false, wayHomeBroken = false;
   const w = {
     log,
     /** One step between neighbouring (or near) cells. Returns false when the suit is empty. */
@@ -34,15 +34,21 @@ function walker(terrain, route) {
       const r = logMove(log, terrain, { from: pa, to: pb, dtS: st.seconds, workW: workRate(st.slopeDeg), radio, spot: route.spot });
       if (!radio && !inShadow) log.warnings.push({ id: 'radio-shadow', level: 'advisory', text: 'Radio shadow: no line of sight to the rover', x: pb.x, z: pb.z, tS: log.tS });
       inShadow = !radio;
-      if (terrain.slope[b] > RULES.slopeMaxDeg.value && !steepShown) {
-        steepShown = true;
-        log.warnings.push({ id: 'steep-underfoot', level: 'warning', text: `Ground over ${RULES.slopeMaxDeg.value}° underfoot`, x: pb.x, z: pb.z, tS: log.tS });
+      // as the Walk logs them: a broken rule once per stretch (so a rule can be broken several times),
+      // the warning once
+      const steep = terrain.slope[b] > RULES.slopeMaxDeg.value;
+      if (steep && !inSteep) {
         log.brokenRules.push({ id: 'slope', name: 'Slope on foot', x: pb.x, z: pb.z, tS: log.tS });
+        if (!steepShown) log.warnings.push({ id: 'steep-underfoot', level: 'warning', text: `Ground over ${RULES.slopeMaxDeg.value}° underfoot`, x: pb.x, z: pb.z, tS: log.tS });
+        steepShown = true;
       }
+      inSteep = steep;
       if (r.seconds <= 0 && !turnBackShown) {
         turnBackShown = true;
         log.warnings.push({ id: 'turn-back', level: 'warning', text: 'Turn back now', x: pb.x, z: pb.z, tS: log.tS });
       }
+      if (r.seconds < 0 && !wayHomeBroken) log.brokenRules.push({ id: 'wayHome', name: 'Way home', x: pb.x, z: pb.z, tS: log.tS });
+      wayHomeBroken = r.seconds < 0;
       if (timeLeft(log.levels).seconds <= 0) {
         log.suitEmpty = { x: pb.x, z: pb.z, tS: log.tS, roverDistanceM: Math.hypot(pb.x - ROVER.x, pb.z - ROVER.z) };
         return false;

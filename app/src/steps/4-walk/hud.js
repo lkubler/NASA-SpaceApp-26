@@ -8,6 +8,7 @@ import {
 import { ALERTS } from './sim.js';
 import { DISPLAY as D } from './display.js';
 import frameUrl from './helmet-frame.webp';
+import { GROUND_TAG } from '../../core/groundColor.js';
 
 const tag = (o) => labelTag(o);
 const SIM_TAG = { label: 'simulated', text: 'The rover model is a simple stand-in built for this view; it marks where the crew parked. The real scene has a gap there where Access Mars cut out Curiosity.' };
@@ -15,17 +16,19 @@ const MODEL_TAG = (text) => ({ label: 'model', text, source: { title: 'Our calcu
 const AM_TAG = { label: 'real', text: 'Card text from Access Mars (Google Creative Lab with NASA/JPL), a 2016 web experience built from Curiosity’s images of Murray Buttes.', source: { title: 'Access Mars, public/index.html', url: 'https://github.com/googlecreativelab/access-mars', where: 'murray_buttes_markers' } };
 const fullTime = timeLeft(fullLevels()).seconds;
 
-// distances and times shown with markers and the target: straight distance on the walk grid; time to get
-// there from the suit model (walking rate on the slope, way home at the higher work rate)
-const DIST_TAG = MODEL_TAG('Straight distance measured on the 0.5 m walk grid.');
-const ROUTE_TAG = MODEL_TAG('Distance on the walk grid and walking time from the suit model (work rate on the slope).');
-const TIME_TAG = { label: 'model', text: 'Suit time since you left the rover: walking and work times from the suit model, shown at demo speed.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
+// distances shown with the target and on the markers: path distance from here along the fastest way that
+// keeps every rule (the plan's cost field), with its walking time; the sample card names a straight distance
+const DIST_TAG = MODEL_TAG('Straight-line distance measured on the 0.5 m walk grid.');
+const ROUTE_TAG = MODEL_TAG('Path distance from where you stand along the fastest way that keeps every rule, measured on the 0.5 m walk grid, and its walking time from the suit model, in demo time.');
+const TIME_TAG = { label: 'model', text: 'Suit time since you left the rover, counted from the rover itself like the plan: walking and work times from the suit model, shown at demo speed. The debrief shows the same clock.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
 export function createHud(el) {
   // frame and the mark on it
   const frame = h('img.walk-frame', { src: frameUrl, alt: '', draggable: 'false' });
   const aiMark = h('div.walk-aimark.mono', 'AI-generated image');
+  // the ground Access Mars has only grey imagery for is tinted in our own colour (core/groundColor.js)
+  const groundMark = h('div.walk-groundmark.mono', 'Ground colour ', tag(GROUND_TAG));
 
   // compass
   const compassCv = h('canvas.walk-compass__cv');
@@ -82,7 +85,7 @@ export function createHud(el) {
   // markers projected from 3D
   const tgtMark = h('div.walk-mark.walk-mark--target', h('span.walk-mark__label'), h('span.walk-mark__dia'));
   const roverDist = h('b.mono');
-  const roverDistTag = h('span', ' ', tag(DIST_TAG));
+  const roverDistTag = h('span', ' ', tag(ROUTE_TAG));
   roverDistTag.hidden = true;
   const roverMark = h('div.walk-mark.walk-mark--rover', h('span.walk-mark__label', 'Rover ', tag(SIM_TAG), roverDist, roverDistTag), h('span.walk-mark__dia'));
   const pointMarks = ACCESS_MARS_POINTS.map(() => h('div.walk-mark.walk-mark--point', h('span.walk-mark__dot')));
@@ -92,7 +95,7 @@ export function createHud(el) {
   const loading = h('div.walk-loading.mono', 'Loading terrain…');
 
   const hud = h('div.walk-hud', compass, mini, bodyCard, reserve, missionCard, alertEl, reticle, lookCard, prompt, hint);
-  el.append(marks, frame, aiMark, hud, escHint, modal, loading);
+  el.append(marks, frame, aiMark, groundMark, hud, escHint, modal, loading);
 
   // ---------- minimap background (once): shaded relief, closed ground darker ----------
   let reliefCv = null, terr = null;
@@ -251,13 +254,20 @@ export function createHud(el) {
     let p = '';
     if (!log.ended && !s.modal) {
       if (sim.atTarget()) p = 'take';
-      else if (sim.atRover()) p = 'end';
+      else if (sim.atRover()) {
+        // the walk log counts to the rover's centre, like the plan: the last metres are added at planning pace
+        const ll = sim.lastLeg();
+        p = `end|${fmtDistance(ll.metres)}|${fmtDuration(ll.seconds)}`;
+      }
     }
     if (p !== lastPrompt) {
       lastPrompt = p;
       prompt.replaceChildren();
       if (p === 'take') prompt.append(h('kbd', 'E'), h('span', `Take sample · ${fmtDuration(spotSeconds())} of work`));
-      if (p === 'end') prompt.append(h('kbd', 'E'), h('span', 'End excursion'));
+      if (p.startsWith('end|')) {
+        const [, m, d] = p.split('|');
+        prompt.append(h('kbd', 'E'), h('span', `End excursion · last ${m} to the rover, ${d}`));
+      }
       prompt.classList.toggle('is-on', !!p);
     }
     hint.classList.toggle('is-off', s.started);
@@ -266,8 +276,12 @@ export function createHud(el) {
   function alertDetail(id, s) {
     const i = s.alertInfo[id] || {};
     switch (id) {
-      case 'turnBack': return `Reserve on return ${fmtDuration(i.reserveS)}. Head for the rover.`;
-      case 'steepUnder': return `${Math.round(i.slopeDeg)}° here. Rule broken: slope on foot, at most ${RULES.slopeMaxDeg.value}°.`;
+      case 'turnBack': return i.viaSpot
+        ? `Reserve on return ${fmtDuration(i.reserveS)} if you go on to the spot and back. Head for the rover.`
+        : `Reserve on return ${fmtDuration(i.reserveS)}. Head for the rover.`;
+      case 'steepUnder': return i.offRoute
+        ? `${Math.round(i.slopeDeg)}° here, off the checked route. Rule broken: slope on foot, at most ${RULES.slopeMaxDeg.value}°.`
+        : `${Math.round(i.slopeDeg)}° here, on the planned route. Rule broken: slope on foot, at most ${RULES.slopeMaxDeg.value}°.`;
       case 'edge': return 'The mapped terrain ends here.';
       case 'steepAhead': return `Ground over ${RULES.slopeMaxDeg.value}° in ${Math.max(1, Math.round(i.m))} m. Closed to the route.`;
       case 'offPath': return `${Math.round(i.m)} m from the planned route.`;
@@ -322,7 +336,7 @@ export function createHud(el) {
     place(tgtMark, target.p, !toRover);
     if (!toRover) {
       const t = `${spotLabel(target.id) || target.name}|${fmtDistance(target.metres)}`;
-      if (t !== lastTgtTxt) { lastTgtTxt = t; tgtMark.firstChild.replaceChildren(h('span', (spotLabel(target.id) || target.name) + ' '), h('b.mono', fmtDistance(target.metres)), ' ', tag(DIST_TAG)); }
+      if (t !== lastTgtTxt) { lastTgtTxt = t; tgtMark.firstChild.replaceChildren(h('span', (spotLabel(target.id) || target.name) + ' '), h('b.mono', fmtDistance(target.metres)), ' ', tag(ROUTE_TAG)); }
     }
     // the rover carries its own label (simulated); as the target it also shows the distance
     const txt = toRover ? fmtDistance(target.metres) : '';
@@ -350,7 +364,7 @@ export function createHud(el) {
         h('img', { src: log.sample.photo, alt: log.sample.photoTitle || 'Curiosity photo' }),
         h('figcaption.mono', `${log.sample.photoTitle || ''}. ${log.sample.photoMeta || 'Curiosity'}, ${log.sample.photoCredit || 'NASA/JPL-Caltech'} `,
           tag({ label: 'real', text: 'Real Curiosity photo of this rock, the sandstone of the Murray Buttes. Curiosity never stopped at this exact spot.', source: { title: `${log.sample.photoMeta || 'Curiosity'}, ${log.sample.photoCredit || 'NASA/JPL-Caltech'}`, url: log.sample.photoUrl || '', where: '' } }))) : null,
-      h('p.walk-modal__text', `${route.spot.name}: sandstone of the butte (Stimson formation), bagged ${fmtDistance(Math.hypot(log.sample.x - ROVER.x, log.sample.z - ROVER.z))} from the rover `, tag(DIST_TAG), `. The photo shows this rock in the Murray Buttes as Curiosity saw it, not this exact spot.`),
+      h('p.walk-modal__text', `${route.spot.name}: sandstone of the butte (Stimson formation), bagged ${fmtDistance(Math.hypot(log.sample.x - ROVER.x, log.sample.z - ROVER.z))} from the rover in a straight line `, tag(DIST_TAG), `. The photo shows this rock in the Murray Buttes as Curiosity saw it, not this exact spot.`),
       h('div.walk-modal__next', 'Next target: the rover. ', h('kbd', 'E'), ' continue')));
     modal.classList.add('is-on');
   }

@@ -7,7 +7,7 @@ export function fmtDuration(seconds, { approx = false } = {}) {
   let h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
   if (m === 60) { h += 1; m = 0; }
   const txt = h > 0 ? `${h} h ${String(m).padStart(2, '0')}` : `${m} min`;
-  return (approx ? '≈ ' : '') + (neg ? '−' : '') + txt;
+  return (approx ? '≈ ' : '') + (neg && (h || m) ? '−' : '') + txt; // never "−0 min"
 }
 
 /** Clock "00:42:10". */

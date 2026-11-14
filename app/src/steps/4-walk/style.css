@@ -8,6 +8,7 @@
 /* helmet frame over the view: the keyed image (docs/design/helmet-frame.png, green removed) */
 .walk-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; }
 .walk-aimark { position: absolute; left: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
+.walk-groundmark { position: absolute; right: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
 
 /* HUD sits inside the visor */
 .walk-hud { position: absolute; inset: 0; color: var(--text); font-size: var(--fs-small); }
@@ -28,7 +29,7 @@
 .walk-mini__cv { display: block; width: 100%; height: 100%; border-radius: 50%; }
 .walk-mini__n { position: absolute; top: -1.35em; left: 50%; transform: translateX(-50%); font-size: var(--fs-tag); }
 .walk-target { margin-top: 0.9em; width: 150%; }
-.walk-target__name { font-weight: 600; font-size: var(--fs-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.walk-target__name { font-weight: 600; font-size: var(--fs-small); line-height: 1.25; }
 .walk-target__line { font-size: var(--fs-mono); margin-top: 0.2em; }
 .walk-target__bar { height: 3px; background: rgba(255, 255, 255, 0.25); border-radius: 2px; margin-top: 0.5em; width: 100%; overflow: hidden; }
 .walk-target__bar span { display: block; height: 100%; width: 0; background: var(--accent); }
@@ -107,6 +108,9 @@
 .walk-mark--target .walk-mark__label b { color: var(--accent); font-weight: 600; font-size: var(--fs-mono); }
 .walk-mark--rover .walk-mark__label { position: absolute; left: -2.5em; bottom: 4px; white-space: nowrap; font-size: var(--fs-small); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
 .walk-mark--rover .vlabel { color: #fff; background: rgba(0, 0, 0, 0.35); }
+/* marker labels sit on a dark backing so the distance reads against bright sky and rock */
+.walk-mark--target .walk-mark__label, .walk-mark--rover .walk-mark__label { background: rgba(0, 0, 0, 0.42); border-radius: 6px; padding: 0.15em 0.5em; }
+.walk-mark--target .vlabel { color: rgba(255, 255, 255, 0.8); }
 .walk-mark--rover b { color: var(--accent); font-weight: 600; font-size: var(--fs-mono); }
 .walk-mark--rover .walk-mark__dia { display: none; position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border: 2px solid var(--accent); transform: rotate(45deg); box-shadow: 0 0 10px rgba(79, 203, 255, 0.55); }
 .walk-mark--rover.is-target .walk-mark__dia { display: block; }

@@ -73,3 +73,9 @@
 .step--plan .map-marker--number circle.plan-ring { fill: rgba(0, 0, 0, 0.25); stroke: var(--accent); stroke-width: 1.1; stroke-dasharray: 2 1.6; }
 .step--plan .sw--cheapest { width: 0.95em; height: 0.95em; border-radius: 50%; border: 1.5px dashed var(--accent); }
 .step--plan .plan-totals .bignum__label { display: block; }
+.step--plan .map-path--broken { stroke-width: 5; stroke-dasharray: 0.1 4; }
+/* short screens: the panel tightens so a broken-rule alert never pushes the totals under the button */
+@media (max-height: 800px) {
+  .step--plan .split__panel { gap: calc(var(--gap) * 0.65); }
+  .step--plan .plan-legs .row { padding: 0.16em 0; }
+}

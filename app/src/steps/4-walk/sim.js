@@ -3,7 +3,7 @@
 // thresholds in display.js only decide when the display speaks.
 import {
   RULES, WORK, ASTRONAUT, ROVER,
-  logMove, logPath, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, hasRadio,
+  logMove, logPath, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, walkSeconds, hasRadio,
   radioShadowMask, roverField, spotField, isClosedAt,
 } from '../../core/index.js';
 import { DISPLAY as D } from './display.js';
@@ -32,9 +32,27 @@ export function createSim(t, route, log) {
   const toSpot = spotField(t, route.spot);
   const legs = [route.out.points, route.back.points];
 
+  // the rover model's footprint: the visitor is kept outside it
+  const ry = D.roverHeadingDeg * DEG;
+  const fwd = { x: Math.sin(ry), z: Math.cos(ry) }, side = { x: Math.cos(ry), z: -Math.sin(ry) };
+  const rc = { x: ROVER.x + fwd.x * D.roverShiftM, z: ROVER.z + fwd.z * D.roverShiftM };
+  const halfL = D.roverHalfLenM + D.roverMarginM, halfW = D.roverHalfWidthM + D.roverMarginM;
+  const insideRover = (x, z) => {
+    const a = (x - rc.x) * fwd.x + (z - rc.z) * fwd.z, b = (x - rc.x) * side.x + (z - rc.z) * side.z;
+    return Math.abs(a) < halfL && Math.abs(b) < halfW ? { a, b } : null;
+  };
+  /** A point inside the footprint moves out to its nearest edge. */
+  const outOfRover = (x, z) => {
+    const q = insideRover(x, z);
+    if (!q) return { x, z };
+    let { a, b } = q;
+    if (halfL - Math.abs(a) < halfW - Math.abs(b)) a = Math.sign(a || 1) * halfL; else b = Math.sign(b || 1) * halfW;
+    return { x: rc.x + fwd.x * a + side.x * b, z: rc.z + fwd.z * a + side.z * b };
+  };
+
   // start beside the rover, on the route, facing along it
   const pts = route.out.points;
-  let k0 = pts.findIndex((p) => Math.hypot(p.x - ROVER.x, p.z - ROVER.z) >= D.startClearM);
+  let k0 = pts.findIndex((p) => Math.hypot(p.x - ROVER.x, p.z - ROVER.z) >= D.startClearM && !insideRover(p.x, p.z));
   if (k0 < 0) k0 = Math.min(1, pts.length - 1);
   const a = pts[k0], b = pts[Math.min(pts.length - 1, k0 + 6)];
   const s = {
@@ -48,14 +66,16 @@ export function createSim(t, route, log) {
     homeAtSample: null,
   };
   log.track.length || log.track.push({ x: ROVER.x, z: ROVER.z, tS: log.tS, reserveS: NaN, radio: true });
-  // the metres from the rover to the start point are walked at planning pace with the first step
+  // the metres from the rover to the start point are logged at planning pace right away, so the clock,
+  // the distances and the reserve shown in the helmet all count from the rover, like the plan and the
+  // debrief (the clock then runs from the first step)
   const startPath = [{ x: ROVER.x, z: ROVER.z }, ...pts.slice(1, k0 + 1)];
+  if (log.distanceM === 0 && log.tS === 0) logPath(log, t, startPath, { shadow, spot: route.spot });
   s.radio = hasRadio(t, s.x, s.z);
   refreshReserve();
 
   function refreshReserve() {
-    const p = s.started ? s : ROVER; // before the first step the walk counts from the rover, like the plan
-    s.reserve = reserveFrom(t, log.levels, { x: p.x, z: p.z, phase: log.phase, spot: route.spot });
+    s.reserve = reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: log.phase, spot: route.spot });
     s.timeLeft = timeLeft(log.levels);
   }
 
@@ -68,10 +88,7 @@ export function createSim(t, route, log) {
     s.pitch = Math.max(-D.pitchMaxDeg * DEG, Math.min(D.pitchMaxDeg * DEG, s.pitch + inp.pitch * D.pitchDegS * DEG * dt));
     let f = inp.f, r = inp.r;
     const len = Math.hypot(f, r);
-    if (len > 0 && !s.started) {
-      s.started = true;
-      if (log.distanceM === 0) logPath(log, t, startPath, { shadow, spot: route.spot });
-    }
+    if (len > 0 && !s.started) s.started = true;
     if (!s.started) return; // the clock starts with the first step
     const from = { x: s.x, y: ground(s.x, s.z), z: s.z };
     let nx = s.x, nz = s.z;
@@ -87,11 +104,7 @@ export function createSim(t, route, log) {
       if (nx < lo || nx > hi || nz < lo || nz > hi) s.atEdge = true;
       nx = Math.max(lo, Math.min(hi, nx)); nz = Math.max(lo, Math.min(hi, nz));
       // the rover model is solid
-      const rd = Math.hypot(nx - ROVER.x, nz - ROVER.z);
-      if (rd < D.roverClearM) {
-        const k = D.roverClearM / Math.max(rd, 1e-3);
-        nx = ROVER.x + (nx - ROVER.x) * k; nz = ROVER.z + (nz - ROVER.z) * k;
-      }
+      ({ x: nx, z: nz } = outOfRover(nx, nz));
     }
     const to = { x: nx, y: ground(nx, nz), z: nz };
     const horiz = Math.hypot(to.x - from.x, to.z - from.z);
@@ -127,7 +140,7 @@ export function createSim(t, route, log) {
 
   /** Distance to the planned route (both legs), and the nearest point on the current leg. */
   function nearRoute() {
-    let best = Infinity, cur = null;
+    let best = Infinity, cur = null, bp = null;
     const curLeg = log.phase === 'out' && !log.sample ? 0 : 1;
     legs.forEach((L, li) => {
       for (let i = 1; i < L.length; i++) {
@@ -135,11 +148,11 @@ export function createSim(t, route, log) {
         const dx = q.x - p.x, dz = q.z - p.z, l2 = dx * dx + dz * dz;
         const u = l2 ? Math.max(0, Math.min(1, ((s.x - p.x) * dx + (s.z - p.z) * dz) / l2)) : 0;
         const d = Math.hypot(s.x - (p.x + u * dx), s.z - (p.z + u * dz));
-        if (d < best) best = d;
+        if (d < best) { best = d; bp = { x: p.x + u * dx, z: p.z + u * dz }; }
         if (li === curLeg && (!cur || d < cur.d)) cur = { d, i, u };
       }
     });
-    return { m: best, cur, L: legs[curLeg] };
+    return { m: best, cur, L: legs[curLeg], p: bp };
   }
 
   /** Closed ground on the planned route ahead (the crew keeps to the band): metres to it, or null. */
@@ -166,11 +179,15 @@ export function createSim(t, route, log) {
   }
 
   function evaluate() {
-    const i = t.indexOf(s.x, s.z);
     const cur = {}, info = {};
-    cur.steepUnder = isClosedAt(t, s.x, s.z); // the planner's slope test (core/planner.js)
-    if (cur.steepUnder) info.steepUnder = { slopeDeg: t.slope[i] };
     const near = nearRoute();
+    // the planner's slope test (core/planner.js). On the band (within onRouteM of the planned route) the
+    // test reads the route point beside the visitor: the band is the checked ground, and a visitor a
+    // step beside it is still on it. Off the band it reads the ground underfoot.
+    const onBand = near.m <= D.onRouteM && !!near.p;
+    const q = onBand ? near.p : s;
+    cur.steepUnder = isClosedAt(t, q.x, q.z);
+    if (cur.steepUnder) info.steepUnder = { slopeDeg: t.slope[t.indexOf(q.x, q.z)], offRoute: !onBand };
     if (!cur.steepUnder) {
       // on the band: closed ground on the planned route ahead (only where the plan breaks the slope rule);
       // off the band: closed ground in the walking direction
@@ -202,7 +219,7 @@ export function createSim(t, route, log) {
         if (hm - s.tb.ref >= D.homeTurnM) s.tb = { on: true, ref: hm };
       }
     } else s.tb = null;
-    if (s.tb && s.tb.on) { cur.turnBack = true; info.turnBack = { reserveS: s.reserve.seconds }; }
+    if (s.tb && s.tb.on) { cur.turnBack = true; info.turnBack = { reserveS: s.reserve.seconds, viaSpot: log.phase === 'out' && !log.sample }; }
 
     // broken rules (logged once per stretch)
     breakRule('slope', 'Slope on foot', cur.steepUnder);
@@ -241,12 +258,28 @@ export function createSim(t, route, log) {
     return true;
   }
 
+  /** The last metres from here to the rover's centre (where the plan ends), straight. */
+  function lastPath() {
+    const d = distTo(ROVER), n = Math.max(1, Math.ceil(d / t.cell));
+    return Array.from({ length: n + 1 }, (_, k) => ({ x: s.x + (ROVER.x - s.x) * k / n, z: s.z + (ROVER.z - s.z) * k / n }));
+  }
+  /** Metres and suit seconds the walk log adds for the last metres when the excursion ends here (as logPath counts them). */
+  function lastLeg() {
+    const p = lastPath();
+    let metres = 0, seconds = 0;
+    for (let k = 1; k < p.length; k++) {
+      const flat = Math.hypot(p[k].x - p[k - 1].x, p[k].z - p[k - 1].z);
+      if (flat < 1e-6) continue;
+      const m = Math.hypot(flat, t.heightAt(p[k].x, p[k].z) - t.heightAt(p[k - 1].x, p[k - 1].z));
+      metres += m; seconds += walkSeconds(m);
+    }
+    return { metres, seconds };
+  }
+
   function finish(returned) {
     if (returned) {
       // the last metres to the rover, straight, at planning pace
-      const d = distTo(ROVER), n = Math.max(1, Math.ceil(d / t.cell));
-      const path = Array.from({ length: n + 1 }, (_, k) => ({ x: s.x + (ROVER.x - s.x) * k / n, z: s.z + (ROVER.z - s.z) * k / n }));
-      const r = logPath(log, t, path, { shadow, spot: route.spot });
+      const r = logPath(log, t, lastPath(), { shadow, spot: route.spot });
       if (r) { s.reserve = r; s.timeLeft = timeLeft(log.levels); }
     }
     log.ended = true;
@@ -282,5 +315,5 @@ export function createSim(t, route, log) {
     return { ...base, metres: c.metres, seconds: c.seconds, done: Math.max(0, Math.min(1, 1 - c.metres / legStart.m)) };
   }
 
-  return { s, log, route, step, takeSample, endExcursion, endMission, atTarget, atRover, target, refreshReserve, home, toSpot };
+  return { s, log, route, lastLeg, step, takeSample, endExcursion, endMission, atTarget, atRover, target, refreshReserve, home, toSpot };
 }
