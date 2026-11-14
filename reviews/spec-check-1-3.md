@@ -150,3 +150,58 @@ Status values: **met**, **not met**, **unclear** (two spec lines conflict), **no
 - **Labels on every value:** met in steps 1–3 (see above). Only scale bars and marker numbers have no label.
 - **No German text:** met in the opening, steps 1–3 and the sources page.
 - **Sources page lists everything shown:** data (MOLA, Access Mars, HiRISE, waypoints, the three Curiosity photos with credits, RAD, REMS), tools and code (three.js, Vite, Vitest, Draco, fonts, Python, AI helmet frame, Claude Code) and the AI-use note are listed. The only value missing is the step 1 height factor ×2.5.
+
+---
+
+# Round 2
+
+Checked Sat 14.11. about 20:30 (BUILD phase), `main` at 23ff958 (app code unchanged since). Dev server `vite --port 5182` on `app/` (5181 was already taken by another dev server on the same folder). Playwright 1.46 headless Chromium (SwiftShader WebGL) at 1280 × 720 and 1920 × 1080: the full visitor path 1 → 2 → 3 with no dev jump (spots 03 and 06, all five rule checks clicked, Edit route), then `?step=2&broken=1` → Confirm → Go → Start → Walk → esc → Debrief. Screenshots: `reviews/spec-check/1-3/r2-*.jpg` (JPEG, quality 70; the suffix is the width). No console errors on any run. Each screen also got a DOM scan for clipped boxes, text outside the viewport, overlapping text boxes, debug or placeholder words and German words. It found nothing except the items in the cleanliness table below.
+
+Left out on purpose, by team decision: Go map on the right (frame "Layout", design "Map"), white main buttons in steps 1 and 2 (design "Accent"), no rock type on the spot card (Plan "Selecting a candidate"), no demo factor in step 1 (rules "Demo time").
+
+## Still not met
+
+| Line | Status | What I saw | Screenshot |
+|---|---|---|---|
+| Not met: none | – | Every line from round 1 that was not met, apart from the four left out above, is now met. See the next table. | – |
+
+## Round 1 lines that were not met, checked again
+
+| Line | Status | What I saw | Screenshot |
+|---|---|---|---|
+| Design: Markers => numbered circles, mono digits; the chosen one filled cyan (step 3) | met | The Go map shows the chosen spot as a filled cyan circle "06". The legend reads "● Spot". With the test fixture the circle shows "·" instead of a number (fixture point 07 only). | `r2-3-go-1920.jpg`, `r2-3-broken-TESTFIXTURE-1280.jpg` |
+| 3 Go: Rule broken => … the broken rule is carried into the walk and the debrief | met | Fixture: "Start with 1 broken rule" leads into the walk, whose HUD lists "Plan breaks: Slope on foot" in red. After esc the debrief says "…but broke a rule: Slope on foot (in the plan)". "Rules on the walk" shows a red Slope on foot "15 m east of the rover (in the plan)". In the helmet the red text sits on a light translucent card and is hard to read. | `r2-4-broken-TESTFIXTURE-1280.jpg`, `r2-5-broken-TESTFIXTURE-1280.jpg` |
+| Rules: Values => all in one place in the app | met | The crater height factor is now `craterHeightFactor` 2.5 × `assumption` in the Sources values table (group Demo). | `r2-0-sources-1280.jpg` |
+| Rules: Astronaut => 82 kg body mass, 23 kg carried load; shown | met | Go footer: "Astronaut 82 kg `real` + load 23 kg `real`". | `r2-3-go-1920.jpg` |
+| Rules: Suit => 104 kg; shown | met | Go footer: "Suit 104 kg `real`". | `r2-3-go-1920.jpg` |
+| Rules: Secondary oxygen => 1 hour; shown, never counted as time left | met | Go footer: "Secondary oxygen 1 h, never planned with `real · lunar rule`". It is not part of the reserve (Plan and Go both show 1 h 12 for spot 06). The wording looks cut off; see cleanliness. | `r2-3-go-1920.jpg` |
+| Plan: Candidate without a rule-keeping route => best route shown, broken rules in red in the panel and on the route | met (test fixture only) | `?step=2&broken=1`: the panel has a red "Breaks a rule: Slope on foot / Crosses 8.1 m of ground steeper than 20°" and the steepest slope 25.5° is red. A short red stretch now shows on the map above the markers. Marker 07 sits on top of marker 01's ring and the Monument Valley point, and the red line runs across the "07" digits. No real candidate breaks a rule. | `r2-2-broken-TESTFIXTURE-1920.jpg` |
+| Frame: Screen => works at 1280 × 720 (broken-rule alert in Plan) | met | With the alert, the panel still fits at 720 px: "limited by oxygen", the demo line and "Confirm route" are all visible. | `r2-2-broken-TESTFIXTURE-1280.jpg` |
+| Rules: Turn-back point | not checked | No real route reaches zero reserve in steps 1–3, so the turn-back text never appears. | – |
+
+## Regression pass (0-frame, design, 1-mission, 2-plan, 3-go)
+
+All other lines that were met in round 1 are still met. I saw them again in these screens.
+
+| Spec | Status | What I saw | Screenshot |
+|---|---|---|---|
+| 0-frame | met | Step bar beside `[MARTIAN MAP]` in steps 1–3 and 5, hidden in 4. Forward is blocked until a request or spot is chosen. Edit route goes back with F7 kept. SOURCES is reachable from every step. No German text. Every screen fits at both sizes without scrolling. | `r2-2-open-1280.jpg`, `r2-0-sources-1920.jpg` |
+| design | met | Black background, terrain is the only large coloured area, headlines end with a full stop, Space Grotesk / Inter / JetBrains Mono, hatched > 20°, yellow radio caution, cyan glowing "Start excursion" (box-shadow 0 0 36px cyan). | `r2-3-go-1920.jpg` |
+| 1-mission | met | The two-sentence opening comes first. MOLA crater with Mount Sharp labelled `real`. "Choose your mission." bottom left. Two locked sites "not in this demo". Two request cards with who asks, one task, reason, Curiosity photo and "Sent 20:10 · received 20:28 · 18 min delay". "Plan this mission" opens Plan. | `r2-1-opening-1280.jpg`, `r2-1-chosen-1920.jpg` |
+| 2-plan | met | Same layout. Six numbered spots, four Access Mars points, Home, hatching, radio dots, hover times (≈ 1 h 23 … ≈ 5 h 34), cheapest ring on 01, five legs, three totals (06: ≈ 5 h 34, 1 h 12 limited by oxygen, 20.0°), yellow band on the route through the radio shadow, "Confirm route". | `r2-2-select-06-1920.jpg`, `r2-2-hover-1280.jpg` |
+| 3-go | met | "Route ready." / "Route breaks a rule.", five big numbers equal to Plan, profile with the spot and radio shadow, four rule checks plus the radio caution ("longest 3 h 16"), three suit checks `simulated`. Each check highlights its place on the map and profile. "Start excursion" / "Start with 1 broken rule". Edit route sits beside the button. | `r2-3-check-0-1280.jpg` … `r2-3-check-4-1920.jpg`, `r2-3-broken-check-TESTFIXTURE-1920.jpg` |
+
+## Visual cleanliness
+
+| Where | What I saw | Screenshot |
+|---|---|---|
+| Go, height profile | The "Radio shadow" caption is printed on top of the dot grid and the spot's dashed line, and is hard to read at both sizes. | `r2-3-go-1920.jpg`, `r2-3-go-1280.jpg` |
+| Go, footer line | "Secondary oxygen 1 h, never planned with `real · lunar rule`" reads as an unfinished sentence: the label takes the place of the missing object. | `r2-3-go-1920.jpg` |
+| Go, checks; Plan, totals | Where a label wraps onto its own line ("real · lunar rule" under "plan 2.00 km", "model · lunar rule" under "Total time"), it starts one character to the right of the line above. | `r2-3-go-1280.jpg`, `r2-2-select-06-1920.jpg` |
+| Plan map | The Buttes Access Mars point overlaps the lower right of marker 02. The Interference point is cut in half by the left map edge. Both appear at both sizes. | `r2-2-select-06-1920.jpg`, `r2-2-open-1280.jpg` |
+| Plan map (test fixture only) | Marker 07 covers part of marker 01's cheapest ring and the Monument Valley point. The red broken stretch crosses the "07" digits. | `r2-2-broken-TESTFIXTURE-1920.jpg` |
+| Go map (test fixture only) | The fixture spot shows "·" instead of its number. | `r2-3-broken-TESTFIXTURE-1280.jpg` |
+| Step 1, request cards | The `assumption` tag after "18 min delay" wraps alone onto its own line on both cards, at both sizes. The lede shows "18  min" with a wide gap before "min". | `r2-1-chosen-1280.jpg`, `r2-1-chosen-1920.jpg` |
+| Step 1, opening | The dimmed site labels (Marias Pass, Pahrump Hills) show faintly through the text block of the opening question at 1280. | `r2-1-opening-1280.jpg` |
+| Sources page | The values table still names values by code keys (`slopeMaxDeg`, `craterHeightFactor`, …). The crater factor's source reads "No source: placeholder chosen by the team for the demo". | `r2-0-sources-1280.jpg` |
+| Walk HUD (seen in passing) | "Plan breaks: Slope on foot" is red on a light translucent card, low contrast. | `r2-4-broken-TESTFIXTURE-1280.jpg` |
