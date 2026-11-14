@@ -2,7 +2,7 @@
 // the route band on the ground. First person at eye height.
 import * as THREE from 'three';
 import { getTerrainScene, sceneToThree, ACCESS_MARS_FOG } from '../../core/terrainScene.js';
-import { RADIO, ROVER } from '../../core/index.js';
+import { RADIO, ROVER, isClosed, radioShadowMask } from '../../core/index.js';
 import { DISPLAY as D } from './display.js';
 
 const ACCENT = 0x4fcbff; // --accent in styles/tokens.css
@@ -25,15 +25,22 @@ export function createScene3d(host, t) {
   const bands = {};
   const patch = groundPatch(t);
   scene.add(patch);
+  // ground cues near the walker (specs/feedback-1.md, Walk: display): steep ground and radio shadow edges.
+  // Built once; the fade with distance runs in the shader (no per-frame work)
+  const cues = [steepLines(t), radioDots(t)].filter(Boolean);
+  for (const c of cues) scene.add(c);
   const rover = roverModel();
   sceneToThree(ROVER.x, t.heightAt(ROVER.x, ROVER.z), ROVER.z, rover.position);
   scene.add(rover);
 
+  const _size = new THREE.Vector2();
   function resize() {
     const w = host.clientWidth || window.innerWidth, h = host.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%';
     cam.aspect = w / h; cam.updateProjectionMatrix();
+    // screen width of the steep lines: the drawing buffer's width in pixels
+    for (const c of cues) if (c.material.uniforms.viewportW) c.material.uniforms.viewportW.value = renderer.getDrawingBufferSize(_size).x;
   }
   resize();
   window.addEventListener('resize', resize);
@@ -86,12 +93,159 @@ export function createScene3d(host, t) {
     if (terrainRoot) scene.remove(terrainRoot); // shared object: leave it intact for other views
     for (const b of Object.values(bands)) { b.geometry.dispose(); b.material.dispose(); }
     patch.geometry.dispose(); patch.material.dispose();
+    for (const c of cues) { c.geometry.dispose(); c.material.dispose(); }
     rover.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
     renderer.dispose();
     renderer.domElement.remove();
   }
 
-  return { renderer, scene, cam, loadTerrain, setBand, placeRover, setPose, project, viewDir, render, dispose, resize };
+  return { renderer, scene, cam, loadTerrain, setBand, placeRover, setPose, project, viewDir, render, dispose, resize, cues };
+}
+
+// ---------- ground cues: edge of the closed area (steep) and of the radio shadow ----------
+/** A colour token of the shared style sheet (styles/tokens.css), so the 3D cues use the maps' colours. */
+function token(name, fallback) {
+  const v = typeof document !== 'undefined' ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '';
+  return new THREE.Color(v || fallback);
+}
+
+/**
+ * Points on the edge of a grid mask: the midpoint between a masked cell and each of its 4 unmasked
+ * neighbours, thinned so that no two points lie closer than `spacing` metres (one pass, a hash grid).
+ */
+function maskEdge(t, inMask, spacing) {
+  const n = t.n, out = [], taken = new Map();
+  const key = (x, z) => Math.floor(x / spacing) + ',' + Math.floor(z / spacing);
+  const near = (x, z) => {
+    const cx = Math.floor(x / spacing), cz = Math.floor(z / spacing);
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) {
+      const l = taken.get((cx + a) + ',' + (cz + b));
+      if (l && l.some((p) => Math.hypot(p.x - x, p.z - z) < spacing)) return true;
+    }
+    return false;
+  };
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    const i = r * n + c;
+    if (!inMask(i)) continue;
+    const a = t.centerOf(c, r);
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const cc = c + dc, rr = r + dr;
+      if (cc < 0 || rr < 0 || cc >= n || rr >= n || inMask(rr * n + cc)) continue;
+      const b = t.centerOf(cc, rr), x = (a.x + b.x) / 2, z = (a.z + b.z) / 2;
+      if (near(x, z)) continue;
+      const k = key(x, z);
+      if (!taken.has(k)) taken.set(k, []);
+      taken.get(k).push({ x, z });
+      out.push({ x, z });
+    }
+  }
+  return out;
+}
+
+// shared fade: full up to fadeFull metres from the eye (horizontal), gone at fadeMax
+const FADE_GLSL = `
+  uniform float fadeFull, fadeMax;
+  float cueFade(vec3 w) { return 1.0 - smoothstep(fadeFull, fadeMax, distance(w.xz, cameraPosition.xz)); }`;
+
+/**
+ * Steep ground: thin vertical lines rising from the edge of the closed area (over the slope rule). Each line is
+ * a quad D.steepLineWidthPx wide on screen (widened in the vertex shader; the viewport width is set on resize).
+ */
+function steepLines(t) {
+  const pts = maskEdge(t, (i) => isClosed(t, i), D.steepLineSpacingM);
+  if (!pts.length) return null;
+  const pos = new Float32Array(pts.length * 12), att = new Float32Array(pts.length * 8), idx = new Uint32Array(pts.length * 6);
+  pts.forEach((p, k) => {
+    const y = t.heightAt(p.x, p.z), y0 = y - D.steepLineBelowM, y1 = y + D.steepLineHeightM;
+    pos.set([p.x, y0, -p.z, p.x, y0, -p.z, p.x, y1, -p.z, p.x, y1, -p.z], k * 12);
+    // (side, up): side -1 / +1 across the line, up 0 at the foot, 1 at the top
+    att.set([-1, 0, 1, 0, 1, 1, -1, 1], k * 8);
+    const o = k * 4;
+    idx.set([o, o + 1, o + 2, o, o + 2, o + 3], k * 6);
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('cue', new THREE.BufferAttribute(att, 2));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: {
+      color: { value: token('--steep', '#c2643a') }, fadeFull: { value: D.cueFadeFullM }, fadeMax: { value: D.cueFadeMaxM },
+      widthPx: { value: D.steepLineWidthPx }, viewportW: { value: 1280 },
+    },
+    vertexShader: `
+      attribute vec2 cue; uniform float widthPx, viewportW; varying float vUp; varying vec3 vW;
+      void main() {
+        vUp = cue.y;
+        vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz;
+        vec4 c = projectionMatrix * viewMatrix * w;
+        c.x += cue.x * widthPx / viewportW * c.w;
+        gl_Position = c;
+      }`,
+    fragmentShader: `
+      uniform vec3 color; varying float vUp; varying vec3 vW;
+      ${FADE_GLSL}
+      void main() {
+        float a = cueFade(vW) * mix(1.0, 0.3, vUp);
+        if (a < 0.01) discard;
+        gl_FragColor = vec4(color, a);
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const lines = new THREE.Mesh(g, m);
+  lines.frustumCulled = false;
+  lines.renderOrder = 3;
+  lines.userData.count = pts.length;
+  return lines;
+}
+
+/** Radio shadow: a dotted line on the ground along the edge of the shadow (no line of sight to the rover). */
+function radioDots(t) {
+  const shadow = radioShadowMask(t);
+  const pts = maskEdge(t, (i) => shadow[i] === 1, D.radioDotSpacingM);
+  if (!pts.length) return null;
+  const r = D.radioDotRadiusM;
+  const pos = new Float32Array(pts.length * 12), uv = new Float32Array(pts.length * 8), idx = new Uint32Array(pts.length * 6);
+  pts.forEach((p, k) => {
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([u, v], j) => {
+      const x = p.x + u * r, z = p.z + v * r;
+      pos.set([x, t.heightAt(x, z) + D.radioDotLiftM, -z], k * 12 + j * 3);
+      uv.set([u, v], k * 8 + j * 2);
+    });
+    const o = k * 4;
+    idx.set([o, o + 1, o + 2, o, o + 2, o + 3], k * 6);
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  const m = new THREE.ShaderMaterial({
+    uniforms: { color: { value: token('--advisory', '#5b8cff') }, fadeFull: { value: D.cueFadeFullM }, fadeMax: { value: D.cueFadeMaxM } },
+    vertexShader: `
+      varying vec2 vUv; varying vec3 vW;
+      void main() {
+        vUv = uv;
+        vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz;
+        gl_Position = projectionMatrix * viewMatrix * w;
+      }`,
+    fragmentShader: `
+      uniform vec3 color; varying vec2 vUv; varying vec3 vW;
+      ${FADE_GLSL}
+      void main() {
+        float d = length(vUv);
+        float a = cueFade(vW) * (1.0 - smoothstep(0.75, 1.0, d));
+        if (a < 0.01) discard;
+        gl_FragColor = vec4(color, a);
+        #include <colorspace_fragment>
+      }`,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 2;
+  mesh.userData.count = pts.length;
+  return mesh;
 }
 
 // ---------- route band ----------

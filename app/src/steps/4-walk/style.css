@@ -8,7 +8,12 @@
 /* helmet frame over the view: the keyed image (docs/design/helm-source.webp, green removed by scripts/preprocess/build_helmet.py);
    "AI-generated image" is drawn into its pixels, bottom left; object-fit: fill never crops it */
 .walk-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; }
-.walk-groundmark { position: absolute; right: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
+.walk-groundmark { position: absolute; right: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; display: flex; flex-direction: column; align-items: flex-end; gap: 0.3em; }
+.walk-groundmark > div { display: flex; align-items: center; gap: 0.3em; }
+/* legend swatches of the ground cues (scene3d.js): the maps' colours for steep ground and the advisory blue */
+.walk-cue { display: inline-block; flex: none; margin-right: 0.3em; }
+.walk-cue--steep { width: 2px; height: 1.1em; background: var(--steep); box-shadow: 0.35em 0 0 var(--steep), 0.7em 0 0 var(--steep); margin-right: 1em; }
+.walk-cue--radio { width: 1.4em; height: 0.4em; background: radial-gradient(circle, var(--advisory) 0.15em, transparent 0.2em) 0 50% / 0.45em 100% repeat-x; }
 
 /* HUD sits inside the visor */
 .walk-hud { position: absolute; inset: 0; color: var(--text); font-size: var(--fs-small); }
@@ -79,6 +84,19 @@
 .walk-alert__box { text-shadow: none; animation: slide-up var(--slide) both; background: rgba(0, 0, 0, 0.6); }
 .walk-alert__lvl { font-size: var(--fs-tag); text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
 .walk-alert .alert__text { color: var(--text); }
+.walk-alert__box.is-still { animation: none; }
+/* other active warnings: small chips at the right side of the large one, its top aligned (the large one keeps its place) */
+.walk-alert__chips { position: absolute; left: calc(100% + 0.6em); top: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.35em; }
+.walk-alert__chip {
+  display: flex; align-items: center; gap: 0.45em; white-space: nowrap; font-size: var(--fs-tag); font-weight: 500;
+  background: rgba(0, 0, 0, 0.62); border: 1px solid currentColor; border-radius: var(--radius-pill); padding: 0.25em 0.75em 0.25em 0.6em;
+  text-shadow: none; animation: fade-in var(--fade) both;
+}
+.walk-alert__chip span:last-child { color: var(--text); }
+.walk-alert__dot { width: 0.6em; height: 0.6em; border-radius: 50%; background: currentColor; flex: none; }
+.walk-alert__chip.is-warning { color: var(--warning); }
+.walk-alert__chip.is-caution { color: var(--caution); }
+.walk-alert__chip.is-advisory { color: var(--advisory); }
 
 /* reticle and look-at card */
 .walk-reticle { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border: 1.5px solid rgba(255, 255, 255, 0.8); border-radius: 50%; }
@@ -124,6 +142,7 @@
 .walk-mark--rover.is-target .walk-mark__dia { display: block; }
 .walk-mark--rover.is-target .walk-mark__label { bottom: 14px; }
 .walk-mark.is-quiet .walk-mark__label { visibility: hidden; }
+.walk-mark.is-under { visibility: hidden; }
 .walk-mark--point .walk-mark__dot { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.45); }
 
 /* modal: sample taken, suit empty */
@@ -159,3 +178,4 @@
 .walk-aim.is-bad .walk-aim__ring { border-color: var(--text-2); border-style: dashed; box-shadow: none; }
 .walk-aim.is-bad .walk-aim__label { color: var(--text); }
 .walk-aim.is-free .walk-aim__ring { display: none; }
+.walk-aim.is-quiet .walk-aim__label { visibility: hidden; }

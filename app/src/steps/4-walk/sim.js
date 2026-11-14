@@ -10,14 +10,18 @@ import { DISPLAY as D } from './display.js';
 
 const DEG = Math.PI / 180;
 
-/** Alerts, most urgent first (NASA order: warning, caution, advisory). */
+/**
+ * Alerts, most important first (specs/feedback-1.md, Walk: display): turn back, rule broken, steep, radio,
+ * off path. The edge of the site, not named there, keeps its place before the steep stretch (the visitor is
+ * stopped there). Several at once: the first is shown large, the others as small chips beside it.
+ */
 export const ALERTS = {
   turnBack: { level: 'warning', title: 'Turn back now' },
   steepUnder: { level: 'warning', title: `Ground over ${RULES.slopeMaxDeg.value}° underfoot` },
   edge: { level: 'caution', title: 'Edge of the site' },
   steepAhead: { level: 'caution', title: 'Steep stretch ahead' },
-  offPath: { level: 'caution', title: 'Off the path' },
   radioAhead: { level: 'advisory', title: 'Radio shadow ahead' },
+  offPath: { level: 'caution', title: 'Off the path' },
 };
 const ORDER = Object.keys(ALERTS);
 
@@ -61,7 +65,7 @@ export function createSim(t, route, log) {
     moveDir: null, sinceMoveS: Infinity, moving: false,
     workW: WORK.restW.value, radio: true,
     reserve: null, timeLeft: null,
-    active: {}, alert: null, alertInfo: {},
+    active: {}, alert: null, alerts: [], alertInfo: {},
     tb: null, leftRover: false, atEdge: false, fast: false,
     homeAtSample: null,
   };
@@ -328,7 +332,8 @@ export function createSim(t, route, log) {
       log.warnings.push({ id, level: ALERTS[id].level, text: ALERTS[id].title, x: s.x, z: s.z, tS: log.tS });
     }
     s.active = cur; s.alertInfo = info;
-    s.alert = ORDER.find((id) => cur[id]) || null;
+    s.alerts = ORDER.filter((id) => cur[id]);
+    s.alert = s.alerts[0] || null;
   }
 
   // ---------- actions ----------
@@ -393,7 +398,7 @@ export function createSim(t, route, log) {
     log.suitEmpty = { x: s.x, z: s.z, tS: log.tS, roverDistanceM: distTo(ROVER) };
     finish(false);
     s.modal = 'empty';
-    s.alert = null;
+    s.alert = null; s.alerts = [];
   }
 
   function endExcursion() { if (!atRover()) return false; finish(true); return true; }
