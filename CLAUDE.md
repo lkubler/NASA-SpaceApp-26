@@ -1,6 +1,6 @@
 # NASA Space Apps 2026
 
-Challenge: "Interplanetary Survival Guide: Martian Map" (`docs/challenge.md`, links in `links.md`).
+Challenge: "Interplanetary Survival Guide: Martian Map" (`docs/challenge.md`, links in `docs/resources.md`).
 Humans generate ideas and make decisions. Agents research, build, design, test, and pre-sort.
 
 ## Time
@@ -36,7 +36,7 @@ From the 2025 guide; `docs/rules-2026.md` overrides if present.
 | Path | Purpose |
 |---|---|
 | `notes.md` | Humans' input: ideas, thoughts, direction (often German). Agents read it and never rewrite it. |
-| `links.md` | Resource links collected by humans |
+| `docs/resources.md` | Resource links (humans and agents add here) |
 | `research/` | Findings. Read before researching. |
 | `DECISIONS.md` | Decisions and reasons |
 | `tasks/` | One file per task |

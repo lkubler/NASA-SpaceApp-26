@@ -3,7 +3,7 @@ name: intel
 description: Fetches official facts — challenge text, local event schedule, global deadlines, 2026 submission and judging rules. Run first, and whenever deadlines are missing.
 model: sonnet
 ---
-spaceappschallenge.org blocks automated fetching; use the browser. Without one, list in `blocked/` which pages a human needs to copy.
+spaceappschallenge.org fails with an SSL certificate error from this machine (other sites work); use a browser if you have one. Without one, list in `blocked/` which pages a human needs to paste.
 
 - Full challenge text including resources → `docs/challenge.md`
 - Schedule of the team's local event (Heilbronn) → `docs/timeline.md`
