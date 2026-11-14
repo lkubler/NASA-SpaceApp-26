@@ -1,1 +1,68 @@
 /* Styles of step 2-plan only. Prefix classes with .step--plan. */
+
+/* room for a two-line legend below the map */
+.step--plan .split__map { height: calc(100vh - var(--header-h) - var(--gutter) - 4.6em); }
+.step--plan .legend { gap: 0.45em 1.2em; margin-top: 0.7em; }
+.step--plan .legend__note { margin-left: 0; }
+.step--plan .legend .vlabel { margin-left: -0.3em; }
+
+/* legend swatch: route stretch in radio shadow */
+.step--plan .sw--radio {
+  background:
+    radial-gradient(circle, var(--accent) 1.6px, transparent 2px) 0 50% / 0.37em 100% repeat-x,
+    linear-gradient(rgba(246, 201, 69, 0.55), rgba(246, 201, 69, 0.55)) 0 50% / 100% 0.5em no-repeat;
+}
+
+/* route stretches in radio shadow: yellow (caution) band under the cyan dots */
+.step--plan .map-path--radio { stroke: var(--caution); stroke-width: 7; opacity: 0.5; }
+
+/* map markers */
+.step--plan .plan-hit { cursor: pointer; }
+.step--plan .plan-hit:hover circle { stroke: var(--accent); }
+.step--plan .map-marker--number.plan-cheapest .map-marker__label { fill: var(--accent); font-weight: 700; }
+.step--plan .map-marker--number.plan-breaks:not(.is-selected) circle { stroke: var(--warning); }
+.step--plan .plan-broken circle { fill: var(--warning); r: 3; }
+.step--plan .plan-broken .map-marker__label { fill: var(--warning); }
+.step--plan .map-marker--point circle { r: 3.4; }
+
+/* hover / pinned info on the map */
+.step--plan .plan-tip {
+  position: absolute; z-index: 3; transform: translate(var(--shift, -50%), calc(-100% - 22px));
+  background: rgba(8, 8, 9, 0.92); border: 1px solid var(--line-strong); border-radius: 10px;
+  padding: 0.55em 0.8em; font-size: var(--fs-small); white-space: nowrap; pointer-events: none;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5); animation: plan-fade 140ms ease-out;
+}
+.step--plan .plan-tip[hidden] { display: none; }
+.step--plan .plan-tip.is-pinned { pointer-events: auto; }
+.step--plan .plan-tip--below { transform: translate(var(--shift, -50%), 22px); }
+.step--plan .plan-tip--wide { white-space: normal; width: min(320px, 70%); }
+.step--plan .plan-tip__title { display: flex; align-items: center; gap: 0.5em; font-weight: 600; }
+.step--plan .plan-tip__title .marker { font-size: var(--fs-tag); }
+.step--plan .plan-tip__row { margin-top: 0.3em; display: flex; align-items: baseline; gap: 0.35em; }
+.step--plan .plan-tip__text { margin: 0.4em 0 0; color: var(--text-2); line-height: 1.4; }
+.step--plan .muted { color: var(--text-2); }
+@keyframes plan-fade { from { opacity: 0; } to { opacity: 1; } }
+
+/* panel */
+.step--plan .plan-cards { display: flex; flex-direction: column; gap: 0.6em; }
+.step--plan .plan-cards .card__title { display: block; }
+.step--plan .plan-cards .card__right { display: flex; align-items: center; gap: 0.3em; }
+.step--plan .plan-legs { display: flex; flex-direction: column; }
+.step--plan .plan-legs .row { padding: 0.32em 0; }
+.step--plan .plan-spacer { flex: 1; min-height: 0.5em; }
+.step--plan .plan-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 1.2em; }
+.step--plan .plan-totals .bignum__value { font-size: clamp(22px, 3.4vh, 40px); }
+.step--plan .plan-limiting { color: var(--text-2); font-size: var(--fs-small); margin-top: 0.1em; }
+.step--plan .plan-demo { color: var(--text-2); font-size: var(--fs-tag); font-family: var(--font-mono); margin-top: 0.2em; }
+
+/* leg icons: rover square, on-foot dotted line, spot dot */
+.step--plan .plan-leg-icon { display: inline-block; flex: none; }
+.step--plan .plan-leg-icon--rover { width: 0.8em; height: 0.8em; border: 1.5px solid #fff; background: #000; }
+.step--plan .plan-leg-icon--foot { width: 3px; height: 1.1em; background: radial-gradient(circle, var(--accent) 1.3px, transparent 1.6px) 50% 0 / 100% 0.3em repeat-y; }
+.step--plan .plan-leg-icon--spot { width: 0.6em; height: 0.6em; border-radius: 50%; background: var(--accent); }
+.step--plan .map-marker__label { pointer-events: none; }
+
+/* the cheapest spot: dashed cyan ring around its marker */
+.step--plan .map-marker--number circle.plan-ring { fill: rgba(0, 0, 0, 0.25); stroke: var(--accent); stroke-width: 1.1; stroke-dasharray: 2 1.6; }
+.step--plan .sw--cheapest { width: 0.95em; height: 0.95em; border-radius: 50%; border: 1.5px dashed var(--accent); }
+.step--plan .plan-totals .bignum__label { display: block; }
