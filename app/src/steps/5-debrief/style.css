@@ -101,6 +101,18 @@
 .step--debrief .sw--closest { width: 0.75em; height: 0.75em; border-radius: 50%; background: #fff; border: 2px solid var(--accent); }
 .step--debrief .sw--empty { width: 0.75em; height: 0.75em; border-radius: 50%; background: var(--warning); }
 
+/* a round (feedback-1, Several stops): four big numbers (samples added), the stops in the table, order badges */
+.step--debrief .dbf__nums--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/* one stop per line, the same lines in both columns */
+.step--debrief .dbf__stops { display: flex; flex-direction: column; gap: 0.1em; margin-top: 0.25em; font-size: var(--fs-tag); color: var(--text-2); }
+.step--debrief .dbf__stops > div { white-space: nowrap; }
+.step--debrief .dbf__stops b { color: var(--accent); font-weight: 700; }
+.step--debrief .dbf__stops .is-taken { color: var(--accent); }
+.step--debrief .dbf__stops .is-skipped { color: var(--caution); }
+.step--debrief .dbf-order rect { fill: #000; stroke: var(--accent); stroke-width: 0.8; }
+.step--debrief .dbf-order text { fill: var(--accent); font: 700 8.6px var(--font-mono); }
+.step--debrief .sw--dbf-open { width: 0.85em; height: 0.85em; border-radius: 50%; background: #111; border: 1.5px solid #fff; }
+
 /* bottom: checks and the main button */
 .step--debrief .dbf__foot {
   grid-area: foot; display: flex; align-items: center; justify-content: space-between; gap: var(--gutter);

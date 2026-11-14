@@ -62,9 +62,10 @@ Test hook: `window.__walk` (`advance`, `hold`, `info`).
 - `?step=2&broken=1` adds a test point up the east butte wall as spot 07 (`steps/3-go/dev/broken.js`): no route
   keeps the slope rule, so the Plan map shows the red broken stretch above the spot markers.
 - `?step=4&broken=1` starts the Walk (and, ended, the Debrief) on that broken route: the rule broken in the plan is carried along.
-- `?step=5&outcome=home|broken|lost` opens the Debrief with a walk log built from the core functions
+- `?step=5&outcome=home|broken|lost|turned|none` opens the Debrief with a walk log built from the core functions
   (`steps/5-debrief/fixtures.js`): back home, home with broken rules (slope broken several times, shown once
-  as "(4×)"), or suit empty before the rover. Use with `&spot=F7`.
+  as "(4×)"), suit empty before the rover, turned back before the last stop (that stop skipped; one stop: halfway
+  out), or home without a sample. Use with `&spot=F7` or `&stops=F1,F2,F3` (one sample per stop).
 
 ## Shared state (`src/frame/state.js`, one object; steps read and write only this)
 ```
@@ -91,7 +92,7 @@ Route = planRound(t, stops) {
   legs:  Path[],                   // N + 1 legs: legs[0] rover->stop 1, legs[k] stop k->stop k+1, legs[N] stop N->rover
                                    // Path = findRoute result { cells: Int32Array, points: [{x,z}], keepsRules, closedM, ... }
   keepsRules,                      // every leg keeps the slope rule
-  // bridge for the Walk / Debrief (TODO(several-stops walk) in plan.js):
+  // convenience fields (one-stop readers: Go spot name, Plan map bounds, tests); Walk and Debrief use stops / legs
   spotId, spot,                    // the FIRST stop
   out,                             // = legs[0]
   back }                           // = legs[1..N] joined into one path (junction cells not doubled)
@@ -125,9 +126,24 @@ homeMetres / closedM cover the whole way ahead.
 Helpers: `stopsOf(route)` the stops in order (old routes: `[route.spot]`), `stopOrdinal(n)` '1st' '2nd' '3rd',
 `MAX_STOPS`.
 
-Bridge until the Walk and Debrief know rounds: with N > 1 the Walk targets the first stop along `out`, takes one
-sample there, then walks "home" along `back`, which passes the other stops. The Debrief draws out + back (the
-whole round) and compares with the whole-round plan. Search `TODO(several-stops walk)`.
+### Several stops: Walk and Debrief
+- Walk (`steps/4-walk/sim.js`): the target is the next stop not sampled and not skipped, in plan order, then the
+  rover. Target marker, label, minimap and route band follow that leg: the planned `legs[k]` while standing at the
+  leg start, else the cost-field way from here (`sim.leg()` -> `{ target, key, kind, stop, points, planned }`).
+  A sample is taken at any unsampled stop within `DISPLAY.atTargetM` (also out of order or a skipped one); walking
+  past a stop leaves it the target. The reserve is `reserveFrom` with `remainingStops(log)` and does not jump at a
+  sample (the last metres are logged along the cost-field way). A round's "Turn back now" fires when that reserve
+  reaches 0: the remaining stops are marked skipped (`log.turnedBack`), the target becomes the rover, the warning
+  says which stops were skipped and stays until the crew heads home. One stop: as before (nothing skipped).
+  Off-path is measured against the whole planned round plus the shown leg; steep and radio ahead follow the shown leg.
+  The steep border keeps corridors open along every leg of a round (`createScene3d(host, t, { keepOpen })`).
+- WalkLog fields for rounds: `stops: [{ id, name, order, x, z, sampled, tS, skipped }]` (`initStops`),
+  `sample` = the first sample taken, `turnedBack: null | { x, z, tS, reserveS, skipped: [ids] }`; helpers
+  `remainingStops(log)`, `markSampled(log, indexOrId, at)` (phase 'back' when none remains), `samplesOf(log)`.
+  `logMove` without `spot` uses the remaining stops; `simulateWalk` walks every leg with one sample per stop.
+- Debrief: "Samples 2 of 3" (big number and table row with each stop taken / skipped / not taken), planned against
+  actual for the whole round, the round and stops in order ("1st", filled when sampled) on the map, the report
+  names the stops sampled. The request is done with at least one sample and the rover reached. One stop: as before.
 
 ## How a step registers
 Each step lives in `src/steps/<n>-<id>/` and default-exports
@@ -151,7 +167,7 @@ A step builder edits only its own directory (and its own `style.css`).
 - `CANDIDATES`, `ACCESS_MARS_POINTS`, `ROVER`, `candidateById(id)` places.
 - `planRound(t, stops)`, `planRoute(t, spot)` (= one stop), `planAllCandidates(t)`, `planNumbers(t, route)` the one set of numbers for Plan, Go and Debrief; `reserveFrom(t, levels, { x, z, phase, stops | spot })` live reserve; `stopsOf`, `stopOrdinal`, `MAX_STOPS` (see Several stops above).
 - `ui/mapPanel.js` option `fade: true`: the map frame stays in the dark ground tone (`is-pending`) until the step calls `map.reveal()`, then ground, hatching, route and markers fade in together (300 ms); revealed anyway after 4 s.
-- `newWalkLog()`, `logMove(log, t, { from, to, dtS, workW, radio, spot })`, `simulateWalk(t, route)`.
+- `newWalkLog()`, `logMove(log, t, { from, to, dtS, workW, radio, spot | stops })`, `simulateWalk(t, route)`; rounds: `initStops`, `remainingStops`, `markSampled`, `samplesOf`.
 
 ## Demo factor
 `DEMO.timeFactor` = 76 (assumption): the farthest candidate F7 (138 m round trip) comes back with about 1 h 12 reserve;
