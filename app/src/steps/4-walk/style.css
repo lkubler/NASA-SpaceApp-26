@@ -12,7 +12,8 @@
 .walk-groundmark > div { display: flex; align-items: center; gap: 0.3em; }
 /* legend swatches of the ground cues (scene3d.js): the maps' colours for steep ground and the advisory blue */
 .walk-cue { display: inline-block; flex: none; margin-right: 0.3em; }
-.walk-cue--steep { width: 2px; height: 1.1em; background: var(--steep); box-shadow: 0.35em 0 0 var(--steep), 0.7em 0 0 var(--steep); margin-right: 1em; }
+/* steep border: a low wall, bright line at the foot, fill fading out upwards */
+.walk-cue--steep { width: 1.4em; height: 0.9em; border-bottom: 2px solid color-mix(in srgb, var(--steep) 70%, #ffd1a8); background: linear-gradient(to top, color-mix(in srgb, var(--steep) 60%, transparent), transparent); }
 .walk-cue--radio { width: 1.4em; height: 0.4em; background: radial-gradient(circle, var(--advisory) 0.15em, transparent 0.2em) 0 50% / 0.45em 100% repeat-x; }
 
 /* HUD sits inside the visor */
@@ -182,3 +183,23 @@
 
 /* ?mousedebug=1 only: mouse look readout (dev) */
 .walk-mdebug { position: fixed; left: 8px; bottom: 44px; z-index: 50; margin: 0; padding: 0.5em 0.7em; pointer-events: none; font-family: var(--font-mono); font-size: 12px; line-height: 1.35; color: #fff; background: rgba(0, 0, 0, 0.75); border-radius: 6px; white-space: pre; }
+
+/* ---------- intro (specs/x-intro.md, intro.js): film, stepping out, then the display fades in ---------- */
+/* black layer between the 3D view and the helmet: holds the film (part A), fades out in part B, takes every click */
+.walk-intro { position: absolute; inset: 0; background: #000; pointer-events: auto; cursor: default; }
+.walk-intro__film { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; pointer-events: none; }
+/* the helmet display hidden during the intro: only the frame (opacity set in part B) and, while holding on black, the loading state */
+.walk-layer.is-intro > * { opacity: 0; }
+.walk-layer.is-intro *, .walk-layer.is-intro button, .walk-layer.is-intro .vlabel { pointer-events: none; }
+.walk-layer.is-intro > .walk-frame { opacity: 0; }
+.walk-layer.is-intro.is-intro-hold > .walk-loading { opacity: 1; }
+.walk-layer.is-intro-out > * { animation: walk-intro-in 600ms ease-out both; }
+@keyframes walk-intro-in { from { opacity: 0; } to { opacity: 1; } }
+.walk-layer.is-intro-out > .walk-frame { animation: none; }
+.walk-intro__skip {
+  position: absolute; right: 2.4%; bottom: 3.2%; z-index: 2;
+  font-size: var(--fs-small); letter-spacing: 0.06em; color: var(--text);
+  background: rgba(12, 12, 13, 0.6); border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  padding: 0.45em 1.3em; cursor: pointer; animation: fade-in var(--fade) both;
+}
+.walk-intro__skip:hover { border-color: var(--accent); color: var(--accent); }

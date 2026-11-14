@@ -16,6 +16,7 @@ import { createHud } from './hud.js';
 import { lookAt, visiblePoints, rayHit } from './look.js';
 import { DISPLAY as D } from './display.js';
 import { createTapHold } from './taphold.js';
+import { createIntro } from './intro.js'; // x-intro
 
 let cleanup = null;
 
@@ -35,6 +36,8 @@ export default {
     const hudRoot = el.appendChild(document.createElement('div'));
     hudRoot.className = 'walk-layer';
     const hud = createHud(hudRoot);
+    const intro = createIntro(el, hudRoot, ctx); // x-intro: film now, stepping out once the scene is loaded
+    disposers.push(() => intro.stop());
 
     const t = await ctx.getTerrain();
     if (!alive) return;
@@ -130,7 +133,8 @@ export default {
       }
       if (drag.on && !(e.buttons & 1)) drag.on = false; // released outside the window
       const r = view.getBoundingClientRect();
-      const over = el.contains(e.target) && e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom;
+      // over the walk view: the 3D view or the helmet display (not the intro layer, a dialog or the step bar)
+      const over = (view.contains(e.target) || hudRoot.contains(e.target)) && e.clientX >= r.left && e.clientX < r.right && e.clientY >= r.top && e.clientY < r.bottom;
       if (!over && !drag.on) { freeOut(); return; }
       if (free.last && performance.now() >= lk.pendingUntil) {
         const dx = e.clientX - free.last.x, dy = e.clientY - free.last.y;
@@ -358,11 +362,13 @@ export default {
     try { await v3.loadTerrain(); } catch (e) { console.error(e); }
     if (!alive) return;
     hud.setLoading('');
+    intro.ready({ v3, sim, t }); // x-intro
 
     let raf = 0, last = performance.now(), held = false;
     const loop = (now) => {
       if (!alive) return;
       if (held) { last = now; raf = requestAnimationFrame(loop); return; }
+      if (intro.frame(now)) { last = now; raf = requestAnimationFrame(loop); return; } // x-intro: sim and HUD wait
       advance((now - last) / 1000); last = now;
       frame();
       raf = requestAnimationFrame(loop);

@@ -20,11 +20,21 @@ npm run tune [76]  # per-candidate plan numbers and detours for a demo factor
 Journey test (whole visitor journey in headless Chromium, no dev jump). It fails on any console error or on
 numbers that differ between Plan, Go / no-go, Walk and Debrief, and writes a JPEG (quality 70) of every screen
 to `../reviews/journey/<run>/`. Runs: `near-1280` (spot 01), `far-1280` (spot 06), `far-1920`; default all
-three. Playwright is not an app dependency: install it anywhere (`npm i playwright@1.46 && npx playwright install chromium`).
+three. `stops-1280` (round 01 -> 02 -> 03: badges, leg rows, stops kept after Edit route, every stop on the Go
+profile) runs only when named. Playwright is not an app dependency: install it anywhere (`npm i playwright@1.46 && npx playwright install chromium`).
 ```
 npm run dev &
 PW=/path/to/node_modules/playwright/index.mjs node scripts/journey.mjs http://localhost:5173/ [near-1280 far-1280 far-1920]
 ```
+
+## Intro (`specs/x-intro.md`, `src/steps/4-walk/intro.js`)
+The first walk of a session (a module flag; a reload is a new session) opens with the intro: part A, the team's
+film `public/egress/egress.mp4`, fetched as a blob while Go / no-go is open (`src/ui/introFilm.js`) and left out
+when it cannot play through at the click (still loading, blocked, no H.264 decoder: Playwright's bundled
+Chromium); part B, the live walk camera stepping out of the rover hatch to the walk's start pose (about 4 s, fade
+only with `prefers-reduced-motion`), helmet frame only; then the display fades in and the controls are handed
+over. The sim, the suit clock and the walk log stand still until then. Skip button, any key or a click ends it at
+once. Test hook: `window.__intro` (`phase`: a, hold, b, hud, done; `path`; `skip()`).
 
 ## Walk keys
 Mouse look in every browser: a click captures the mouse (pointer lock), then moving it turns the view, no button
@@ -43,7 +53,12 @@ Test hook: `window.__walk` (`advance`, `hold`, `info`).
   drag), whether the lock check tripped and why, lock refused, last raw movementX/Y, last clientX/Y, mouse events
   per second, summed yaw from the mouse and from the edge zones, edge zone. Example: `?step=4&mousedebug=1`.
 - `?step=N` opens step N with the state the earlier steps would have produced (each step's `devFixture`).
+- `?step=4` opens the walk without the intro (`specs/x-intro.md`); `?step=4&intro=1` plays it anyway. Go / no-go is
+  skipped there, so the film is not preloaded and only part B (stepping out) plays; for the full intro open
+  `?step=3&spot=F1` and click "Start excursion".
 - `&spot=F7` picks the spot in step 2 (default F3). Example: `?step=5&spot=F7`.
+- `&stops=F3,F7,F1` picks a round of up to three stops in that order (wins over `spot`). Example: `?step=3&stops=F3,F7,F1`.
+  Plain `?step=2` opens Plan with no stop chosen.
 - `?step=2&broken=1` adds a test point up the east butte wall as spot 07 (`steps/3-go/dev/broken.js`): no route
   keeps the slope rule, so the Plan map shows the red broken stretch above the spot markers.
 - `?step=4&broken=1` starts the Walk (and, ended, the Debrief) on that broken route: the rule broken in the plan is carried along.
@@ -57,11 +72,62 @@ Test hook: `window.__walk` (`advance`, `hold`, `info`).
   request: null | { id, title, ... },   // chosen request (step 1)
   requestsDone: string[],               // finished request ids (step 5 adds one)
   candidates: [{ candidate, route, plan }],   // planAllCandidates (step 2)
-  spotId: null | 'F1'..'F7',            // chosen spot (step 2)
-  route: null | Route,                  // planRoute (step 2)
-  plan: null | PlanNumbers,             // planNumbers (step 2; read by 3 and 5)
+  stops: string[],                      // chosen stop ids in visiting order, 0..3 (step 2), e.g. ['F3','F7','F1']
+  spotId: null | 'F1'..'F7',            // = stops[0] (the first stop; kept for older readers)
+  route: null | Route,                  // planRound(t, stops) (step 2)
+  plan: null | PlanNumbers,             // planNumbers(t, route) (step 2; read by 3 and 5)
   walk: null | WalkLog }                // newWalkLog / logMove (step 4; read by 5)
 ```
+Step 2 always writes `stops`, `spotId`, `route` and `plan` together. Read the stops from `route.stops` (or
+`stopsOf(route)`), not from `spotId`. Old states without `stops` are filled from `spotId` when step 2 mounts.
+
+### Several stops (feedback-1): Route and PlanNumbers
+A round is rover -> stop 1 -> ... -> stop N -> rover, N = 1..`MAX_STOPS` (3, `PLANNER.maxStops`, assumption).
+Each leg is its own `findRoute` (same rules as a single spot). One stop gives exactly the old route and numbers
+(`test/stops.test.js` compares with a copy of the old planner, `test/legacyPlan.js`).
+```
+Route = planRound(t, stops) {
+  stops: [{ id, name, x, z }],     // visiting order
+  legs:  Path[],                   // N + 1 legs: legs[0] rover->stop 1, legs[k] stop k->stop k+1, legs[N] stop N->rover
+                                   // Path = findRoute result { cells: Int32Array, points: [{x,z}], keepsRules, closedM, ... }
+  keepsRules,                      // every leg keeps the slope rule
+  // bridge for the Walk / Debrief (TODO(several-stops walk) in plan.js):
+  spotId, spot,                    // the FIRST stop
+  out,                             // = legs[0]
+  back }                           // = legs[1..N] joined into one path (junction cells not doubled)
+                                   // one stop: out = legs[0], back = legs[1], as before
+PlanNumbers = planNumbers(t, route): all old fields, over the whole round
+  (distanceM, timeS, walkS, spotS = one stop's work, reserveS, checks, brokenRules, keepsRules, radio shadow,
+   steepest slope, farthest distance, turnBack, profile, energyJ, radiationMSv, ...), plus
+  stops:    [{ id, name, order: 1..N, index, sM, tS, x, z }]    // arrival at each stop: profile index,
+                                                              // metres and seconds from the start, position
+  legPlans: [{ index, from: {id,name}, to: {id,name},          // rover: id null, name ''
+               distanceM, seconds, energyJ,                    // this leg alone, on foot
+               startM, endM, startS, endS,                     // leg boundaries along the round (metres, seconds;
+                                                              // seconds include the work at earlier stops)
+               startIndex, endIndex,                           // leg boundaries in plan.profile
+               keepsRules, closedM }]                          // this leg's own rule check
+  stopsS:   spotS * N                                          // work at all stops
+  profile[].leg: 'out' (legs before the last), 'spot' (one extra point per stop: the same place after the
+                 work, tS moved on by spotS), 'back' (the last leg, the way home)
+  legs (panel list): rover, foot, spot, foot, ..., spot, foot, rover; spot entries carry id and order only when N > 1
+  outM = legs[0] metres, backM = the rest; spotAt = the first stop.
+  reserveS: work at every stop counted, the way home (last leg) at the walk-back rate 1.2x.
+  turnBack: one stop as before (back on the same path); N > 1: on the way to the last stop, work at earlier stops
+            counted, home from there by the fastest way.
+```
+Live reserve, "reserve from here given the remaining stops":
+`reserveFrom(t, levels, { x, z, phase: 'out', stops: remaining })` with `remaining` = the stops not yet visited,
+next one first (`[{ id, x, z }]`): walk to each in order, the work at each, then home from the last one.
+`phase: 'back'` = home from here. `{ spot }` alone still works (= `stops: [spot]`). Returns
+`{ seconds, limiting, name, levelsAtHome, homeSeconds, homeMetres, closedM, timeLeft }`, where homeSeconds /
+homeMetres / closedM cover the whole way ahead.
+Helpers: `stopsOf(route)` the stops in order (old routes: `[route.spot]`), `stopOrdinal(n)` '1st' '2nd' '3rd',
+`MAX_STOPS`.
+
+Bridge until the Walk and Debrief know rounds: with N > 1 the Walk targets the first stop along `out`, takes one
+sample there, then walks "home" along `back`, which passes the other stops. The Debrief draws out + back (the
+whole round) and compares with the whole-round plan. Search `TODO(several-stops walk)`.
 
 ## How a step registers
 Each step lives in `src/steps/<n>-<id>/` and default-exports
@@ -83,7 +149,8 @@ A step builder edits only its own directory (and its own `style.css`).
 - `findRoute(t, from, to)` route keeping slope <= 20 deg, else best route with `keepsRules: false`; `costField(t, target)` cost to target from every cell.
 - `lineOfSight(t, a, b)`, `radioShadowMask(t)`, `hasRadio(t, x, z)` at eye height.
 - `CANDIDATES`, `ACCESS_MARS_POINTS`, `ROVER`, `candidateById(id)` places.
-- `planRoute(t, spot)`, `planAllCandidates(t)`, `planNumbers(t, route)` the one set of numbers for Plan, Go and Debrief; `reserveFrom(t, levels, { x, z, phase, spot })` live reserve.
+- `planRound(t, stops)`, `planRoute(t, spot)` (= one stop), `planAllCandidates(t)`, `planNumbers(t, route)` the one set of numbers for Plan, Go and Debrief; `reserveFrom(t, levels, { x, z, phase, stops | spot })` live reserve; `stopsOf`, `stopOrdinal`, `MAX_STOPS` (see Several stops above).
+- `ui/mapPanel.js` option `fade: true`: the map frame stays in the dark ground tone (`is-pending`) until the step calls `map.reveal()`, then ground, hatching, route and markers fade in together (300 ms); revealed anyway after 4 s.
 - `newWalkLog()`, `logMove(log, t, { from, to, dtS, workW, radio, spot })`, `simulateWalk(t, route)`.
 
 ## Demo factor

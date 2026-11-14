@@ -57,8 +57,13 @@ function smoothSphere(src, n) {
   return out;
 }
 
-/** Build the planet into `wrap` (fills it). Returns { zoomToGale, dispose }. */
-export function planetView(wrap) {
+/**
+ * Build the planet into `wrap` (fills it). The model download starts once `after` settles (the star sky
+ * goes first). `wrap` gets the class is-ready (CSS fades it in) only after the textured model has been
+ * uploaded to the GPU and drawn once, so it never shows half-loaded. Returns { ready, isReady, zoomToGale, follow, dispose };
+ * `ready` resolves true when shown, false if the model failed.
+ */
+export function planetView(wrap, { after = Promise.resolve() } = {}) {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -93,7 +98,9 @@ export function planetView(wrap) {
     .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), GALE_MODEL.lat))
     .multiply(new THREE.Quaternion().setFromAxisAngle(Y, -GALE_MODEL.lon));
 
-  new GLTFLoader().load(MODEL, (gltf) => {
+  let readyFlag = false, setReady;
+  const ready = new Promise((res) => { setReady = (v) => { readyFlag = v; res(v); }; });
+  const onLoaded = (gltf) => {
     if (disposed) return;
     const model = gltf.scene;
     model.updateMatrixWorld(true);
@@ -106,9 +113,20 @@ export function planetView(wrap) {
       Object.assign(mat, { metalness: 0, roughness: 1, transparent: false, opacity: 1 });
       mat.needsUpdate = true;
       orient.add(new THREE.Mesh(smoothSphere(geo, 4), mat));
+      if (mat.map) renderer.initTexture(mat.map);
     });
-    wrap.classList.add('is-ready');
-  }, undefined, (e) => console.error('mars model failed to load', e));
+    // compile and draw once while still invisible, then fade in on the next frame
+    renderer.compile(scene, cam);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (disposed) return;
+      wrap.classList.add('is-ready');
+      setReady(true);
+    }));
+  };
+  const onFailed = (e) => { console.error('mars model failed to load', e); setReady(false); };
+  Promise.resolve(after).catch(() => {}).then(() => {
+    if (!disposed) new GLTFLoader().load(MODEL, onLoaded, undefined, onFailed);
+  });
 
   let W = 1, H = 1, R = 1;
   function resize() {
@@ -159,6 +177,8 @@ export function planetView(wrap) {
   raf = requestAnimationFrame(frame);
 
   return {
+    ready,
+    isReady: () => readyFlag,
     /** Hold Gale at the centre with `kmPerPx` kilometres of ground per CSS pixel (after zoomToGale). */
     follow(kmPerPx) { if (zoom) zoom.follow = MARS_R_KM / (kmPerPx * R); },
     /** Turn Gale to the centre and zoom until the crater spans `fill` of the width. Resolves when done. */
@@ -169,6 +189,7 @@ export function planetView(wrap) {
     },
     dispose() {
       disposed = true;
+      if (!readyFlag) setReady(false);
       cancelAnimationFrame(raf); ro.disconnect();
       scene.traverse((o) => {
         if (o.geometry) o.geometry.dispose();

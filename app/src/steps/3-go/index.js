@@ -5,10 +5,11 @@ import {
   h, s, headline, lede, bigNumber, pillButton, textLink, mapPanel, legend, labelTag,
   fmtDistance, fmtDuration, fmtDeg, fmtMSv,
 } from '../../ui/index.js';
-import { ROVER, RULES, ASTRONAUT, spotNumber } from '../../core/index.js';
+import { ROVER, RULES, ASTRONAUT, spotNumber, stopsOf, stopOrdinal } from '../../core/index.js';
 import { heightProfile, ranges } from './profile.js';
 import { L } from './labels.js';
 import { brokenFixture } from './dev/broken.js';
+import { preloadIntroFilm } from '../../ui/introFilm.js';
 
 let root = null;
 let offResize = null;
@@ -79,6 +80,7 @@ export default {
 
   async mount(el, ctx) {
     root = el;
+    preloadIntroFilm(); // x-intro: the walk's intro film loads while this step is open
     const terrain = await ctx.getTerrain();
     if (root !== el) return;
     const { plan, route } = ctx.state;
@@ -86,13 +88,22 @@ export default {
 
     const broken = plan.brokenRules.length;
     const spotName = route.spot.name || 'Spot';
+    // several stops (specs/feedback-1.md): the whole round, every stop by number and name in visiting order
+    const stops = stopsOf(route);
+    const several = stops.length > 1;
+    const num = (id) => numberOfSpot(id, ctx.state.candidates);
+    const seq = stops.map((st) => `${num(st.id)} ${st.name || 'Spot'}`).join(' → ');
 
     // --- intro and big numbers
     const intro = h('section.go__intro',
       headline(broken ? 'Route breaks a rule.' : 'Route ready.', { size: 'hero' }),
-      lede(broken
-        ? `The best route to ${spotName.toLowerCase()} breaks ${plural(broken, 'NASA rule')}. Every other limit is checked below.`
-        : `Rover to ${spotName.toLowerCase()} on foot and back, checked against every NASA rule.`,
+      lede(several
+        ? (broken
+          ? `The best round, rover → ${seq} → rover, breaks ${plural(broken, 'NASA rule')}. Every other limit is checked below.`
+          : `On foot from the rover to ${seq} and back, checked against every NASA rule.`)
+        : broken
+          ? `The best route to ${spotName.toLowerCase()} breaks ${plural(broken, 'NASA rule')}. Every other limit is checked below.`
+          : `Rover to ${spotName.toLowerCase()} on foot and back, checked against every NASA rule.`,
       h('span.go__demo', ' Demo time ', h('span.mono', `${L.demo.value}${L.demo.unit}`), ' ', labelTag(L.demo))),
       h('div.go__nums',
         bigNumber({ label: 'Distance', value: fmtDistance(plan.distanceM), tag: L.distance }),
@@ -103,24 +114,34 @@ export default {
       ));
 
     // --- small map: same terrain and route as the plan step
-    const map = mapPanel(terrain, { steep: true, scaleM: 20 });
+    // fade: ground, route and markers fade in together once drawn (no pop over an empty frame)
+    const map = mapPanel(terrain, { steep: true, scaleM: 20, fade: true });
     const wide = plan.profile.every((p) => Math.abs(p.z - ROVER.z) < terrain.extent / 2 / 1.6 - 4);
     if (wide) { map.el.classList.add('go-map--wide'); map.svg.setAttribute('preserveAspectRatio', 'xMidYMid slice'); }
     drawRoute(map, plan);
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover' });
-    map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: numberOfSpot(route.spotId, ctx.state.candidates), selected: true });
+    stops.forEach((st, k) => {
+      const g = map.addMarker(st.x, st.z, { kind: 'number', text: num(st.id), selected: true });
+      if (several) {
+        g.append(s('g', { class: 'go-order', transform: 'translate(0 -11.2)' },
+          s('rect', { x: -6, y: -3.3, width: 12, height: 6.6, rx: 3.3 }),
+          s('text', { 'text-anchor': 'middle', dy: '0.36em' }, stopOrdinal(k + 1))));
+      }
+    });
     const hasShadow = plan.radioStretches.length > 0;
     const mapBox = h('section.go__map', map.el, legend([
       { kind: 'rover', text: 'Rover' },
       { kind: 'foot', text: 'On foot' },
-      { kind: 'selected', text: 'Spot' },
+      { kind: 'selected', text: several ? 'Stops, visiting order' : 'Spot' },
       hasShadow ? { kind: 'go-shadow', text: 'Radio shadow' } : null,
       { kind: 'steep', text: `Steeper than ${RULES.slopeMaxDeg.value}${RULES.slopeMaxDeg.unit}` },
       broken ? { kind: 'go-broken', text: 'Breaks a rule' } : null,
     ].filter(Boolean)));
 
     // --- height profile
-    const prof = heightProfile(plan, { spotName });
+    const prof = heightProfile(plan, several
+      ? { stops: plan.stops.map((st) => ({ sM: st.sM, label: `${stopOrdinal(st.order)} · ${num(st.id)} ${st.name}` })) }
+      : { spotName });
     const profBox = h('section.go__profile', prof.el);
 
     // --- checks: one per rule in the row; the radio shadow is not a rule, so it gets its own "Caution" line
@@ -208,6 +229,7 @@ export default {
 
     el.append(h(`div.go${broken ? '.is-broken' : ''}`, intro, mapBox, profBox, bottom));
     requestAnimationFrame(() => prof.resize());
+    map.reveal();
     const onResize = () => prof.resize();
     window.addEventListener('resize', onResize);
     offResize = () => window.removeEventListener('resize', onResize);

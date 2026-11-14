@@ -2,7 +2,8 @@
 // the route band on the ground. First person at eye height.
 import * as THREE from 'three';
 import { getTerrainScene, sceneToThree, ACCESS_MARS_FOG } from '../../core/terrainScene.js';
-import { RADIO, ROVER, isClosed, radioShadowMask } from '../../core/index.js';
+import { RADIO, ROVER, CANDIDATES, radioShadowMask, roverField } from '../../core/index.js';
+import { steepWallLines } from './steepBorder.js';
 import { DISPLAY as D } from './display.js';
 
 const ACCENT = 0x4fcbff; // --accent in styles/tokens.css
@@ -27,20 +28,17 @@ export function createScene3d(host, t) {
   scene.add(patch);
   // ground cues near the walker (specs/feedback-1.md, Walk: display): steep ground and radio shadow edges.
   // Built once; the fade with distance runs in the shader (no per-frame work)
-  const cues = [steepLines(t), radioDots(t)].filter(Boolean);
+  const cues = [steepWall(t), radioDots(t)].filter(Boolean);
   for (const c of cues) scene.add(c);
   const rover = roverModel();
   sceneToThree(ROVER.x, t.heightAt(ROVER.x, ROVER.z), ROVER.z, rover.position);
   scene.add(rover);
 
-  const _size = new THREE.Vector2();
   function resize() {
     const w = host.clientWidth || window.innerWidth, h = host.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%';
     cam.aspect = w / h; cam.updateProjectionMatrix();
-    // screen width of the steep lines: the drawing buffer's width in pixels
-    for (const c of cues) if (c.material.uniforms.viewportW) c.material.uniforms.viewportW.value = renderer.getDrawingBufferSize(_size).x;
   }
   resize();
   window.addEventListener('resize', resize);
@@ -86,7 +84,11 @@ export function createScene3d(host, t) {
     return { x: _v.x, y: _v.y, z: -_v.z };
   }
 
-  function render() { renderer.render(scene, cam); }
+  function render() {
+    // the steep border's stripes drift slowly (a uniform; the geometry is built once)
+    for (const c of cues) if (c.material.uniforms.time) c.material.uniforms.time.value = performance.now() / 1000;
+    renderer.render(scene, cam);
+  }
 
   function dispose() {
     window.removeEventListener('resize', resize);
@@ -148,55 +150,83 @@ const FADE_GLSL = `
   float cueFade(vec3 w) { return 1.0 - smoothstep(fadeFull, fadeMax, distance(w.xz, cameraPosition.xz)); }`;
 
 /**
- * Steep ground: thin vertical lines rising from the edge of the closed area (over the slope rule). Each line is
- * a quad D.steepLineWidthPx wide on screen (widened in the vertex shader; the viewport width is set on resize).
+ * Steep ground: one low translucent wall along the smoothed outline of the closed ground (steepBorder.js):
+ * a crisp bright line at the foot, a fill fading out upwards, faint stripes drifting along it. Depth-tested
+ * against the terrain (the hill hides what lies behind it), no depth write, double sided.
  */
-function steepLines(t) {
-  const pts = maskEdge(t, (i) => isClosed(t, i), D.steepLineSpacingM);
-  if (!pts.length) return null;
-  const pos = new Float32Array(pts.length * 12), att = new Float32Array(pts.length * 8), idx = new Uint32Array(pts.length * 6);
-  pts.forEach((p, k) => {
-    const y = t.heightAt(p.x, p.z), y0 = y - D.steepLineBelowM, y1 = y + D.steepLineHeightM;
-    pos.set([p.x, y0, -p.z, p.x, y0, -p.z, p.x, y1, -p.z, p.x, y1, -p.z], k * 12);
-    // (side, up): side -1 / +1 across the line, up 0 at the foot, 1 at the top
-    att.set([-1, 0, 1, 0, 1, 1, -1, 1], k * 8);
-    const o = k * 4;
-    idx.set([o, o + 1, o + 2, o, o + 2, o + 3], k * 6);
-  });
+function steepWall(t) {
+  // the planned routes to every candidate spot keep their open ground (the ways home in the rover's cost
+  // field, which the Walk builds before the scene): the border never runs across them
+  const home = roverField(t);
+  const lines = steepWallLines(t, D, CANDIDATES.map((c) => home.pathFrom(c.x, c.z)));
+  if (!lines.length) return null;
+  const pos = [], wall = [], idx = [];
+  const H = D.steepWallHeightM, B = D.steepWallBelowM;
+  for (const { pts, closed } of lines) {
+    const p = closed ? [...pts, pts[0]] : pts;
+    const o0 = pos.length / 3;
+    let along = 0;
+    p.forEach((q, k) => {
+      if (k) along += Math.hypot(q.x - p[k - 1].x, q.z - p[k - 1].z);
+      const y = t.heightAt(q.x, q.z);
+      // wall.x: height above the walk grid (m), wall.y: metres along the line
+      pos.push(q.x, y - B, -q.z, q.x, y + H, -q.z);
+      wall.push(-B, along, H, along);
+      if (k) { const o = o0 + (k - 1) * 2; idx.push(o, o + 2, o + 1, o + 1, o + 2, o + 3); }
+    });
+  }
   const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('cue', new THREE.BufferAttribute(att, 2));
-  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('wall', new THREE.Float32BufferAttribute(wall, 2));
+  g.setIndex(idx);
   const m = new THREE.ShaderMaterial({
     uniforms: {
       color: { value: token('--steep', '#c2643a') }, fadeFull: { value: D.cueFadeFullM }, fadeMax: { value: D.cueFadeMaxM },
-      widthPx: { value: D.steepLineWidthPx }, viewportW: { value: 1280 },
+      height: { value: H }, lineM: { value: D.steepLineM }, linePx: { value: D.steepLinePx }, fill: { value: D.steepFillAlpha },
+      stripeM: { value: D.steepStripeM }, stripeMS: { value: D.steepStripeMS }, time: { value: 0 },
     },
     vertexShader: `
-      attribute vec2 cue; uniform float widthPx, viewportW; varying float vUp; varying vec3 vW;
+      attribute vec2 wall; varying vec2 vWall; varying vec3 vW;
       void main() {
-        vUp = cue.y;
+        vWall = wall;
         vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz;
-        vec4 c = projectionMatrix * viewMatrix * w;
-        c.x += cue.x * widthPx / viewportW * c.w;
-        gl_Position = c;
+        gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: `
-      uniform vec3 color; varying float vUp; varying vec3 vW;
+      uniform vec3 color; uniform float height, lineM, linePx, fill, stripeM, stripeMS, time;
+      varying vec2 vWall; varying vec3 vW;
       ${FADE_GLSL}
       void main() {
-        float a = cueFade(vW) * mix(1.0, 0.3, vUp);
-        if (a < 0.01) discard;
-        gl_FragColor = vec4(color, a);
+        float f = cueFade(vW);
+        if (f < 0.01) discard;
+        float hm = vWall.x;                       // metres above the walk grid
+        float px = max(fwidth(hm), 1e-4);         // metres per pixel up the wall
+        // crisp line at the foot: a band around the walk grid height, lineM or linePx pixels tall
+        float half_ = 0.5 * max(lineM, px * linePx);
+        float line = 1.0 - smoothstep(half_ - px * 0.75, half_ + px * 0.75, abs(hm));
+        // translucent fill, strongest at the foot, gone at the top (full below the foot, where the
+        // Access Mars mesh lies lower than the walk grid)
+        float u = clamp(hm / height, 0.0, 1.0);
+        float body = fill * pow(1.0 - u, 1.6);
+        // a soft glow just above the line, so the foot reads first
+        float glow = 0.35 * exp(-max(hm, 0.0) / 0.12);
+        // faint vertical stripes drifting along the wall (anti-aliased)
+        float s = fract(vWall.y / stripeM - time * stripeMS / stripeM);
+        float sw = fwidth(vWall.y / stripeM) + 1e-4;
+        float stripe = smoothstep(0.0, sw, s) * (1.0 - smoothstep(0.35, 0.35 + sw, s));
+        body *= 0.55 + 0.45 * stripe;
+        float a = f * max(line, min(1.0, body + glow));
+        if (a < 0.005) discard;
+        gl_FragColor = vec4(mix(color, vec3(1.0, 0.82, 0.66), 0.4 * line), a);
         #include <colorspace_fragment>
       }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
   });
-  const lines = new THREE.Mesh(g, m);
-  lines.frustumCulled = false;
-  lines.renderOrder = 3;
-  lines.userData.count = pts.length;
-  return lines;
+  const mesh = new THREE.Mesh(g, m);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = 3;
+  mesh.userData.count = lines.length;
+  return mesh;
 }
 
 /** Radio shadow: a dotted line on the ground along the edge of the shadow (no line of sight to the rover). */

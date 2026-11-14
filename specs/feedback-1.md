@@ -35,8 +35,12 @@ Helmet frame => `app/public/helm.webp` (grey), green keyed out, "AI-generated im
 ## Walk: display
 Several warnings at once => the most important one large, in this order: turn back, rule broken, steep, radio, off path; all others stay visible as small chips at the side
 3D labels => hidden inside the warning area
-Steep ground (over 20°) => thin vertical lines rising about 1.5 m from the edge of the closed area, in the colour the maps use for steep ground; not visible beyond about 15 m, fading in when closer; label model
+Steep ground (over 20°) => one continuous border along the edge of the closed area, like a low translucent wall about 1.5 m high: a clear line at the ground, fading out upwards, in the colour the maps use for steep ground; it follows the outline smoothly, small patches get no border of their own; not visible beyond about 15 m, fading in when closer; label model
 Radio shadow => a dotted blue line on the ground at the shadow edge, fading in the same way; label model
+
+## Opening
+While the planet and the crater load => the screen looks intended: text and Begin are there at once, the planet fades in when ready, nothing pops or jumps
+New mission after a Debrief => a soft transition into the crater view, no hard cut; the globe opening is not replayed
 
 ## Several stops
 Plan => clicking spots adds them to the route in the order clicked, up to three; a click on a chosen spot removes it; each chosen spot shows its order number

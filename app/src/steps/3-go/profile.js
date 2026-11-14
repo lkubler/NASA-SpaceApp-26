@@ -1,5 +1,5 @@
-// Height profile of the round trip rover -> spot -> rover, drawn from plan.profile (core planNumbers).
-// Marks: the spot, stretches in radio shadow, ground over the slope rule, and one focus point
+// Height profile of the round rover -> stop(s) -> rover, drawn from plan.profile (core planNumbers).
+// Marks: every stop, named at its place, stretches in radio shadow, ground over the slope rule, and one focus point
 // (where a clicked check's value occurs).
 import { h, s } from '../../ui/index.js';
 
@@ -7,10 +7,12 @@ const W = 1000; // SVG units across; height is set from the element's size
 
 /**
  * @param {PlanNumbers} plan
- * @param {{ spotName: string }} o
+ * @param {{ spotName?: string, stops?: { sM: number, label: string }[] }} o  stops: every stop with its name;
+ *   without it the one spot (plan.spotAt) named spotName
  * @returns {{ el, focus(where|null, text, range?), resize() }}
  */
-export function heightProfile(plan, { spotName }) {
+export function heightProfile(plan, { spotName, stops }) {
+  const stopMarks = stops || [{ sM: plan.spotAt.sM, label: spotName }];
   const pts = plan.profile;
   const total = pts[pts.length - 1].sM || 1;
   let ymin = Infinity, ymax = -Infinity;
@@ -36,7 +38,7 @@ export function heightProfile(plan, { spotName }) {
   // HTML labels under the plot
   const lab = (m, text, cls, align) => labels.append(h(`span.goprof__label${cls ? '.' + cls : ''}`, { style: { left: pct(m), transform: align === 'start' ? 'none' : align === 'end' ? 'translateX(-100%)' : 'translateX(-50%)' } }, text));
   lab(0, 'Rover', '', 'start');
-  lab(plan.spotAt.sM, spotName, 'is-spot', 'middle');
+  for (const st of stopMarks) lab(st.sM, st.label, 'is-spot', 'middle');
   lab(total, 'Rover', '', 'end');
   if (shadowRanges.length) {
     const r = shadowRanges.reduce((a, b) => (b[1] - b[0] > a[1] - a[0] ? b : a));
@@ -44,6 +46,22 @@ export function heightProfile(plan, { spotName }) {
   }
 
   let focusState = null;
+
+  // labels that would overlap the one before move to a second row (stops close together on the round)
+  function placeLabels() {
+    const els = [...labels.children];
+    els.forEach((e) => e.classList.remove('is-row2'));
+    let prev = [null, null];
+    for (const e of els) {
+      const r = e.getBoundingClientRect();
+      if (!r.width) continue;
+      const hit = (q) => q && r.left < q.right + 8;
+      const row = hit(prev[0]) ? 1 : 0;
+      if (row) e.classList.add('is-row2');
+      prev[row] = e.getBoundingClientRect();
+    }
+    labels.classList.toggle('has-row2', els.some((e) => e.classList.contains('is-row2')));
+  }
 
   function draw() {
     H = Math.max(40, plot.clientHeight || 100);
@@ -66,7 +84,7 @@ export function heightProfile(plan, { spotName }) {
       if (seg.length < 2) seg.push({ ...seg[0], sM: seg[0].sM + total / W });
       svg.append(s('path', { class: 'goprof__closed', d: seg.map((p, i) => `${i ? 'L' : 'M'}${X(p.sM).toFixed(1)} ${Y(p.y).toFixed(1)}`).join(''), 'vector-effect': 'non-scaling-stroke' }));
     }
-    svg.append(s('line', { class: 'goprof__spot', x1: X(plan.spotAt.sM), x2: X(plan.spotAt.sM), y1: 0, y2: H, 'vector-effect': 'non-scaling-stroke' }));
+    for (const st of stopMarks) svg.append(s('line', { class: 'goprof__spot', x1: X(st.sM), x2: X(st.sM), y1: 0, y2: H, 'vector-effect': 'non-scaling-stroke' }));
     if (focusState) drawFocus();
   }
 
@@ -105,7 +123,7 @@ export function heightProfile(plan, { spotName }) {
       } else el.classList.remove('has-focus');
       draw();
     },
-    resize() { draw(); if (focusState) { const d = marks.querySelector('.goprof__dot'); if (d) d.style.top = `${Y(heightAtM(focusState.where.sM))}px`; } },
+    resize() { draw(); placeLabels(); if (focusState) { const d = marks.querySelector('.goprof__dot'); if (d) d.style.top = `${Y(heightAtM(focusState.where.sM))}px`; } },
   };
   return api;
 }

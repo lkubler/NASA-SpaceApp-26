@@ -66,12 +66,26 @@ export const DISPLAY = {
   bandFadeNearM: 2.2,     // the band fades in from this far in front of the eye ...
   bandFadeFullM: 6,       // ... to full strength here, so it stays a calm, even band
   // ground cues (specs/feedback-1.md, Walk: display); all assumption: display choices, not measurements
-  cueFadeFullM: 8,        // steep lines and radio dots at full strength up to this far from the walker (assumption) ...
+  cueFadeFullM: 8,        // steep border and radio dots at full strength up to this far from the walker (assumption) ...
   cueFadeMaxM: 15,        // ... fading out to nothing here, not visible beyond (assumption; spec: about 15 m)
-  steepLineHeightM: 1.5,  // steep ground: vertical lines rise this high from the edge of the closed area (assumption; spec: about 1.5 m)
-  steepLineBelowM: 0.3,   // ... and start this far below the walk grid, so they never float where the Access Mars mesh lies lower (assumption)
-  steepLineWidthPx: 2,    // ... each this many drawing-buffer pixels wide: thin, still seen on the orange ground (assumption)
-  steepLineSpacingM: 0.7, // ... at most one line per this many metres of edge (assumption)
+  // steep ground: one border wall along the outline of the closed ground (steepBorder.js). The outline
+  // starts from the planner's own slope test and is cleaned for the eye only (assumption: display choices)
+  steepCloseM: 1,         // ... gaps and notches in closed ground narrower than about twice this are joined (morphological close radius; assumption)
+  steepHoleMaxM2: 25,     // ... open holes inside closed ground smaller than this are filled (assumption)
+  steepMinAreaM2: 12,     // ... closed patches (and leftover outlines) smaller than this get no border of their own (assumption)
+  steepKeepOpenM: 1,      // ... open ground within this distance of the planned routes to the candidate spots stays open, so the border never crosses a route (assumption)
+  steepSmoothPasses: 3,   // ... Chaikin corner-cutting passes: no 0.5 m stair steps (assumption)
+  steepSpacingM: 0.4,     // ... one wall vertex per this many metres of outline (assumption)
+  steepRelaxPasses: 6,    // ... relaxation passes after that, rounding the corners of one-cell notches (assumption)
+  steepMinLineM: 5,       // ... pieces of outline shorter than this (cut by the edge of the square) are left out (assumption)
+  steepEdgeClearM: 0.4,   // ... no wall along the edge of the mapped square itself (outline points closer than this to it are left out; assumption)
+  steepWallHeightM: 1.5,  // ... wall height above the walk grid (assumption; spec: about 1.5 m)
+  steepWallBelowM: 0.3,   // ... the wall reaches this far below the walk grid, so it never floats where the Access Mars mesh lies lower (assumption)
+  steepLineM: 0.035,      // ... bright line at the foot of the wall: this tall ... (assumption)
+  steepLinePx: 2.5,       // ... and at least this many drawing-buffer pixels, so it stays crisp far away (assumption)
+  steepFillAlpha: 0.3,    // ... translucent fill at the foot, fading to nothing at the top (assumption)
+  steepStripeM: 0.6,      // ... faint vertical stripes this far apart, drifting slowly along the wall ... (assumption)
+  steepStripeMS: 0.12,    // ... at this speed in metres per second (assumption)
   radioDotSpacingM: 0.6,  // radio shadow: one dot per this many metres of the shadow edge (assumption)
   radioDotRadiusM: 0.07,  // ... dot radius on the ground (assumption)
   radioDotLiftM: 0.07,    // ... lifted this far above the walk grid, like the route band (assumption)
