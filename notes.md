@@ -31,3 +31,17 @@ Routenlogik
 - Missionbriefing während der Fahrt Cutscene: Ziele der Mission, Gefahren, z.B. Perseverance war hier vor so und so vielen Jahren, ein paar Bilder einblenden
 
 - Potentielles live rerouting falls man den Pfad verlässt (mit Warnung) + neu Berechnung oder kurze Gefahren Ansicht und Hinweise, falls man sich spontan entscheidet eine Detour zu nehmen
+
+
+
+
+
+
+
+Orte:
+- Gale Crater:
+  rover / data from: Curiosity
+  links:
+  -  NASA PDS Analyst’s Notebook: https://an.rsl.wustl.edu/msl/AN/an3.aspx
+  -  Ort:https://trek.nasa.gov/mars/#v=0.1&x=137.34923560455954&y=-4.529538328419656&z=7&p=urn%3Aogc%3Adef%3Acrs%3AEPSG%3A%3A104905&d=&locale=&b=mars&e=133.39415755333584%2C-6.644406453032323%2C141.30431365578323%2C-2.4146702038069905&sfz=&w=
+  - 3d map: https://github.com/googlecreativelab/access-mars
