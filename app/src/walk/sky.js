@@ -80,16 +80,17 @@ export function initSky({ scene, sun, hemi, container, state }) {
     // fog follows the horizon colour, density from visibility (FogExp2: ~2% contrast at 2/density)
     fogCol.copy(u.cHor.value).lerp(PAL.dust.clone().multiplyScalar(0.45 + 0.55 * dayK), dustK * 0.9);
     scene.fog.color.copy(fogCol); // linear fog so short range is hazed too: near 60 m (clear) -> 1 m (storm), far = (2 - 1.5 dustK) x visibility
-    scene.fog.near = 60 * Math.pow(1 / 60, dustK); scene.fog.far = st.sun.vis * (2 - 1.5 * dustK);
+    scene.fog.near = 60 * Math.pow(1 / 60, dustK); scene.fog.far = st.sun.vis * (2 - 1.8 * dustK);
     // lights
     sun.color.setRGB(1, 0.93 - 0.18 * (1 - sstep(0, 25, el)), 0.84 - 0.34 * (1 - sstep(0, 25, el)));
     sun.intensity = 4.2 * direct; sun.castShadow = direct > 0.02;
     hemi.intensity = 0.06 + 1.3 * dayK * (1 - 0.35 * dustK) + 0.25 * twi;
     hemi.color.copy(u.cHor.value).lerp(new THREE.Color(0xffffff), 0.3);
     // mute the backdrop photo with the light level and haze
-    if (!st.bgMats) { st.bgMats = []; scene.traverse((o) => { if (o.isMesh && o.material && o.material.isMeshBasicMaterial && o.material.fog === false) st.bgMats.push(o.material); }); }
+    if (!st.bgMats || !st.bgMats.length) { st.bgMats = []; scene.traverse((o) => { if (o.isMesh && o.material && o.material.isMeshBasicMaterial && o.material.fog === false) st.bgMats.push(o.material); }); }
     for (const m of st.bgMats) m.color.setRGB(1, 0.84, 0.7).multiplyScalar(0.06 + 0.94 * dayK * (1 - 0.6 * dustK));
     for (const m of st.bgMats) { m.transparent = true; m.opacity = 1 - 0.95 * dustK; } // backdrop photo dissolves into the dust sky
+    ui.veil(dustK);
     ui.sync();
   }
 
@@ -113,11 +114,14 @@ export function initSky({ scene, sun, hemi, container, state }) {
     root.dataset.collapsed = 'true';
     chipBtn.addEventListener('click', () => { const c = root.dataset.collapsed !== 'true'; root.dataset.collapsed = String(c); chipBtn.setAttribute('aria-expanded', String(!c)); chipC.textContent = c ? '\u25be' : '\u25b4'; });
     root.append(chipBtn, body);
+    const veilEl = mk('div', 'dust-veil'); container.append(veilEl);
+    let lastK = 0;
+    const veil = (k) => { veilEl.style.opacity = String(Math.min(0.88, k * 0.95)); if (k > 0.8 && lastK <= 0.8) { veilEl.classList.remove('hit'); void veilEl.offsetWidth; veilEl.classList.add('hit'); } lastK = k; };
     const dustWarn = mk('div', 'sky-dustwarn'); dustWarn.hidden = true; container.append(dustWarn);
     container.append(root);
     for (const ev of ['keydown', 'keyup', 'mousedown']) root.addEventListener(ev, (e) => e.stopPropagation());
     const fmt = (h) => { const m = Math.round(h * 60) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
-    return { root, sync() {
+    return { root, veil, sync() {
       const s = st.sun; time.textContent = fmt(st.hour) + ' LTST';
       sub.textContent = (s.elevation >= 0 ? 'Sun ' + s.elevation.toFixed(0) + '° up' : 'Sun below horizon') + ' · az ' + s.azimuth.toFixed(0) + '° · Ls ' + s.Ls.toFixed(0) + '°';
       chipT.textContent = fmt(st.hour) + ' LTST'; chipD.textContent = 'Dust: ' + DUST[st.dustIdx].label + ' \u00b7 tau ' + DUST[st.dustIdx].tau;

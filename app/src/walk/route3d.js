@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import * as comms from '../model/comms.js';
 import { app } from '../state.js';
 
+const LAPSE_S = 24; // guided walk: the whole EVA plays in ~24 s of wall time
 const STEP = 0.5, HALF = 64, INSET = 0.75, LIFT = 0.14, SLOPE_WARN = 20;
 
 function cssColor(name, fallback) {
@@ -37,7 +38,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
   }
 
   let R = null; // built route
-  let routeRef = null, guided = false, lastIdx = -1, wasShadow = false, tbPassed = false, slopeAt = -1e9, pubKey = '';
+  let routeRef = null, lapseT = 0, guided = false, lastIdx = -1, wasShadow = false, tbPassed = false, slopeAt = -1e9, pubKey = '';
   const btn = document.createElement('button'); btn.className = 'walk-guide'; btn.textContent = 'Guided walk'; btn.hidden = true;
   container.append(btn);
 
@@ -48,7 +49,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
   const ground = (x, z) => groundRaycast(x, z) ?? hAt(x, z);
 
   function build() {
-    clear(); R = null; guided = false; btn.textContent = 'Guided walk'; pubKey = '';
+    clear(); R = null; guided = false; btn.textContent = 'Guided walk'; pubKey = ''; if (app.get().eva) app.set({ eva: null });
     const route = app.get().route;
     const P = route && route.points, ts = route && typeof route.toScene === 'function' ? route.toScene : null;
     if (!P || P.length < 2 || !ts) { btn.hidden = true; return; }
@@ -117,7 +118,10 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
       const ring = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.07, 6, 32), new THREE.MeshBasicMaterial({ color: colTurn }));
       ring.rotation.x = Math.PI / 2; ring.position.set(sc[tb].x, ground(sc[tb].x, sc[tb].z) + 0.2, sc[tb].z); group.add(ring);
     }
-    R = { sc, S, rf, inSh, tb: Number.isInteger(tb) ? tb : -1, first: S.findIndex((s) => s.in) };
+    const el = P.map((p) => (typeof p.elapsed_s === 'number' ? p.elapsed_s : typeof p.time_s === 'number' ? p.time_s : null));
+    const hasEl = el.every((v) => v != null) && el[el.length - 1] > 0;
+    let lastIn = -1; S.forEach((s, i) => { if (s.in) lastIn = i; });
+    R = { sc, S, rf, inSh, el, hasEl, lastIn, startHour: typeof route.startHour === 'number' ? route.startHour : null, tb: Number.isInteger(tb) ? tb : -1, first: S.findIndex((s) => s.in) };
     btn.hidden = R.first < 0;
     lastIdx = -1; wasShadow = false; tbPassed = false;
     spawn();
@@ -142,11 +146,19 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     const cur = app.get().route;
     if (cur !== routeRef) { routeRef = cur; build(); }
     if (!R) return;
-    const { i, d } = nearest();
+    const { i: ni, d } = nearest();
+    // Guided walk = time-lapse: the EVA clock runs along the whole route's elapsed_s while the camera walks the visible part,
+    // so reserve, dose and signal change visibly within seconds. Free walk: values at the nearest route point.
+    let i = ni, eva = null;
+    if (guided && R.hasEl) {
+      const tot = R.el[R.el.length - 1]; lapseT = Math.min(tot, lapseT + Math.min(dt, 0.1) * tot / LAPSE_S); const te = lapseT;
+      let lo = 0, hi = R.el.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (R.el[m] < te) lo = m + 1; else hi = m; }
+      i = lo; eva = { elapsed_s: te, startHour: R.startHour, timelapse: true };
+    }
     const f = R.rf[i], sh = R.inSh[i];
-    const key = (f == null ? 'n' : Math.round(f * 100)) + (sh ? 's' : 'o');
+    const key = (f == null ? 'n' : Math.round(f * 100)) + (sh ? 's' : 'o') + (eva ? 't' + Math.round(eva.elapsed_s / 30) : '');
     if (key !== pubKey) { // HUD feed, published only on change (hud.js reads app state)
-      pubKey = key; const patch = { comms: { status: sh ? 'shadow' : 'ok' } };
+      pubKey = key; const patch = { comms: { status: sh ? 'shadow' : 'ok' }, eva };
       if (f != null) patch.reserve = { fraction: f };
       app.set(patch);
     }
@@ -161,20 +173,24 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     if (guided) guide();
   }
 
-  function guide() {
+  function nearestS() {
     let near = 0, nd = Infinity;
     for (let k = 0; k < R.S.length; k++) { const dd = (R.S[k].x - state.pos.x) ** 2 + (R.S[k].z - state.pos.z) ** 2; if (dd < nd) { nd = dd; near = k; } }
+    return near;
+  }
+  function guide() {
+    const near = nearestS();
     const t = Math.min(R.S.length - 1, near + 8);
     if (!R.S[t].in || near >= R.S.length - 2) { stop(); return; }
     const want = Math.atan2(-(R.S[t].x - state.pos.x), -(R.S[t].z - state.pos.z));
     let dy = want - state.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
     state.yaw += dy * 0.12; state.pitch += (-0.12 - state.pitch) * 0.05; state.keys.KeyW = true;
   }
-  function stop() { guided = false; state.keys.KeyW = false; btn.textContent = 'Guided walk'; }
+  function stop() { guided = false; state.keys.KeyW = false; btn.textContent = 'Guided walk'; pubKey = ''; if (app.get().eva) app.set({ eva: null }); }
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (guided) { stop(); return; }
-    guided = true; btn.textContent = 'Stop guided walk';
+    guided = true; lapseT = 0; btn.textContent = 'Stop guided walk';
     if (document.pointerLockElement) document.exitPointerLock();
     const m = document.getElementById('msg'); if (m) m.style.display = 'none';
   });

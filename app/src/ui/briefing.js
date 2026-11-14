@@ -46,9 +46,9 @@ export function mountBriefing(root) {
   req.append(dl);
   const cta = h('div', 'brief-cta');
   const go = button('Plan the EVA', { variant: 'primary', onClick: () => { location.hash = '#/map'; } });
-  go.classList.add('brief-go'); go.disabled = true;
-  const gs = h('span', 'brief-gs', 'Acquiring terrain...');
-  onTerrainReady(() => { go.disabled = false; gs.textContent = 'Terrain ready'; });
+  go.classList.add('brief-go'); // the planning map needs no 3D terrain, so it opens at once
+  const gs = h('span', 'brief-gs', 'Terrain for the walk view is loading in the background...');
+  onTerrainReady(() => { gs.textContent = 'Terrain ready'; });
   const src = button('Sources', { variant: 'secondary', onClick: () => { location.hash = '#/sources'; } });
   cta.append(go, src, gs);
   req.append(cta);

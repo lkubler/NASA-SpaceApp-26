@@ -16,7 +16,7 @@ body[data-view="briefing"] #nav, body[data-view="briefing"] #attr { display: non
 .cold-pill .bars i:nth-child(1) { height: 5px; } .cold-pill .bars i:nth-child(2) { height: 9px; } .cold-pill .bars i:nth-child(3) { height: 14px; }
 .cold-pill.nosig { color: var(--comms-shadow); border-color: var(--comms-shadow); }
 .cold-pill.nosig .bars i { background: transparent; border: 1px solid currentColor; box-sizing: border-box; }
-.cold-big { font: 600 112px/1 var(--font-display); letter-spacing: .08em; color: var(--ok); transition: color 120ms; }
+.cold-big { font: 600 112px/1 var(--font-display); letter-spacing: .08em; color: var(--ok); }
 .cold.lost .cold-big { color: var(--comms-shadow); text-shadow: 0 0 40px rgba(255,79,160,.45); }
 .cold-timer { display: flex; align-items: baseline; gap: var(--s-3); font: 600 14px var(--font-display); letter-spacing: .1em; color: var(--hud-text); opacity: 0; transition: opacity 300ms; }
 .cold.lost .cold-timer { opacity: .9; }
