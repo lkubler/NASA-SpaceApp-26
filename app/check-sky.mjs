@@ -14,12 +14,12 @@ p.on('requestfailed', (r) => errs.push('reqfail: ' + r.url()));
 await p.goto(url);
 await p.waitForFunction('window.__app', { timeout: 120000 });
 await new Promise((r) => setTimeout(r, 4000));
-const shots = [['noon', 12, 0, 0.1, 'look-away'], ['sunset', 17.7, 0, 0.12, 'sun'], ['storm', 11, 3, 0.05, 'look-away']];
+const shots = [['noon', 12, 0, 0.1, 'look-away'], ['sunset', 17.7, 0, 0.12, 'sun'], ['storm', 11, 3, 0.05, 'look-away'], ['morning', 9, 0, 0.1, 'look-away']];
 for (const [name, hour, dust, pitch, look] of shots) {
   const info = await p.evaluate((hour, dust, pitch, look) => {
     document.getElementById('msg').style.display = 'none'; const a = window.__app; a.sky.setDust(dust); a.sky.setHour(hour);
-    const s = a.sky.st.sun; const az = look === 'sun' ? s.azimuth : (s.azimuth + 150) % 360;
-    a.tp(-6, 8, -az * Math.PI / 180, pitch);
+    const s = a.sky.st.sun; const az = look === 'sun' ? s.azimuth : (s.azimuth + 100) % 360;
+    const r = az * Math.PI / 180; a.tp(-6, 8, Math.atan2(-Math.sin(r), -Math.cos(r)), pitch); // scene +z = north
     return { el: s.elevation, az: s.azimuth, Ls: s.Ls, ltst: s.ltst, vis: s.vis, direct: s.direct };
   }, hour, dust, pitch, look);
   await new Promise((r) => setTimeout(r, 1500));
