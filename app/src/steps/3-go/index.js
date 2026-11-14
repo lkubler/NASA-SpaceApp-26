@@ -112,7 +112,8 @@ export default {
       ));
 
     // --- small map: same terrain and route as the plan step
-    const map = mapPanel(terrain, { steep: true, scaleM: 20 });
+    // fade: ground, route and markers fade in together once drawn (no pop over an empty frame)
+    const map = mapPanel(terrain, { steep: true, scaleM: 20, fade: true });
     const wide = plan.profile.every((p) => Math.abs(p.z - ROVER.z) < terrain.extent / 2 / 1.6 - 4);
     if (wide) { map.el.classList.add('go-map--wide'); map.svg.setAttribute('preserveAspectRatio', 'xMidYMid slice'); }
     drawRoute(map, plan);
@@ -226,6 +227,7 @@ export default {
 
     el.append(h(`div.go${broken ? '.is-broken' : ''}`, intro, mapBox, profBox, bottom));
     requestAnimationFrame(() => prof.resize());
+    map.reveal();
     const onResize = () => prof.resize();
     window.addEventListener('resize', onResize);
     offResize = () => window.removeEventListener('resize', onResize);

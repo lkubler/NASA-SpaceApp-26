@@ -68,13 +68,20 @@ export default {
     root = el;
     const Lay = splitLayout();
     el.append(Lay.el);
+    // while the terrain loads: the empty map frame in the dark ground tone, not a blank column
+    const placeholder = h('div.map.plan-map-wait');
+    Lay.map.append(placeholder);
     const terrain = await ctx.getTerrain();
     if (root !== el) return;
+    placeholder.remove();
 
     // ----- map -----
     // too steep (hatched) and radio shadow (dotted) are drawn by the shared map at screen size, so they
     // stay right at every zoom; the ground under them is this step's own render
-    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8 });
+    // fade: ground, hatching and markers appear together once the ground is painted and the markers drawn
+    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true });
+    let groundDone = false, drawnOnce = false;
+    const revealWhenReady = () => { if (groundDone && drawnOnce) map.reveal(); };
     const tip = h('div.plan-tip', { hidden: true });
     map.el.append(tip);
     // wide map, cropped north and south (slice) only as far as every marker and route stays in view
@@ -85,7 +92,8 @@ export default {
       if (root !== el || !img) return;
       composeGround(cv, relief, img);
       map.redraw();
-    }).catch((e) => console.warn('top-down terrain render failed, keeping the relief', e));
+    }).catch((e) => console.warn('top-down terrain render failed, keeping the relief', e))
+      .finally(() => { groundDone = true; revealWhenReady(); });
 
     const leg = legend([
       { kind: 'foot', text: 'On foot' },
@@ -474,6 +482,8 @@ export default {
     if (kept.some((id) => !candOf(id))) ctx.set({ stops: [], spotId: null, route: null, plan: null });
     else if (kept.length && !(ctx.state.stops && ctx.state.stops.length)) ctx.set({ stops: kept });
     render();
+    drawnOnce = true;
+    revealWhenReady();
   },
 
   unmount() { root = null; cleanup.forEach((f) => f()); cleanup = []; },
