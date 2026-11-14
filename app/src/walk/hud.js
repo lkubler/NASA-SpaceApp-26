@@ -5,6 +5,7 @@
 import { app } from '../state.js';
 import { chip } from '../ui/components.js';
 import { autonomyBar, radCounter } from '../ui/autonomy.js';
+import { routeTotalS, routeElapsedAt } from '../model/rad.js';
 
 function cell(label, prov) {
   const c = document.createElement('div'); c.className = 'hud-cell';
@@ -27,7 +28,7 @@ export function mountHud(root) {
   const frame = document.createElement('div'); frame.className = 'hud-frame';
   const cross = document.createElement('div'); cross.className = 'hud-cross';
   const bar = document.createElement('div'); bar.className = 'hud-bar on-glass';
-  const slope = cell('Slope', 'modelled'), speed = cell('Speed', 'modelled'), res = cell('Reserve', 'modelled'), sig = cell('Signal', 'simulated');
+  const slope = cell('Slope', 'modelled'), speed = cell('Speed', 'modelled'), res = cell('Reserve', 'modelled'), sig = cell('Signal', 'modelled');
   const gauge = document.createElement('div'); gauge.className = 'hud-gauge';
   const fill = document.createElement('i'); gauge.append(fill);
   res.c.insertBefore(gauge, res.c.lastChild);
@@ -38,11 +39,11 @@ export function mountHud(root) {
   const warn = document.createElement('div'); warn.className = 'hud-warn'; warn.hidden = true;
   root.append(frame, cross, warn, auto, bar);
 
-  function update({ slopeDeg = 0, speed: sp = 0, mult = 1 } = {}) {
+  function update({ slopeDeg = 0, speed: sp = 0, mult = 1, x = 0, z = 0 } = {}) {
     const st = app.get();
     const now = performance.now(); evaS += Math.min(1, (now - lastT) / 1000); lastT = now; // EVA elapsed = walking time
-    const rt = st.route && st.route.points && st.route.points.length ? st.route.points[st.route.points.length - 1].time_s : 0;
-    rad.update(evaS, rt);
+    const rt = routeTotalS(st.route), re = routeElapsedAt(st.route, x, z); // route elapsed_s at nearest point, else wall-clock
+    rad.update(re ?? evaS, rt);
     slope.v.textContent = slopeDeg.toFixed(1) + '°';
     slope.s.textContent = Math.round(Math.tan(slopeDeg * Math.PI / 180) * 100) + ' % grade';
     slope.c.dataset.state = slopeDeg >= 20 ? 'danger' : slopeDeg >= 10 ? 'warn' : '';

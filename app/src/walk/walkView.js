@@ -163,7 +163,7 @@ function frame(now) {
   renderer.render(scene, camera);
   stat.frames++;
   if (now - stat.t > 1000) { stat.fps = stat.frames * 1000 / (now - stat.t); stat.frames = 0; stat.t = now; }
-  if (state.ready) hud.update({ slopeDeg: state.slope, speed: state.speed, mult: state.mult });
+  if (state.ready) hud.update({ slopeDeg: state.slope, speed: state.speed, mult: state.mult, x: state.pos.x, z: state.pos.z });
 }
 requestAnimationFrame(frame);
 

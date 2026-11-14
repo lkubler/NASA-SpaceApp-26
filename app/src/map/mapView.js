@@ -9,6 +9,7 @@ import { planRoute, costGrid, SLOPE_HARD_DEG, SLOPE_PREFER_DEG } from './planner
 import { computeReserve, DEFAULTS, STATION_TASKS } from '../model/reserve.js';
 import { viewshed, HIDDEN, DEFAULT_SHADOW_LIMIT_S } from '../model/comms.js';
 import { tile, chip, badge, button, provLegend } from '../ui/components.js';
+import { autonomyBar } from '../ui/autonomy.js';
 
 const QUELA = { lon: 137.353006, lat: -4.695202 }; // rover waypoint at the Quela drill site (research/)
 // Comms source: a rover parked on the highest nearby ground (about +10 m over the lander, antenna ~2 m [assumption]).
@@ -307,7 +308,8 @@ export function mountMap(el) {
     <label>Suit start level <b id="mp-capv">100%</b><input id="mp-cap" type="range" min="1" max="100" step="1" value="100"></label>`;
   const clear = button('Clear stations', { variant: 'secondary', onClick: () => { waypoints = []; replan(false); } });
   const note = h('p', 'mp-note', 'Model estimates (Pandolf load model, geometric radio line of sight, assumed station times). Not flight data.');
-  panel.append(head, out, ctl, clear, provLegend(), note);
+  const auto = autonomyBar(); auto.classList.add('auto-panel');
+  panel.append(head, auto, out, ctl, clear, provLegend(), note);
   panel.addEventListener('input', (e) => { if (e.target.id === 'mp-cap') { capacityPct = +e.target.value; panel.querySelector('#mp-capv').textContent = capacityPct + '%'; replan(false); } });
   panel.addEventListener('change', (e) => {
     const t = e.target;

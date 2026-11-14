@@ -24,3 +24,13 @@ test('dose: 24 h = 0.67 mSv, SPE adds (m-1)*12h*rate', () => {
   assert.equal(doseRate(100, { spe: true }), GCR_MSV_PER_H * SPE.multiplier);
   assert.equal(doseRate(13 * 3600, { spe: true }), GCR_MSV_PER_H);
 });
+
+import { routeTotalS, routeElapsedAt } from './rad.js';
+test('route dose uses total EVA time incl. station dwell (6.2 h = 0.17 mSv)', () => {
+  const route = { toScene: (x, y) => ({ x, z: y }), points: [{ x: 0, y: 0, elapsed_s: 0 }, { x: 10, y: 0, elapsed_s: 3600 }, { x: 20, y: 0, elapsed_s: 6.2 * 3600 }] };
+  assert.equal(routeTotalS(route), 6.2 * 3600);
+  assert.ok(Math.abs(evaDose(routeTotalS(route)) - 0.1731) < 0.001);
+  assert.equal(routeElapsedAt(route, 9, 1), 3600);
+  assert.equal(routeTotalS(null), 0);
+  assert.equal(routeElapsedAt(null, 0, 0), null);
+});

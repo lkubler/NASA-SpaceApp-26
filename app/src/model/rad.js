@@ -46,3 +46,16 @@ export function evaDose(elapsedS, { spe = false, mult = SPE.multiplier } = {}) {
 export function doseRate(elapsedS, { spe = false, mult = SPE.multiplier } = {}) {
   return spe && elapsedS / 3600 < SPE.durationH ? GCR_MSV_PER_H * mult : GCR_MSV_PER_H;
 }
+
+/** Total EVA seconds of a planned route (last point elapsed_s incl. station dwell; falls back to time_s). 0 if none. */
+export function routeTotalS(route) {
+  const P = route && route.points; if (!P || !P.length) return 0;
+  const l = P[P.length - 1]; return l.elapsed_s ?? l.time_s ?? 0;
+}
+/** EVA elapsed seconds at the route point nearest to scene position (x, z); null without a usable route. */
+export function routeElapsedAt(route, x, z) {
+  const P = route && route.points; if (!P || !P.length || typeof route.toScene !== "function") return null;
+  let best = Infinity, e = null;
+  for (const p of P) { const s = route.toScene(p.x, p.y), d = (s.x - x) ** 2 + (s.z - z) ** 2; if (d < best) { best = d; e = p.elapsed_s ?? p.time_s ?? null; } }
+  return e;
+}
