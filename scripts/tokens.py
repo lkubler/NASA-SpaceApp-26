@@ -1,137 +1,107 @@
 #!/usr/bin/env python3
-"""Token usage and budget mode for the agent system. --short prints one line.
+"""Plan-usage mode for the orchestrator loop. Only relevant for /loop rounds.
 
-Reads all Claude Code transcripts (~/.claude/projects/**/*.jsonl; the plan limit is account-wide),
-sums usage in a rolling window, weights it by model price, and prints a mode:
-  normal | save | critical
-The budget is learned: when a usage-limit error shows up in a transcript, the usage in the
-window at that moment becomes the observed limit (stored in status/budget_state.json).
-Until then, config/budget.json's window_budget is used (null = no limit known yet).
+Sources:
+  1. status/limits.json: real session (5 h) and weekly usage %, written by scripts/statusline.py
+     from the data Claude Code passes to the status line.
+  2. Fallback: session-limit errors in ~/.claude/projects transcripts (weekly then unknown).
+
+Modes (thresholds in config/budget.json):
+  normal   all fine
+  save     weekly >= weekly_save_pct: cheaper models, fewer agents
+  wait     session limit (nearly) used up: next round after the session reset
+  stop     weekly >= weekly_max_pct: start no more agents until the weekly reset
+
+Usage: tokens.py [--short] | tokens.py --hook  (UserPromptSubmit: prints only for loop prompts)
 """
 import json
-import re
-import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECTS = Path.home() / ".claude" / "projects"
-RESET_RE = re.compile(r"resets ([0-9:apm]+)", re.I)
+LOOP_MARKERS = ("ORCHESTRATOR.md", "/loop", "autonomous-loop")
 
 
-def main_checkout():
+def load(path, default):
     try:
-        common = subprocess.run(
-            ["git", "-C", str(ROOT), "rev-parse", "--path-format=absolute", "--git-common-dir"],
-            capture_output=True, text=True, timeout=5, check=True,
-        ).stdout.strip()
-        return Path(common).parent
-    except Exception:  # noqa: BLE001
-        return ROOT
-
-
-MAIN = main_checkout()
-CFG = MAIN / "config" / "budget.json"
-STATE = MAIN / "status" / "budget_state.json"
-
-
-def weight_for(model, weights):
-    model = (model or "").lower()
-    for key, w in weights.items():
-        if key in model:
-            return w
-    return weights.get("default", 1.0)
-
-
-def load_json(path, default):
-    try:
-        return json.loads(path.read_text())
+        return json.loads(Path(path).read_text())
     except Exception:  # noqa: BLE001
         return default
 
 
-def main():
-    short = "--short" in sys.argv
-    cfg = load_json(CFG, {})
-    state = load_json(STATE, {})
-    window = timedelta(hours=cfg.get("window_hours", 5))
-    weights = cfg.get("model_weights", {"default": 1.0})
-    now = datetime.now(timezone.utc)
-    since = now - window
+def iso(v):
+    try:
+        return datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+    except Exception:  # noqa: BLE001
+        return None
 
-    seen = set()
-    used, per_model, oldest, limit_hits, reset_txt = 0.0, {}, None, [], None
-    for d in [PROJECTS]:
-        for f in d.rglob("*.jsonl"):
+
+def last_session_hit(since):
+    """Most recent 'session limit' API error in transcripts after `since`, with its reset text."""
+    hit = None
+    for f in PROJECTS.rglob("*.jsonl"):
+        try:
             if datetime.fromtimestamp(f.stat().st_mtime, timezone.utc) < since:
                 continue
             for line in f.open(errors="ignore"):
-                if '"timestamp"' not in line:
+                if '"rate_limit"' not in line or "isApiErrorMessage" not in line:
                     continue
-                try:
-                    o = json.loads(line)
-                    ts = datetime.fromisoformat(o["timestamp"].replace("Z", "+00:00"))
-                except Exception:  # noqa: BLE001
-                    continue
-                if ts < since:
-                    continue
-                msg = o.get("message") if isinstance(o.get("message"), dict) else {}
-                # Only API errors count as limit hits, not text that mentions limits.
-                if o.get("isApiErrorMessage") and o.get("error") == "rate_limit":
-                    limit_hits.append(ts)
-                    m = RESET_RE.search(line)
-                    reset_txt = m.group(1) if m else reset_txt
-                u = msg.get("usage")
-                if not u:
-                    continue
-                rid = o.get("requestId") or o.get("uuid")
-                if rid in seen:
-                    continue
-                seen.add(rid)
-                tokens = (u.get("input_tokens", 0) + 1.25 * u.get("cache_creation_input_tokens", 0)
-                          + 0.1 * u.get("cache_read_input_tokens", 0) + 5 * u.get("output_tokens", 0))
-                w = tokens * weight_for(msg.get("model"), weights)
-                used += w
-                m = msg.get("model", "?")
-                per_model[m] = per_model.get(m, 0) + w
-                oldest = ts if oldest is None or ts < oldest else oldest
+                o = json.loads(line)
+                ts = iso(o.get("timestamp"))
+                if o.get("error") == "rate_limit" and ts and ts >= since and (not hit or ts > hit[0]):
+                    text = json.dumps(o.get("message", {}).get("content", ""))
+                    hit = (ts, text.split("resets")[-1].strip(' "]}').split("(")[0].strip() if "resets" in text else "?")
+        except Exception:  # noqa: BLE001
+            continue
+    return hit
 
-    # Learn the limit from the most recent usage-limit hit.
-    if limit_hits:
-        last_hit = max(limit_hits).isoformat()
-        if state.get("last_hit") != last_hit:
-            state.update(last_hit=last_hit, observed_budget=round(used), resets=reset_txt)
-            STATE.parent.mkdir(parents=True, exist_ok=True)
-            STATE.write_text(json.dumps(state, indent=2))
 
-    budget = state.get("observed_budget") or cfg.get("window_budget")
-    recent_hit = state.get("last_hit") and (
-        now - datetime.fromisoformat(state["last_hit"]) < timedelta(minutes=30))
-    pct = used / budget * 100 if budget else None
-    if recent_hit or (pct is not None and pct >= cfg.get("critical_pct", 90)):
-        mode = "critical"
-    elif pct is not None and pct >= cfg.get("save_pct", 70):
-        mode = "save"
+def main():
+    if "--hook" in sys.argv:
+        try:
+            prompt = json.load(sys.stdin).get("prompt", "")
+        except Exception:  # noqa: BLE001
+            prompt = ""
+        if not any(m in prompt for m in LOOP_MARKERS):
+            return
+    short = "--short" in sys.argv or "--hook" in sys.argv
+
+    cfg = load(ROOT / "config" / "budget.json", {})
+    max_pct = cfg.get("weekly_max_pct", 90)
+    save_pct = cfg.get("weekly_save_pct", 80)
+    now = datetime.now(timezone.utc)
+
+    lim = load(ROOT / "status" / "limits.json", {})
+    fresh = iso(lim.get("updated")) and now - iso(lim["updated"]) < timedelta(minutes=30)
+    s = (lim.get("five_hour") or {}).get("pct") if fresh else None
+    w = (lim.get("seven_day") or {}).get("pct") if fresh else None
+    s_reset = iso((lim.get("five_hour") or {}).get("resets_at"))
+    w_reset = iso((lim.get("seven_day") or {}).get("resets_at"))
+
+    hit = last_session_hit(now - timedelta(hours=5))
+    hit_active = hit and (s_reset is None or hit[0] > now - timedelta(minutes=30))
+
+    if w is not None and w >= max_pct:
+        mode, why = "stop", f"weekly {w:.0f}% >= {max_pct}% cap"
+    elif (s is not None and s >= 98) or (s is None and hit_active):
+        mode, why = "wait", "session limit used up"
+    elif w is not None and w >= save_pct:
+        mode, why = "save", f"weekly {w:.0f}% >= {save_pct}%"
     else:
-        mode = "normal"
-    reset = (oldest + window).astimezone() if oldest else None
+        mode, why = "normal", ""
 
-    pct_txt = f"{pct:.0f}% of {budget / 1e6:.1f}M" if pct is not None else "limit not learned yet"
-    if short:
-        r = f" | window frees up from {reset:%H:%M}" if mode != "normal" and reset else ""
-        if recent_hit and state.get("resets"):
-            r = f" | LIMIT HIT, resets {state['resets']}"
-        print(f"[TOKENS] mode: {mode} | {used / 1e6:.1f}M weighted in last {window.seconds // 3600 or window.days * 24}h ({pct_txt}){r}")
-        return
-    print(f"Mode:    {mode}")
-    print(f"Window:  last {window}, {used / 1e6:.2f}M weighted tokens ({pct_txt})")
-    for m, w in sorted(per_model.items(), key=lambda x: -x[1]):
-        print(f"  - {m:<28} {w / 1e6:.2f}M")
-    if state.get("last_hit"):
-        print(f"Last usage-limit hit: {state['last_hit']}")
-    if reset:
-        print(f"Oldest usage in window expires: {reset:%a %H:%M}")
+    def t(d):
+        return d.astimezone().strftime("%a %H:%M") if d else "?"
+
+    parts = [f"mode: {mode}" + (f" ({why})" if why else "")]
+    parts.append(f"session {s:.0f}% (resets {t(s_reset)})" if s is not None else
+                 ("session limit hit, resets " + hit[1] if hit_active else "session: unknown"))
+    parts.append(f"week {w:.0f}% of {max_pct}% cap (resets {t(w_reset)})" if w is not None else
+                 "week: unknown (no status-line data yet)")
+    line = " | ".join(parts)
+    print(f"[TOKENS] {line}" if short else line.replace(" | ", "\n"))
 
 
 if __name__ == "__main__":

@@ -1,8 +1,5 @@
 {
-  "_comment": "Read by scripts/tokens.py. Weighted tokens = (input + 1.25*cache_write + 0.1*cache_read + 5*output) * model weight. window_budget 61M = calibrated from 2 past session-limit hits (Sep 24, Oct 23: 61.2M and 61.6M in the 5 h before). It is re-learned automatically from the first usage-limit hit (status/budget_state.json). Set it by hand if you know your plan's limit.",
-  "window_hours": 5,
-  "window_budget": 61000000,
-  "save_pct": 70,
-  "critical_pct": 90,
-  "model_weights": { "fable": 8, "opus": 5, "sonnet": 3, "haiku": 1, "default": 3 }
+  "_comment": "Read by scripts/tokens.py, only for /loop rounds. The session (5 h) limit may be used up fully; the loop then waits for the reset. The weekly limit is capped: at weekly_max_pct the loop starts no more agents.",
+  "weekly_max_pct": 90,
+  "weekly_save_pct": 80
 }

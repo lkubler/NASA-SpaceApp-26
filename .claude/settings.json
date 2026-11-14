@@ -45,7 +45,7 @@
           },
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/tokens.py\" --short"
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/tokens.py\" --hook"
           }
         ]
       }
@@ -61,5 +61,12 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "python3 \"$CLAUDE_PROJECT_DIR/scripts/statusline.py\""
+  },
+  "env": {
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "25"
   }
 }

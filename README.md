@@ -24,8 +24,8 @@ NASA Space Apps 2026 — "Interplanetary Survival Guide: Martian Map". Humans wr
 | medic | haiku | Diagnose stuck agents |
 | agent-smith | sonnet | Create new agents |
 
-## Token budget
-`python3 scripts/tokens.py` shows usage over the last 5 hours (whole account) and a mode: normal / save / critical. The orchestrator sees it every round and scales down (cheaper models, fewer parallel agents) as the limit gets close. The limit is calibrated in `config/budget.json` and re-learned whenever a session-limit error occurs.
+## Token budget (loop only)
+The status line shows time, phase, and real plan usage (session % · week %). `scripts/statusline.py` saves those numbers; `scripts/tokens.py` turns them into a mode for the orchestrator loop: normal / save (week ≥ 80 %) / wait (session used up, resume after reset) / stop (week ≥ 90 %, never exceeded). Thresholds in `config/budget.json`. Normal work is not affected. Auto-compact runs at 25 % context.
 
 ## Stuck detection
 - Rule: 3 failed attempts → `blocked/` (CLAUDE.md)

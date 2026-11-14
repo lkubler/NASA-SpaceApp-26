@@ -11,7 +11,7 @@ Look at the current state, not at plans: run `python3 scripts/now.py`, read `DEC
 Return at most 3 improvements, biggest first. For each:
 - what: one concrete, testable change (e.g. "research the max slope a suited astronaut can walk at, with sources", "test the route planner as an EVA planner with 3 science targets", "make the radio-shadow overlay readable at video size")
 - why: which criterion it raises and roughly how much
-- agent: who should do it (`intel`, `scout`, `data-scout`, `triage`, `designer`, `builder`, `ux-tester`, `pitch`, `compliance`, `jury`)
+- agent: the one agent best suited. Name only roles that are actually needed; return fewer than 3 improvements, or none, if nothing else is worth the tokens right now. (`intel`, `scout`, `data-scout`, `triage`, `designer`, `builder`, `ux-tester`, `pitch`, `compliance`, `jury`)
 - done when: how that agent can verify it
 
 Rules:
