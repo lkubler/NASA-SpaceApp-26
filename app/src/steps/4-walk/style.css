@@ -12,7 +12,8 @@
 .walk-groundmark > div { display: flex; align-items: center; gap: 0.3em; }
 /* legend swatches of the ground cues (scene3d.js): the maps' colours for steep ground and the advisory blue */
 .walk-cue { display: inline-block; flex: none; margin-right: 0.3em; }
-.walk-cue--steep { width: 2px; height: 1.1em; background: var(--steep); box-shadow: 0.35em 0 0 var(--steep), 0.7em 0 0 var(--steep); margin-right: 1em; }
+/* steep border: a low wall, bright line at the foot, fill fading out upwards */
+.walk-cue--steep { width: 1.4em; height: 0.9em; border-bottom: 2px solid color-mix(in srgb, var(--steep) 70%, #ffd1a8); background: linear-gradient(to top, color-mix(in srgb, var(--steep) 60%, transparent), transparent); }
 .walk-cue--radio { width: 1.4em; height: 0.4em; background: radial-gradient(circle, var(--advisory) 0.15em, transparent 0.2em) 0 50% / 0.45em 100% repeat-x; }
 
 /* HUD sits inside the visor */
