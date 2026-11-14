@@ -14,3 +14,16 @@
 #map-panel .mp-cap { display: block; margin: 10px 0 6px; }
 #map-panel input[type=range] { width: 100%; accent-color: var(--mars); }
 #map-panel button { background: var(--mars); color: #fff; border: 0; border-radius: var(--radius); padding: 5px 12px; cursor: pointer; font: 500 12px var(--font-body); }
+#map-panel { width: 372px; }
+#map-panel .mp-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
+#map-panel .mp-tiles .tile { min-width: 0; padding: 8px 10px; }
+#map-panel .mp-tiles .tile .num { font-size: 24px; }
+#map-panel .mp-sec { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; }
+#map-panel .mp-sec .label { font: 600 11px var(--font-display); letter-spacing: .08em; text-transform: uppercase; }
+#map-panel .mp-assume { font-size: 11px; color: var(--ink-muted); }
+#map-panel table.mp-st td { vertical-align: middle; font-size: 11px; }
+#map-panel table.mp-st select, #map-panel table.mp-st input { font: 12px var(--font-mono); max-width: 82px; }
+#map-panel table.mp-st input[type=number] { width: 48px; }
+#map-panel .mp-ctl label { display: block; margin: 8px 0 4px; font-size: 12px; }
+#map-panel .mp-ctl input[type=time] { font: 12px var(--font-mono); margin-left: 6px; }
+#map-panel .legend { margin: 10px 0 4px; font-size: 11px; }
