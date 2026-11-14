@@ -11,15 +11,16 @@ body[data-view="map"] #map-view, body[data-view="walk"] #walk-view { display: bl
 body[data-view="walk"] { background: var(--scrim-solid); }
 #hud { position: absolute; left: 12px; top: 12px; padding: 8px 10px; background: var(--scrim); border: 1px solid var(--hud-line);
   border-radius: var(--radius); color: var(--hud-text); font: 13px/1.5 var(--font-mono); white-space: pre; pointer-events: none; }
-#msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 16px;
-  color: var(--hud-text); background: var(--scrim); cursor: pointer; }
+/* Overlay is a small centred pill so the terrain stays visible behind it */
+#msg { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 7; padding: var(--s-3) var(--s-5); border-radius: 999px; text-align: center;
+  font: 600 14px/1.2 var(--font-display); letter-spacing: .06em; color: var(--ink); background: rgba(251,248,245,.94); box-shadow: 0 2px 16px rgba(0,0,0,.35); cursor: pointer; }
 #attr { position: fixed; z-index: 5; right: 8px; bottom: 6px; font-size: 10px; color: var(--ink-muted); }
 body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 
 /* ---- Walk HUD (replaces spike debug HUD) ---- */
 #hud { position: absolute; inset: 0; padding: 0; background: none; border: 0; white-space: normal; pointer-events: none; }
 .hud-frame { position: absolute; inset: 0; background:
-  radial-gradient(ellipse at center, transparent 62%, rgba(10,4,3,.55) 100%),
+  radial-gradient(ellipse at center, transparent 70%, rgba(10,4,3,.32) 100%),
   linear-gradient(to bottom, rgba(255,255,255,.06), transparent 8%); }
 .hud-cross { position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px; opacity: .8;
   background: linear-gradient(#fff,#fff) center/1px 100% no-repeat, linear-gradient(#fff,#fff) center/100% 1px no-repeat;
@@ -27,8 +28,8 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .hud-bar { position: absolute; left: 50%; bottom: var(--s-5); transform: translateX(-50%); display: flex; gap: 1px;
   background: var(--hud-line); border: 1px solid var(--hud-line); border-radius: var(--radius); overflow: hidden; backdrop-filter: blur(6px); }
 .hud-cell { background: var(--scrim); min-width: 150px; padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: 2px; color: var(--hud-text); }
-.hud-l { font: 600 14px/16px var(--font-display); text-transform: uppercase; letter-spacing: .06em; opacity: .85; }
-.hud-v { font: 500 40px/40px var(--font-mono); font-variant-numeric: tabular-nums; }
+.hud-l { font: 600 13px/16px var(--font-display); text-transform: uppercase; letter-spacing: .1em; opacity: .7; }
+.hud-v { font: 500 36px/40px var(--font-mono); font-variant-numeric: tabular-nums; }
 .hud-s { font: 500 14px/16px var(--font-mono); text-transform: uppercase; letter-spacing: .06em; opacity: .75; margin-bottom: var(--s-1); }
 .hud-cell .chip { align-self: flex-start; background-color: rgba(0,0,0,.25); }
 .hud-cell[data-state="warn"] .hud-v { color: var(--warn); }
@@ -44,7 +45,8 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .walk-toast { position: absolute; top: calc(var(--s-5) + 56px); left: 50%; transform: translateX(-50%); padding: var(--s-3) var(--s-5); background: var(--scrim); border-left: 6px solid var(--warn); border-radius: var(--radius); color: var(--hud-text); font: 600 14px var(--font-display); letter-spacing: .06em; pointer-events: none; z-index: 5; }
 .walk-toast[data-kind="danger"] { border-left-color: var(--danger); }
 .walk-toast[hidden] { display: none; }
-.walk-guide { position: absolute; top: var(--s-5); right: var(--s-5); z-index: 6; padding: var(--s-2) var(--s-4); background: var(--scrim); color: var(--hud-text); border: 1px solid var(--hud-line); border-radius: var(--radius); font: 600 13px var(--font-display); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.walk-guide { position: absolute; top: var(--s-5); right: var(--s-5); z-index: 8; height: 44px; padding: 0 var(--s-5); background: var(--mars); color: #fff; border: 1px solid rgba(255,255,255,.6); border-radius: var(--radius); box-shadow: 0 2px 14px rgba(0,0,0,.4); font: 600 15px var(--font-display); letter-spacing: .1em; text-transform: uppercase; cursor: pointer; }
+.walk-guide:hover { background: var(--mars-deep); }
 .walk-guide[hidden] { display: none; }
 
 /* Task 013: autonomy clock + RAD dose counter */
@@ -52,8 +54,8 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .auto-s { opacity: .75; text-transform: uppercase; letter-spacing: .06em; font-size: 12px; }
 .auto-hud { position: absolute; left: var(--s-5); top: var(--s-5); max-width: 56%; flex-wrap: nowrap; padding: var(--s-2) var(--s-4); background: var(--scrim);
   border: 1px solid var(--hud-line); border-radius: var(--radius); backdrop-filter: blur(6px); white-space: nowrap; }
-.rad-cell { background: var(--scrim); min-width: 170px; padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: 2px; color: var(--hud-text); }
-.rad-cell .hud-v { font-size: 28px; line-height: 40px; }
+.rad-cell { background: var(--scrim); min-width: 176px; padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: 2px; color: var(--hud-text); }
+.rad-cell .hud-v { white-space: nowrap; font-size: 24px; line-height: 40px; }
 .rad-cell .chip { align-self: flex-start; background-color: rgba(0,0,0,.25); }
 .rad-cell[data-state="warn"] .hud-v, .rad-warn { color: var(--warn); }
 .rad-warn { font: 600 12px/14px var(--font-mono); }
@@ -62,3 +64,4 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .rad-toggle[aria-pressed="true"] { border-color: var(--warn); }
 .rad-cell [hidden], .rad-cell .chip[hidden] { display: none !important; }
 #hud { z-index: 6; }
+.hud-s { white-space: nowrap; }

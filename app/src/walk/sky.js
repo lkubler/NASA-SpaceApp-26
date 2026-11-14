@@ -105,7 +105,14 @@ export function initSky({ scene, sun, hemi, container, state }) {
     const seg = mk('div', 'sky-seg'); seg.setAttribute('role', 'group');
     const btns = DUST.map((d, i) => { const b = mk('button', 'sky-opt'); b.append(mk('b', null, d.label), mk('span', null, 'tau ' + d.tau)); b.title = d.note; b.addEventListener('click', () => { st.dustIdx = i; compute(); }); seg.append(b); return b; });
     const vis = mk('div', 'sky-vis'), hint = mk('div', 'sky-hint', 'T: sun +1 h   G: next dust scenario   Esc to use the sliders');
-    root.append(h1, time, sub, range, h2, seg, vis, hint);
+    // compact chip (default) toggles the full controls: time + dust at a glance, panel on demand
+    const chipBtn = mk('button', 'sky-chip'); chipBtn.type = 'button'; chipBtn.setAttribute('aria-expanded', 'false'); chipBtn.setAttribute('aria-label', 'Time of sol and dust controls');
+    const chipT = mk('b', 'sky-chip-t'), chipD = mk('span', 'sky-chip-d'), chipC = mk('i', 'sky-chip-c', '\u25be');
+    chipBtn.append(chipT, chipD, chipC);
+    const body = mk('div', 'sky-body'); body.append(h1, time, sub, range, h2, seg, vis, hint);
+    root.dataset.collapsed = 'true';
+    chipBtn.addEventListener('click', () => { const c = root.dataset.collapsed !== 'true'; root.dataset.collapsed = String(c); chipBtn.setAttribute('aria-expanded', String(!c)); chipC.textContent = c ? '\u25be' : '\u25b4'; });
+    root.append(chipBtn, body);
     const dustWarn = mk('div', 'sky-dustwarn'); dustWarn.hidden = true; container.append(dustWarn);
     container.append(root);
     for (const ev of ['keydown', 'keyup', 'mousedown']) root.addEventListener(ev, (e) => e.stopPropagation());
@@ -113,6 +120,7 @@ export function initSky({ scene, sun, hemi, container, state }) {
     return { root, sync() {
       const s = st.sun; time.textContent = fmt(st.hour) + ' LTST';
       sub.textContent = (s.elevation >= 0 ? 'Sun ' + s.elevation.toFixed(0) + '° up' : 'Sun below horizon') + ' · az ' + s.azimuth.toFixed(0) + '° · Ls ' + s.Ls.toFixed(0) + '°';
+      chipT.textContent = fmt(st.hour) + ' LTST'; chipD.textContent = 'Dust: ' + DUST[st.dustIdx].label + ' \u00b7 tau ' + DUST[st.dustIdx].tau;
       btns.forEach((b, i) => b.classList.toggle('on', i === st.dustIdx)); range.value = st.hour;
       vis.textContent = 'Visibility ~' + Math.round(s.vis) + ' m · direct sun ' + Math.round(s.direct * 100) + ' %';
       dustWarn.hidden = s.tau < 8; dustWarn.textContent = '\u25a0 DUST: visibility ' + Math.round(s.vis) + ' m [SIMULATED]';

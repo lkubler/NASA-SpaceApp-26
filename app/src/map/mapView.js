@@ -97,8 +97,8 @@ export function mountMap(el) {
       let R = (lo[0] + (hi[0] - lo[0]) * t) * sh, G = (lo[1] + (hi[1] - lo[1]) * t) * sh, B = (lo[2] + (hi[2] - lo[2]) * t) * sh;
       const sd = slope[k];
       if (sd !== sd) { R = 60; G = 56; B = 58; }
-      else if (sd > SLOPE_HARD_DEG) { R = R * 0.35 + bad[0] * 0.65; G = G * 0.35 + bad[1] * 0.65; B = B * 0.35 + bad[2] * 0.65; }
-      else if (sd > SLOPE_PREFER_DEG) { R = R * 0.55 + warn[0] * 0.45; G = G * 0.55 + warn[1] * 0.45; B = B * 0.55 + warn[2] * 0.45; }
+      else if (sd > SLOPE_HARD_DEG) { R = R * 0.62 + bad[0] * 0.38; G = G * 0.62 + bad[1] * 0.38; B = B * 0.62 + bad[2] * 0.38; }
+      else if (sd > SLOPE_PREFER_DEG) { R = R * 0.9 + warn[0] * 0.1; G = G * 0.9 + warn[1] * 0.1; B = B * 0.9 + warn[2] * 0.1; }
       o[p] = R; o[p + 1] = G; o[p + 2] = B; o[p + 3] = 255;
     }
     g.putImageData(img, 0, 0);
@@ -192,8 +192,9 @@ export function mountMap(el) {
       const k = j * W + i; if (vis[k] !== HIDDEN) continue;
       const edge = i > 0 && j > 0 && i < W - 1 && j < H - 1 && (vis[k - 1] !== HIDDEN || vis[k + 1] !== HIDDEN || vis[k - W] !== HIDDEN || vis[k + W] !== HIDDEN);
       let a = 0;
-      if (edge) a = 150;
-      else if (near && near[k * 4 + 3] > 0 && (i + j) % 5 === 0) a = 120; // diagonal hatch
+      const inCor = near && near[k * 4 + 3] > 0;
+      if (edge) a = inCor ? 150 : 0; // outline only along the route corridor; far outlines read as noise
+      else if (inCor && (i + j) % 5 === 0) a = 120; // diagonal hatch
       if (a) { const p = k * 4; d[p] = m[0]; d[p + 1] = m[1]; d[p + 2] = m[2]; d[p + 3] = a; }
     }
     g.putImageData(img, 0, 0); comms = c;
@@ -236,6 +237,7 @@ export function mountMap(el) {
     const w = canvas.width = el.clientWidth, h = canvas.height = el.clientHeight;
     ctx.fillStyle = css('--scrim-solid'); ctx.fillRect(0, 0, w, h);
     if (!L) { ctx.fillStyle = css('--hud-text'); ctx.font = '14px ' + css('--font-mono'); ctx.fillText(msg, 24, 70); return; }
+    placed = [];
     const W = L.hm.width, H = L.hm.height;
     ctx.imageSmoothingEnabled = view.s < 1.5;
     ctx.drawImage(L.base, view.ox, view.oy, W * view.s, H * view.s);
@@ -267,6 +269,13 @@ export function mountMap(el) {
       const pts = [start, ...waypoints], a = toScreen(pts[l.from]), b = toScreen(pts[l.to]);
       ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.strokeStyle = css('--danger'); ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.stroke(); ctx.setLineDash([]);
     });
+    // turn-back point
+    if (route && route.turnBackIndex > 0) {
+      const tp = route.points[route.turnBackIndex], [x, y] = toScreen(tp), ts = route.turnBackStation;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillStyle = css('--turnback'); ctx.strokeStyle = css('--route-casing'); ctx.lineWidth = 2;
+      ctx.fillRect(-8, -8, 16, 16); ctx.strokeRect(-8, -8, 16, 16); ctx.restore();
+      label('TURN BACK ' + (ts ? 'before station ' + ts.n + ' ' : '') + fmtClock(startH + tp.elapsed_s / 3600), x + 14, y - 10, { accent: true });
+    }
     // stations / waypoints
     waypoints.forEach((p, i) => {
       const [x, y] = toScreen(p), st = route && route.stations && route.stations.find((q) => q.wp === i), late = st && st.afterTurnBack;
@@ -274,13 +283,6 @@ export function mountMap(el) {
       ctx.fillStyle = '#fff'; ctx.font = '600 11px ' + css('--font-body'); ctx.textAlign = 'center'; ctx.fillText(i + 1, x, y + 4); ctx.textAlign = 'left';
       if (st) label(STATION_TASKS[st.task].label + ' ' + st.minutes + ' min', x + 12, y + 4 + (i % 2 ? 10 : -4));
     });
-    // turn-back point
-    if (route && route.turnBackIndex > 0) {
-      const tp = route.points[route.turnBackIndex], [x, y] = toScreen(tp), ts = route.turnBackStation;
-      ctx.save(); ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillStyle = css('--turnback'); ctx.strokeStyle = css('--route-casing'); ctx.lineWidth = 2;
-      ctx.fillRect(-8, -8, 16, 16); ctx.strokeRect(-8, -8, 16, 16); ctx.restore();
-      label('TURN BACK ' + (ts ? 'before station ' + ts.n + ' ' : '') + fmtClock(startH + tp.elapsed_s / 3600), x + 14, y - 10);
-    }
     // lander (route start) and rover (comms source)
     if (start) {
       const [x, y] = toScreen(start);
@@ -295,8 +297,18 @@ export function mountMap(el) {
       label('Rover on high ground (comms)', x + 12, y + 4);
     }
   }
-  function label(t, x, y) {
-    ctx.font = '600 11px ' + css('--font-body'); ctx.lineWidth = 3; ctx.strokeStyle = css('--route-casing'); ctx.strokeText(t, x, y); ctx.fillStyle = '#fff'; ctx.fillText(t, x, y);
+  // Labels sit on a dark pill and dodge each other: try offsets around the anchor, keep the first free one.
+  let placed = [];
+  function label(t, x, y, o = {}) {
+    ctx.font = '600 11px ' + css('--font-body');
+    const w = ctx.measureText(t).width + 10, hh = 16, dx = o.dx ?? 12, up = o.pri ? 1 : 0;
+    const cands = [[dx, -2], [dx, 14], [dx, -18], [-w - dx + 2, -2], [-w - dx + 2, 14], [-w / 2, -22], [-w / 2, 22], [dx, 30], [dx, -34]];
+    let pick = cands[0];
+    for (const c of cands) { const r = [x + c[0] - 3, y + c[1] - 12, w, hh]; if (!placed.some((q) => r[0] < q[0] + q[2] && r[0] + r[2] > q[0] && r[1] < q[1] + q[3] && r[1] + r[3] > q[1])) { pick = c; break; } }
+    const rx = x + pick[0] - 3, ry = y + pick[1] - 12; placed.push([rx, ry, w, hh]);
+    ctx.fillStyle = o.accent ? 'rgba(255,178,36,.95)' : 'rgba(28,15,12,.82)';
+    ctx.beginPath(); ctx.roundRect(rx, ry, w, hh, 3); ctx.fill();
+    ctx.fillStyle = o.accent ? '#1C0F0C' : '#fff'; ctx.textAlign = 'left'; ctx.fillText(t, rx + 5, ry + 12);
   }
 
   // ---- panel (designer components: tile, chip, badge, button, provLegend) ----
