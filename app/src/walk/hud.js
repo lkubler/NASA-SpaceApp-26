@@ -4,6 +4,7 @@
 // when present; otherwise labelled placeholders show.
 import { app } from '../state.js';
 import { chip } from '../ui/components.js';
+import { autonomyBar, radCounter } from '../ui/autonomy.js';
 
 function cell(label, prov) {
   const c = document.createElement('div'); c.className = 'hud-cell';
@@ -30,12 +31,18 @@ export function mountHud(root) {
   const gauge = document.createElement('div'); gauge.className = 'hud-gauge';
   const fill = document.createElement('i'); gauge.append(fill);
   res.c.insertBefore(gauge, res.c.lastChild);
-  bar.append(slope.c, speed.c, res.c, sig.c);
+  const rad = radCounter();
+  bar.append(slope.c, speed.c, res.c, sig.c, rad.el);
+  const auto = autonomyBar(); auto.classList.add('on-glass', 'auto-hud');
+  let evaS = 0, lastT = performance.now();
   const warn = document.createElement('div'); warn.className = 'hud-warn'; warn.hidden = true;
-  root.append(frame, cross, warn, bar);
+  root.append(frame, cross, warn, auto, bar);
 
   function update({ slopeDeg = 0, speed: sp = 0, mult = 1 } = {}) {
     const st = app.get();
+    const now = performance.now(); evaS += Math.min(1, (now - lastT) / 1000); lastT = now; // EVA elapsed = walking time
+    const rt = st.route && st.route.points && st.route.points.length ? st.route.points[st.route.points.length - 1].time_s : 0;
+    rad.update(evaS, rt);
     slope.v.textContent = slopeDeg.toFixed(1) + '°';
     slope.s.textContent = Math.round(Math.tan(slopeDeg * Math.PI / 180) * 100) + ' % grade';
     slope.c.dataset.state = slopeDeg >= 20 ? 'danger' : slopeDeg >= 10 ? 'warn' : '';
