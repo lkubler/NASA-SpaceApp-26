@@ -10,7 +10,7 @@ Source: https://www.spaceappschallenge.org/2026/ → Resources → Project Submi
 
 ## Judging and Awards Guide
 
-Source: https://www.spaceappschallenge.org/2026/ → Resources → Judging and Awards Guide (pasted by a human, 2026-11-14).
+Source: https://www.spaceappschallenge.org/resources/judging-awards-guide/ (pasted by a human, 2026-11-14; original as PDF in `docs/judging-awards-guide-2026.pdf`).
 
 ### Eligibility for Global Judging (minimum)
 - Respond to an official challenge.
