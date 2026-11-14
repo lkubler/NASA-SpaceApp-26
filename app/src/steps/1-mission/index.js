@@ -1,7 +1,7 @@
 // Step 1 Mission (specs/1-mission.md): opening, Gale crater in 3D, the three sites, the two requests
 // from Earth, choosing one. Writes state.request (app/README.md).
 import './style.css';
-import { h, headline, lede, pillButton, labelTag, fmtTimeOfDay, LOCK_SVG } from '../../ui/index.js';
+import { h, headline, lede, pillButton, labelTag, LOCK_SVG } from '../../ui/index.js';
 import { ENVIRONMENT, DEMO } from '../../core/values.js';
 import { REQUESTS } from './requests.js';
 import { loadGale, craterView, VERTICAL_EXAGGERATION } from './crater.js';
@@ -24,6 +24,10 @@ async function loadCredits() {
 
 /** The self-contained request object for the shared state. */
 function toRequest(r, credits, sentAt) {
+  if (r.photo && typeof r.photo === 'object') { // a mission with its own photo (requests.js)
+    const { photo, ...rest } = r;
+    return { ...rest, photo: photo.src, photoCredit: photo.credit, photoCaption: photo.caption, photoMeta: photo.meta, photoUrl: photo.url, sentAt, delayMin: DELAY.value };
+  }
   const p = credits[r.photoId] || {};
   return {
     ...r,
@@ -36,12 +40,6 @@ function toRequest(r, credits, sentAt) {
     delayMin: DELAY.value,
   };
 }
-
-const simulatedMsg = {
-  label: 'simulated',
-  text: 'The message itself is part of the demo; the science question behind it is real (see the reason below).',
-  source: { title: 'research/research-requests.md, section 5 (wording by the team)', url: '' },
-};
 
 export default {
   n: 1, id: 'mission', title: 'Mission',
@@ -57,7 +55,7 @@ export default {
     const credit = h('div.m1-credit.mono');
     const hero = h('div.m1-hero',
       headline('Choose your mission.'),
-      lede('Three sites in Gale crater that Curiosity explored. Select one.'));
+      lede('Three missions at real Curiosity sites in Gale crater.'));
     const panel = h('aside.m1-panel', { 'aria-hidden': 'true' });
     el.append(viewWrap, overlay, hero, credit, panel);
 
@@ -72,9 +70,9 @@ export default {
           h('p.m1-intro__line.m1-intro__q', 'Before every step outside, one question: can I still get home?')),
         h('div.m1-intro__action', begin));
       const globe = h('div.m1-globe', { 'aria-hidden': 'true' });
-      const skyCredit = h('div.m1-intro__credit.mono', 'Mars: NASA/JPL-Caltech 3D model ',
+      const skyCredit = h('div.m1-intro__credit.mono', h('span.m1-credit__k', 'Sources'), 'Mars: NASA/JPL-Caltech 3D model ',
         labelTag({ label: 'real', text: 'NASA’s 3D model of Mars, with a surface texture from spacecraft imagery. Shown as a backdrop; it turns slowly.', source: { title: 'NASA Science, Planet Mars, 3D Model — NASA/JPL-Caltech', url: 'https://science.nasa.gov/resource/planet-mars-3d-model/' } }),
-        h('span', ' · Stars: NASA/Goddard SVS Deep Star Maps 2020 '),
+        h('span.m1-credit__sep', '·'), h('span', 'Stars: NASA/Goddard SVS Deep Star Maps 2020 '),
         labelTag({ label: 'real', text: 'The star field is a real sky map built from the Hipparcos-2, Tycho-2 and Gaia DR2 star catalogs, centred on the core of the Milky Way.', source: { title: 'NASA/Goddard Space Flight Center Scientific Visualization Studio, Deep Star Maps 2020 (Gaia DR2: ESA/Gaia/DPAC)', url: 'https://svs.gsfc.nasa.gov/4851' } }));
       intro.style.backgroundImage = `url(${import.meta.env.BASE_URL || './'}sky/milky-way.jpg)`;
       intro.prepend(globe);
@@ -94,6 +92,7 @@ export default {
         if (reduced || !view) { // plain fade
           intro.classList.add('is-leaving');
           el.classList.remove('m1--intro');
+          openPanel();
           setTimeout(() => { dropPlanet(); intro.remove(); }, 260);
           return;
         }
@@ -115,30 +114,39 @@ export default {
         });
         dropPlanet(); intro.remove();
         el.classList.remove('m1--handoff');
-        if (alive) el.classList.remove('m1--flying');
+        if (alive) { el.classList.remove('m1--flying'); openPanel(); }
       };
       setTimeout(() => begin.focus(), 50);
     }
 
     let view = null;
-    let siteSelected = false;
-    let murrayBtn = null;
+    let panelOpen = false;
+    const siteEls = new Map(); // site id -> marker
     let btn = null;
     const pins = [];
     const cardEls = new Map();
 
+    // one Sources line in the footer; the details sit behind the info markers
     function buildCredit(meta) {
       credit.append(
-        h('span', 'Gale crater · HRSC elevation (ESA Mars Express) via NASA 3D model, ', `${Math.round(meta.km_per_pixel * 1000)} m per pixel `),
-        labelTag({ label: 'real', text: `Elevation of Gale crater from NASA's printable 3D model, made from stereo images of the HRSC camera on ESA's Mars Express; ${Math.round(meta.width_km)} × ${Math.round(meta.height_km)} km. We placed it on the map and converted it to metres by fitting it to MOLA laser altimetry (correlation ${meta.fit.r}). Surface colour from the same NASA Mars 3D model as the opening globe (low resolution, about 6 pixels per degree). Site positions from Curiosity's drive path; Mount Sharp is the highest point of the central mound in this grid.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
-        h('span', ` · height ×${VERTICAL_EXAGGERATION} `),
+        h('span.m1-credit__k', 'Sources'),
+        h('span', 'Gale crater: HRSC (ESA Mars Express), NASA 3D model '),
+        labelTag({ label: 'real', text: `Elevation of Gale crater from NASA's printable 3D model, made from stereo images of the HRSC camera on ESA's Mars Express; ${Math.round(meta.width_km)} × ${Math.round(meta.height_km)} km, ${Math.round(meta.km_per_pixel * 1000)} m per pixel. We placed it on the map and converted it to metres by fitting it to MOLA laser altimetry (correlation ${meta.fit.r}). Surface colour from the same NASA Mars 3D model as the opening globe (low resolution, about 6 pixels per degree). Site positions from Curiosity's drive path; Mount Sharp is the highest point of the central mound in this grid.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
+        h('span.m1-credit__sep', '·'),
+        h('span', `Height ×${VERTICAL_EXAGGERATION} `),
         labelTag(DEMO.craterHeightFactor),
+        ...(meta.drive ? [h('span.m1-credit__sep', '·'), h('span', 'Sites and drive: Curiosity waypoints '),
+          labelTag({ label: 'real', text: `Positions of Murray Buttes, Marias Pass and Pahrump Hills, and the drive from Bradbury Landing, from Curiosity's waypoints (sols ${meta.drive.sols[0]} to ${meta.drive.sols[1]}).`, source: { title: 'Curiosity waypoints (MSL_waypoints.json), NASA/JPL-Caltech', url: meta.drive.url } }),
+          h('span.m1-credit__sep', '·'), h('span', 'Base at Bradbury Landing '),
+          labelTag({ label: 'assumption', text: `There is no base on Mars. We place the crew's base at ${meta.base.name}, where Curiosity landed in August 2012. The position is real (Curiosity's first waypoint), and the line is Curiosity's real drive from there to Murray Buttes, ${meta.drive.km} km as drawn.`, source: { title: 'Curiosity waypoints (MSL_waypoints.json), NASA/JPL-Caltech', url: meta.drive.url } })] : []),
       );
     }
 
     // --- markers: three sites and Mount Sharp, projected from real coordinates every render
     function pin(worldPoint, node) { overlay.append(node); pins.push({ p: worldPoint, node }); }
+    let drawDrive = null;
     function place() {
+      if (drawDrive) drawDrive();
       for (const { p, node } of pins) {
         const q = view.project(p);
         node.style.transform = `translate(${q.x.toFixed(1)}px, ${q.y.toFixed(1)}px)`;
@@ -147,71 +155,112 @@ export default {
     }
     function buildMarkers(meta) {
       pin(view.pointOf(meta.mount_sharp, 0.4), h('div.m1-pin.m1-pin--peak', h('span.m1-pin__peak'), h('span.m1-pin__name', 'Mount Sharp')));
-      // The three sites lie within 2 km of each other, a few pixels apart at this scale: one ring at their
-      // centre, the sites spread on it in their real directions (view looks south: west is on the right).
-      const pts = meta.sites.map((s) => view.pointOf(s, 0.05));
-      const centre = pts.reduce((a, p) => a.add(p), pts[0].clone().multiplyScalar(0)).multiplyScalar(1 / pts.length);
-      const cluster = h('div.m1-pin.m1-cluster', { title: 'The three sites lie within 2 km of each other; spread out here so they can be read.' },
-        h('span.m1-cluster__ring'));
+      // The three sites, each at its real place. They lie within 2 km of each other, so their labels sit
+      // apart with a thin leader line. Each is linked to its mission card: hovering one lights up the other.
       for (const s of meta.sites) {
-        if (s.id === 'murray') {
-          murrayBtn = h('button.m1-site.m1-site--murray', { type: 'button', 'aria-label': 'Select Murray Buttes', onclick: () => selectSite() },
-            h('span.m1-site__dot'), h('span.m1-site__name', h('span.m1-site__arrow', '← '), s.name));
-          cluster.append(murrayBtn);
-        } else {
-          cluster.append(h(`div.m1-site.m1-site--locked.m1-site--${s.id}`, { title: `${s.name}: not in this demo` },
-            h('span.m1-site__dot'),
-            h('span.m1-site__name', h('span.m1-site__lock', { html: LOCK_SVG }), s.name)));
+        const mission = REQUESTS.find((r) => r.site === s.id);
+        const open = mission && !mission.locked;
+        const node = h(`${open ? 'button' : 'div'}.m1-pin.m1-site.m1-site--${s.id}${open ? '.m1-site--open' : '.m1-site--soon'}`,
+          open ? { type: 'button', 'aria-label': `${s.name}: ${mission.title}`, onclick: () => pickMission(mission.id) } : { title: `${s.name}: coming soon` },
+          h('span.m1-site__dot'), h('span.m1-site__lead'),
+          h('span.m1-site__name', s.name, open ? null : h('span.m1-site__soon', 'soon')));
+        if (mission) {
+          node.addEventListener('mouseenter', () => hot(mission.id, true));
+          node.addEventListener('mouseleave', () => hot(mission.id, false));
         }
+        siteEls.set(s.id, node);
+        pin(view.pointOf(s, 0.05), node);
       }
-      pin(centre, cluster);
+      if (meta.base && meta.drive) buildBase(meta);
       view.onRender(place);
       place();
     }
 
-    // --- requests panel
+    // --- base at Bradbury Landing and Curiosity's drive from there to the sites
+    function buildBase(meta) {
+      const NS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('class', 'm1-drive');
+      const glow = document.createElementNS(NS, 'path'), dash = document.createElementNS(NS, 'path');
+      glow.setAttribute('class', 'm1-drive__glow'); dash.setAttribute('class', 'm1-drive__dash');
+      svg.append(glow, dash);
+      overlay.prepend(svg);
+      // end the line at the Murray Buttes marker: cut the drive at its point closest to it (the real drive
+      // passes the other two sites first and turns back)
+      const m = meta.sites.find((t) => t.id === 'murray'), cc = m.col, cr = m.row;
+      let cut = 0, best = Infinity;
+      meta.drive.points.forEach(([col, row], i) => { const d = (col - cc) ** 2 + (row - cr) ** 2; if (d < best) { best = d; cut = i; } });
+      const path = [...meta.drive.points.slice(0, cut + 1), [cc, cr]];
+      const pts = path.map(([col, row]) => view.pointOf({ col, row }, 0.03));
+      drawDrive = () => {
+        const d = pts.map((p, i) => { const q = view.project(p); return `${i ? 'L' : 'M'}${q.x.toFixed(1)} ${q.y.toFixed(1)}`; }).join('');
+        glow.setAttribute('d', d); dash.setAttribute('d', d);
+      };
+      const base = meta.base;
+      pin(view.pointOf(base, 0.03), h('div.m1-pin.m1-base',
+        h('span.m1-base__ring'), h('span.m1-base__ring'), h('span.m1-base__ring'),
+        h('span.m1-base__beam'), h('span.m1-base__core'),
+        h('div.m1-base__label',
+          h('span.m1-base__name', 'Base'),
+          h('span.m1-base__where.mono', `${base.name} · ${meta.drive.km} km drive`))));
+    }
+
+    // --- missions panel: one mission per site
+    let reqs = [];
     function buildPanel(credits) {
       const sentAt = (ctx.state.request && ctx.state.request.sentAt) || Date.now() - DELAY.value * 60000;
-      const reqs = REQUESTS.map((r) => toRequest(r, credits, sentAt));
+      reqs = REQUESTS.map((r) => toRequest(r, credits, sentAt));
       btn = pillButton({ text: 'Plan this mission', arrow: true, onClick: () => ctx.next(), disabled: !ctx.state.request });
-      const list = h('div.m1-reqs');
+      const list = h('div.m1-reqs', { role: 'radiogroup', 'aria-label': 'Missions from Earth' });
       for (const r of reqs) {
-        const c = requestCard(r, () => choose(r));
+        const c = requestCard(r);
         cardEls.set(r.id, c);
         list.append(c);
       }
       panel.append(
-        h('div.m1-panel__head',
-          h('div.m1-panel__kicker.mono', 'Murray Buttes · requests from Earth'),
-          h('p.m1-panel__lede', 'Any answer from Earth takes at least ', h('span.mono', `${DELAY.value} min`), ' ', labelTag(DELAY),
-            ' to arrive, so the crew plans this excursion alone. Choose one request.')),
         list,
         h('div.m1-panel__action', btn));
       markChosen();
     }
 
-    function requestCard(r, onPick) {
-      const received = r.sentAt + r.delayMin * 60000;
-      const el = h(`div.card.m1-req`, { role: 'button', tabindex: '0', 'aria-pressed': 'false', onclick: onPick,
-        onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPick(); } } },
+    function requestCard(r) {
+      const done = (ctx.state.requestsDone || []).includes(r.id);
+      const pick = () => pickMission(r.id);
+      const el = h(`div.m1-req${r.locked ? '.is-locked' : ''}`, {
+        role: 'radio', tabindex: r.locked ? '-1' : '0', 'aria-checked': 'false', 'aria-disabled': r.locked ? 'true' : 'false',
+        onclick: pick, onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } } },
         h('figure.m1-req__photo',
           h('img', { src: r.photo, alt: r.photoCaption, loading: 'lazy' }),
-          h('figcaption.mono', r.photoMeta, h('br'), r.photoCredit, ' ', labelTag({ label: 'real', text: `Real Curiosity photo: ${r.photoCaption}.`, source: { title: `${r.photoMeta}, ${r.photoCredit}`, url: r.photoUrl } }))),
+          h('span.m1-req__photoinfo', labelTag({ label: 'real', text: `Real Curiosity photo: ${r.photoCaption}.`, source: { title: `${r.photoMeta} · ${r.photoCredit}`, url: r.photoUrl } }))),
         h('div.m1-req__body',
-          h('div.m1-req__from.mono', h('span', r.from), labelTag(simulatedMsg)),
-          h('div.m1-req__kind.mono', r.kind === 'sample' ? 'One sample' : 'One measurement',
-            (ctx.state.requestsDone || []).includes(r.id) ? h('span.m1-req__done', '✓ Done') : null),
+          h('div.m1-req__site', siteName(r.site), r.locked ? h('span.m1-req__soon', 'Soon') : null, done ? h('span.m1-req__done', 'Done') : null),
           h('div.m1-req__title', r.title),
-          h('p.m1-req__why', r.why, ' ', labelTag({ label: 'real', text: 'The reason comes from published Curiosity science.', source: r.whySource })),
-          h('div.m1-req__signal.mono',
-            h('span', `Sent ${fmtTimeOfDay(r.sentAt)}`), h('span.m1-req__sep', '·'),
-            h('span', `received ${fmtTimeOfDay(received)}`), h('span.m1-req__sep', '·'),
-            h('span', `${r.delayMin} min delay `), labelTag(DELAY))));
+          h('p.m1-req__why', r.why)),
+        h('span.m1-req__info', labelTag({ label: 'real', text: `Why it matters: ${r.why} The question is real; the message from Earth is part of the demo.`, source: r.whySource })),
+        r.locked ? null : h('span.m1-req__check', { 'aria-hidden': 'true' }));
+      el.addEventListener('mouseenter', () => hot(r.id, true));
+      el.addEventListener('mouseleave', () => hot(r.id, false));
+      el.addEventListener('focus', () => hot(r.id, true));
+      el.addEventListener('blur', () => hot(r.id, false));
       el.dataset.id = r.id;
       return el;
     }
+    let siteNames = {};
+    const siteName = (id) => siteNames[id] || id;
 
-    function choose(r) {
+    /** Light up a mission's card and its site marker together. */
+    function hot(id, on) {
+      const r = reqs.find((x) => x.id === id) || REQUESTS.find((x) => x.id === id);
+      if (!r) return;
+      const card = cardEls.get(id), site = siteEls.get(r.site);
+      if (card) card.classList.toggle('is-hot', on);
+      if (site) site.classList.toggle('is-hot', on);
+      el.classList.toggle('m1--hot', on);
+    }
+
+    function pickMission(id) {
+      const r = reqs.find((x) => x.id === id);
+      if (!r || r.locked) return;
       ctx.set({ request: r });
       markChosen();
     }
@@ -220,17 +269,17 @@ export default {
       for (const [k, c] of cardEls) {
         c.classList.toggle('is-selected', k === id);
         c.classList.toggle('is-done', (ctx.state.requestsDone || []).includes(k));
-        c.setAttribute('aria-pressed', String(k === id));
+        c.setAttribute('aria-checked', String(k === id));
       }
+      const chosen = reqs.find((x) => x.id === id);
+      for (const [sid, m] of siteEls) m.classList.toggle('is-selected', !!chosen && chosen.site === sid);
       if (btn) btn.disabled = !id;
     }
 
-    function selectSite(instant = false) {
-      if (siteSelected) return;
-      siteSelected = true;
-      murrayBtn.classList.add('is-selected');
-      murrayBtn.setAttribute('aria-pressed', 'true');
-      el.classList.add('m1--site');
+    /** The panel opens once the crater is in place; the scene slides left so the sites sit in the free half. */
+    function openPanel(instant = false) {
+      if (panelOpen || !view) return;
+      panelOpen = true;
       panel.setAttribute('aria-hidden', 'false');
       if (instant) panel.classList.add('no-anim');
       requestAnimationFrame(() => panel.classList.add('is-open'));
@@ -243,10 +292,11 @@ export default {
       if (!alive) return;
       view = craterView(viewWrap, gale);
       disposers.push(() => view.dispose());
+      siteNames = Object.fromEntries(gale.meta.sites.map((t) => [t.id, t.name]));
       buildMarkers(gale.meta);
       buildCredit(gale.meta);
       buildPanel(credits);
-      if (ctx.state.request) selectSite(true);
+      if (!el.classList.contains('m1--intro') && !el.classList.contains('m1--flying')) openPanel(!!ctx.state.request);
     } catch (e) {
       console.error(e);
       if (!alive) return;

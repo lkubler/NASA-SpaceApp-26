@@ -105,3 +105,9 @@ Model longitude + 88.3 deg = east longitude (Gale's dark floor and wind streak o
 Olympus Mons agree within 2 deg). Writes `app/public/data/gale/gale_color.rgb.bin` (192 x 255 RGB, row 0 = north) and
 adds `color` to `gale_hrsc.json`. The texture holds about 6 pixels per degree, so the colour is coarse; the relief comes
 from the height grid.
+
+# Base and drive line (step 1 crater view), `build_gale_drive.mjs`
+`node scripts/preprocess/build_gale_drive.mjs` (after `build_gale_hrsc.mjs`). Reads Curiosity's waypoints
+(`MSL_waypoints.json`, NASA/JPL-Caltech MMGIS, cached in `data/raw/msl/`) and adds to `gale_hrsc.json`: `base` = Bradbury
+Landing, the first waypoint (sol 3, 137.441633 E, 4.589467 S; the base there is our assumption), and `drive` = the
+traverse up to sol 1452 (Murray Buttes), simplified to 150 m steps (59 points, 10.1 km as drawn).

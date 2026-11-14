@@ -99,10 +99,10 @@ export default {
     const demo = h('div.plan-demo', 'Demo time: clock and suit run ', String(DEMO.timeFactor.value), DEMO.timeFactor.unit, ' faster ', labelTag(DEMO.timeFactor));
     const btn = pillButton({ text: 'Confirm route', onClick: () => ctx.next(), disabled: !ctx.state.route });
     const req = ctx.state.request;
-    const reqBox = req ? h('div.plan-req',
-      h('div.plan-req__kicker.mono', 'Request from Earth · ', req.from || ''),
-      h('div.plan-req__title', req.title)) : null;
-    Lay.panel.append(headline('Plan your mission.'), reqBox, cards, legs, h('div.plan-spacer'), totals, demo);
+    // the goal is set by the request from step 1; this step only plans the route to it
+    const reqBox = req ? h('div.plan-chip', { title: req.titleLong || req.title },
+      h('span.plan-chip__dot'), h('span.plan-chip__k', 'Request'), h('span.plan-chip__v', req.title)) : null;
+    Lay.panel.append(reqBox, headline('Plan your mission.'), cards, legs, h('div.plan-spacer'), totals, demo);
     Lay.action.append(btn);
 
     cards.append(card({ title: 'Calculating routes…', sub: 'Fastest route to every spot that keeps every rule.' }));
@@ -202,7 +202,7 @@ export default {
         // the chosen spot is described in the panel: no tip over the map labels for it
         g.addEventListener('mouseenter', () => c.id !== ctx.state.spotId && (pinned = null, showTip(c.x, c.z, [
           h('div.plan-tip__title', marker(numberOf(c.id), { selected: isSel }), ' ', c.name),
-          h('div.plan-tip__row', h('span.muted', 'Total time '), h('span.mono', fmtDuration(plan.timeS, { approx: true })), ' ', h('span.vlabel', 'model')),
+          h('div.plan-tip__row', h('span.muted', 'Total time '), h('span.mono', fmtDuration(plan.timeS, { approx: true }))),
           c.id === cheapest ? h('div.plan-tip__row.tone-accent', 'Cheapest of the spots') : null,
           !plan.keepsRules ? h('div.plan-tip__row.tone-warning', 'No route keeps every rule') : null,
         ])));
@@ -294,6 +294,11 @@ export default {
 
     // keep a previous choice (back from Go / no-go) in step with the fresh candidate list
     if (ctx.state.spotId && !cands.some((c) => c.candidate.id === ctx.state.spotId)) ctx.set({ spotId: null, route: null, plan: null });
+    // first visit: preselect the spot that fits the request (requests.js spotId); the crew may pick another
+    if (!ctx.state.spotId && req && req.spotId) {
+      const c = cands.find((x) => x.candidate.id === req.spotId);
+      if (c) ctx.set({ spotId: c.candidate.id, route: c.route, plan: c.plan });
+    }
     render();
   },
 

@@ -11,13 +11,13 @@
 .header > * { pointer-events: auto; }
 .header__left { display: flex; align-items: center; gap: 2.2em; min-width: 0; }
 .header__name { font-weight: 700; font-size: var(--fs-mono); letter-spacing: 0.06em; white-space: nowrap; }
-.header__sources { font-size: var(--fs-tag); color: var(--text-2); letter-spacing: 0.06em; text-transform: uppercase; }
+.header__sources { font-size: var(--fs-tag); color: var(--text-2); }
 .header__sources:hover { color: var(--text); }
 .header--minimal .header__left { display: none; }
 .header--minimal { justify-content: flex-end; height: auto; top: 10px; padding: 0 16px; }
 
 /* step bar: small, shows done, current, next */
-.stepbar { display: flex; align-items: center; gap: 0.55em; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-3); white-space: nowrap; }
+.stepbar { display: flex; align-items: center; gap: 0.55em; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-3); white-space: nowrap; transition: opacity 600ms ease-out; }
 .stepbar__item { display: inline-flex; align-items: center; gap: 0.45em; color: inherit; padding: 0.2em 0; }
 .stepbar__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; border: 1px solid currentColor; }
 .stepbar__item.is-done { color: var(--text-2); }

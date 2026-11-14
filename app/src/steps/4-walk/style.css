@@ -29,6 +29,12 @@
 .walk-mini__cv { display: block; width: 100%; height: 100%; border-radius: 50%; }
 .walk-mini__n { position: absolute; top: -1.35em; left: 50%; transform: translateX(-50%); font-size: var(--fs-tag); }
 .walk-target { margin-top: 0.9em; width: 150%; }
+.walk-task { display: flex; align-items: center; gap: 0.45em; font-size: var(--fs-small); margin-bottom: 0.55em; white-space: nowrap; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7); }
+.walk-task__mark { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--accent); flex: none; }
+.walk-task__k { color: rgba(255, 255, 255, 0.85); }
+.walk-task__v { color: #fff; font-weight: 600; }
+.walk-task.is-done .walk-task__mark { background: var(--accent); }
+.walk-task.is-done .walk-task__v { color: rgba(255, 255, 255, 0.75); text-decoration: line-through; text-decoration-color: rgba(79, 203, 255, 0.8); }
 .walk-target__name { font-weight: 600; font-size: var(--fs-small); line-height: 1.25; }
 .walk-target__line { font-size: var(--fs-mono); margin-top: 0.2em; }
 .walk-target__bar { height: 3px; background: rgba(255, 255, 255, 0.25); border-radius: 2px; margin-top: 0.5em; width: 100%; overflow: hidden; }
@@ -41,7 +47,7 @@
 }
 .walk-card--body { right: 8.6%; top: 17%; }
 .walk-card--mission { right: 9.6%; bottom: 23%; background: var(--helmet-card); min-width: 15.5em; }
-.walk-card__head { display: flex; align-items: center; justify-content: space-between; gap: 1em; color: rgba(255, 255, 255, 0.72); font-size: var(--fs-tag); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.35em; }
+.walk-card__head { display: flex; align-items: center; justify-content: space-between; gap: 1em; color: rgba(255, 255, 255, 0.72); font-size: var(--fs-tag); font-family: var(--font-mono); margin-bottom: 0.35em; }
 .walk-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1.2em; padding: 0.18em 0; }
 .walk-row[hidden] { display: none; }
 .walk-row__l { color: rgba(255, 255, 255, 0.82); white-space: nowrap; }
@@ -56,7 +62,7 @@
   position: absolute; left: 11.5%; bottom: 25%; min-width: 15em; padding: 0.7em 1em 0.8em;
   background: var(--helmet-card); border: 1px solid var(--helmet-line); border-radius: var(--radius-card); backdrop-filter: blur(6px);
 }
-.walk-reserve__head { display: flex; align-items: center; justify-content: space-between; gap: 1em; color: rgba(255, 255, 255, 0.78); font-size: var(--fs-tag); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+.walk-reserve__head { display: flex; align-items: center; justify-content: space-between; gap: 1em; color: rgba(255, 255, 255, 0.78); font-size: var(--fs-tag); font-family: var(--font-mono); }
 .walk-reserve__main { display: flex; align-items: baseline; justify-content: space-between; gap: 1.2em; margin-top: 0.1em; }
 .walk-reserve__val { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-big); letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
 .walk-reserve__left { font-size: var(--fs-mono); color: rgba(255, 255, 255, 0.85); white-space: nowrap; }
@@ -70,7 +76,7 @@
 /* one alert at a time, upper centre (keeps the ground ahead clear) */
 .walk-alert { position: absolute; top: 21%; left: 50%; transform: translateX(-50%); width: min(30em, 34%); }
 .walk-alert__box { text-shadow: none; animation: slide-up var(--slide) both; background: rgba(0, 0, 0, 0.6); }
-.walk-alert__lvl { font-size: var(--fs-tag); text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+.walk-alert__lvl { font-size: var(--fs-tag); opacity: 0.85; }
 .walk-alert .alert__text { color: var(--text); }
 
 /* reticle and look-at card */
@@ -124,7 +130,7 @@
 .walk-modal__card { width: min(30em, 40%); background: rgba(12, 10, 9, 0.78); border: 1px solid var(--helmet-line); border-radius: var(--radius-card); padding: 1.2em 1.4em; backdrop-filter: blur(8px); }
 .walk-modal__card.is-warning { border-color: var(--warning); }
 .walk-modal__card.is-warning .walk-modal__title { color: var(--warning); }
-.walk-modal__kicker { font-size: var(--fs-tag); color: var(--text-2); text-transform: uppercase; letter-spacing: 0.06em; }
+.walk-modal__kicker { font-size: var(--fs-tag); color: var(--text-2); }
 .walk-modal__title { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-headline); letter-spacing: -0.02em; margin-top: 0.15em; }
 .walk-modal__text { margin: 0.5em 0 0; }
 .walk-modal__photo { margin: 0.7em 0 0; }

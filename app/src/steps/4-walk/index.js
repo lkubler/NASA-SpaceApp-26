@@ -38,6 +38,7 @@ export default {
     const route = ctx.state.route;
     if (!route) { hud.setLoading('No route planned. Start from step 1.'); return; }
     hud.setTerrain(t);
+    hud.setTask(ctx.state.request && ctx.state.request.title);
     hud.setPlanBroken(ctx.state.plan && ctx.state.plan.brokenRules);
     // cost fields to the rover and the spot: built once here, read every step
     roverField(t); spotField(t, route.spot);

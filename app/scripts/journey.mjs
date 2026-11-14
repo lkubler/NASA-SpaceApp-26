@@ -18,7 +18,7 @@ const base = args.find((a) => /^https?:/.test(a)) || 'http://localhost:5173/';
 const RUNS = {
   'near-1280': { spot: 'F1', w: 1280, h: 720, request: 0 },
   'far-1280': { spot: 'F7', w: 1280, h: 720, request: 0 },
-  'far-1920': { spot: 'F7', w: 1920, h: 1080, request: 1 },
+  'far-1920': { spot: 'F7', w: 1920, h: 1080, request: 0 },
 };
 const chosen = args.filter((a) => RUNS[a]);
 const runs = chosen.length ? chosen : Object.keys(RUNS);
@@ -46,6 +46,11 @@ for (const run of runs) {
   };
   const text = (sel) => page.locator(sel).first().innerText();
   const S = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__state, (k, v) => (ArrayBuffer.isView(v) ? undefined : v))));
+  // a Plan map marker by its spot name (aria-label "<name>, total ...")
+  const clickSpot = async (id) => {
+    const name = (await S()).candidates.find((c) => c.candidate.id === id).candidate.name;
+    await page.locator(`.step--plan .plan-hit[aria-label^="${name},"]`).click({ force: true });
+  };
   const step = async () => page.evaluate(() => window.__state.step);
 
   try {
@@ -59,9 +64,11 @@ for (const run of runs) {
     await page.waitForFunction(() => !document.querySelector('.m1-intro') && !document.querySelector('.m1--flying'), null, { timeout: 30000 });
     await page.waitForTimeout(500);
     await shot('crater');
-    await page.click('.m1-site--murray .m1-site__name');
+    // the missions panel is open from the start; the locked missions must not be selectable
     await page.waitForSelector('.m1-panel.is-open .m1-req');
     await shot('requests');
+    await page.locator('.m1-req.is-locked').first().click({ force: true });
+    if ((await S()).request) fail(run, 'a locked mission was selectable');
     await page.locator('.m1-req').nth(cfg.request).click();
     await shot('request-chosen');
     const req = (await S()).request;
@@ -75,7 +82,7 @@ for (const run of runs) {
     await shot('plan-open');
     const cands = (await S()).candidates.map((c) => c.candidate.id);
     const k = cands.indexOf(cfg.spot);
-    await page.locator('.step--plan .map-marker--number.plan-hit').nth(k).click({ force: true });
+    await clickSpot(cfg.spot); // by name: the preselected spot is drawn on top, so the order changes
     await page.waitForFunction((id) => window.__state.spotId === id, cfg.spot);
     await shot(`plan-${cfg.spot}`);
     const planTxt = {
@@ -205,16 +212,17 @@ for (const run of runs) {
     const s2 = await S();
     if (s2.route || s2.walk || s2.spotId || s2.request) fail(run, 'mission state not cleared');
     if (!s2.requestsDone.includes(req.id)) fail(run, 'finished request not marked done');
-    await page.click('.m1-site--murray .m1-site__name');
     await page.waitForSelector('.m1-panel.is-open .m1-req');
     await shot('new-mission-requests');
-    // second mission: the other request, through Plan and Go into the Walk, then end with esc
-    await page.locator('.m1-req').nth(1 - cfg.request).click();
+    // second mission: the same (only playable) mission again, picked on its site marker this time,
+    // through Plan and Go into the Walk, then end with esc
+    await page.click('.m1-site--murray .m1-site__name');
+    if (!(await S()).request) fail(run, 'clicking the Murray Buttes marker did not choose its mission');
     await page.click('.m1-panel__action .pill');
     await page.waitForSelector('.step--plan .plan-hit');
     await page.waitForTimeout(400);
-    if ((await S()).spotId) fail(run, 'second mission starts with a spot already chosen');
-    await page.locator('.step--plan .map-marker--number.plan-hit').nth(cands.indexOf('F3')).click({ force: true });
+    { const st = await S(); if (st.spotId !== st.request.spotId) fail(run, `second mission: spot ${st.spotId}, expected the request's spot ${st.request.spotId}`); }
+    await clickSpot('F3');
     await page.waitForFunction(() => window.__state.spotId === 'F3');
     await shot('second-plan');
     await page.click('.step--plan .split__action .pill');

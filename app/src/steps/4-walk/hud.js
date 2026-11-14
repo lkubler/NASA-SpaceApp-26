@@ -41,7 +41,11 @@ export function createHud(el) {
   const tgtLineTxt = h('span');
   const tgtLine = h('div.walk-target__line.mono', tgtLineTxt, ' ', tag(ROUTE_TAG));
   const tgtBar = h('div.walk-target__bar', h('span'));
-  const mini = h('div.walk-mini', h('div.walk-mini__disc', miniCv, h('span.walk-mini__n.mono', 'N')), h('div.walk-target', tgtName, tgtLine, tgtBar));
+  // the request from Earth (step 1) is the current task; ticked once the sample is taken
+  const taskV = h('span.walk-task__v');
+  const task = h('div.walk-task', { hidden: true }, h('span.walk-task__mark'), h('span.walk-task__k', 'Task'), taskV);
+  const mini = h('div.walk-mini', h('div.walk-mini__disc', miniCv, h('span.walk-mini__n.mono', 'N')), h('div.walk-target', task, tgtName, tgtLine, tgtBar));
+  function setTask(title) { taskV.textContent = title || ''; task.hidden = !title; }
 
   // suit and body
   const bodyVals = {};
@@ -206,6 +210,7 @@ export function createHud(el) {
   let lastAlert = '', lastPrompt = '', lastLook = '';
   function update(sim, headingDeg) {
     const { s, log } = sim;
+    task.classList.toggle('is-done', !!log.sample);
     drawCompass(headingDeg);
     drawMini(sim, headingDeg);
     const tg = sim.target();
@@ -391,6 +396,6 @@ export function createHud(el) {
     mVals.plan.textContent = names.join(', ');
     mVals.plan.className = 'walk-row__v mono tone-warning';
   }
-  return { setPlanBroken, setTerrain, update, setLook, setMarks, showSample, showEmpty, hideModal, setEscArmed, setLoading, hud };
+  return { setTask, setPlanBroken, setTerrain, update, setLook, setMarks, showSample, showEmpty, hideModal, setEscArmed, setLoading, hud };
 }
 

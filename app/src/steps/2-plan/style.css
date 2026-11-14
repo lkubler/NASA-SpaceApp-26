@@ -6,9 +6,14 @@
 .step--plan .split__map > .map { flex: 1 1 auto; height: auto; width: 100%; aspect-ratio: auto; min-height: 0; }
 .step--plan .split__map .map__canvas { object-fit: cover; }
 .step--plan .split__side { max-width: none; }
-.step--plan .plan-req { border-left: 2px solid var(--accent); padding: 0.1em 0 0.1em 0.8em; }
-.step--plan .plan-req__kicker { font-size: var(--fs-tag); color: var(--text-2); }
-.step--plan .plan-req__title { font-size: var(--fs-small); margin-top: 0.15em; }
+.step--plan .plan-chip {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5em; max-width: 100%;
+  padding: 0.3em 0.85em 0.3em 0.7em; border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  font-size: var(--fs-small); background: rgba(255, 255, 255, 0.04);
+}
+.step--plan .plan-chip__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+.step--plan .plan-chip__k { color: var(--text-2); }
+.step--plan .plan-chip__v { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .step--plan .legend { gap: 0.45em 1.2em; margin-top: 0.7em; }
 .step--plan .legend__note { margin-left: 0; }
 .step--plan .legend .vlabel { margin-left: -0.3em; }
