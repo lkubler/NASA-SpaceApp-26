@@ -5,6 +5,9 @@ import { autonomy, evaDose, doseRate, SPE } from '../model/rad.js';
 import { SOL1440_START } from '../model/mars24.js';
 
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+// Reference doses: chest X-ray ~0.1 mSv (RadiologyInfo.org / FDA), Earth natural background ~2.4 mSv/yr (UNSCEAR 2008).
+const XRAY_MSV = 0.1, EARTH_MSV_PER_DAY = 2.4 / 365;
+
 const fmt = (m) => (m < 10 ? m.toFixed(1) : String(Math.round(m)));
 
 /** "Earth would hear you in N min . answer in 2N min" bar. millis = scenario date (default: demo sol 1440). */
@@ -30,10 +33,12 @@ export function radCounter() {
   tg.addEventListener('click', () => { spe = !spe; tg.textContent = 'SPE replay: ' + (spe ? 'on' : 'off'); tg.setAttribute('aria-pressed', String(spe)); c2.hidden = !spe; warn.hidden = !spe; root.dataset.state = spe ? 'warn' : ''; update(...last); });
   function update(elapsedS, routeTotalS) {
     last = [elapsedS, routeTotalS];
-    v.textContent = evaDose(elapsedS, { spe }).toFixed(4) + ' mSv';
-    let t = doseRate(elapsedS, { spe }).toFixed(3) + ' mSv/h';
-    if (routeTotalS) t += ' · route ' + evaDose(routeTotalS, { spe }).toFixed(3);
-    s.textContent = t;
+    const d = evaDose(elapsedS, { spe });
+    v.textContent = (d < 0.0005 ? '0' : d.toPrecision(2)) + ' mSv';
+    if (routeTotalS) {
+      const tot = evaDose(routeTotalS, { spe });
+      s.textContent = `EVA total ${tot.toPrecision(2)} mSv \u2248 ${(tot / XRAY_MSV).toFixed(1)} chest X-rays \u00b7 ${Math.round(tot / EARTH_MSV_PER_DAY)} days of Earth background`;
+    } else s.textContent = `${doseRate(elapsedS, { spe }).toPrecision(2)} mSv/h \u00b7 1 chest X-ray \u2248 0.1 mSv`;
   }
   update(0);
   return { el: root, update };

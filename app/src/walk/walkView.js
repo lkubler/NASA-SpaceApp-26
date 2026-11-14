@@ -43,6 +43,10 @@ let route3d = null;
 const stats = { heightmapMs: 0, gridCells: N * N, tris: 0, texLoaded: 0 };
 
 // ---- load ----
+function spread(img) { // mean channel spread of a 8x8 downsample; Access Mars greyscale placeholders have ~0
+  try { const c = document.createElement('canvas'); c.width = c.height = 8; const g = c.getContext('2d'); g.drawImage(img, 0, 0, 8, 8); const d = g.getImageData(0, 0, 8, 8).data; let m = 0;
+    for (let i = 0; i < d.length; i += 4) m += Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]); return m / 64; } catch (e) { return 99; }
+}
 const tl = new THREE.TextureLoader();
 const loader = new GLTFLoader();
 loader.setDRACOLoader(new OldDracoLoader());
@@ -55,9 +59,13 @@ loader.load(BASE + 'terrain.glb', (gltf) => {
     while (n && !/TYPE_/.test(name)) { n = n.parent; name = n ? n.name : ''; }
     if (/TYPE_TILE/.test(name)) {
       const id = /ID_(\d+)/.exec(name)[1];
-      const tex = tl.load(BASE + 'tiles/' + id + '.jpg', () => { stats.texLoaded++; });
+      o.visible = false; // hidden until its photo texture arrives
+      // Access Mars ships 64-128 px greyscale placeholder tiles where no photo exists: tint them to terrain ochre so they do not read as a grey slab
+      const tex = tl.load(BASE + 'tiles/' + id + '.jpg', (t) => { stats.texLoaded++; const sp = spread(t.image); if (sp < 12) o.material.color.setRGB(0.95, 0.42, 0.22); else if (sp < 40) o.material.color.setRGB(1.0, 0.62, 0.42); /* pale grey photo tiles: warm to match the ochre terrain */ o.visible = true; });
       tex.flipY = false; tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
       o.material = new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0 });
+      // Where the photo mosaic has no colour (grey fill), grade texels towards terrain ochre so no grey slab shows: SIMULATED fill, not data
+      o.material.onBeforeCompile = (sh) => { sh.fragmentShader = sh.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n  { float mx = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b)), mn = min(diffuseColor.r, min(diffuseColor.g, diffuseColor.b)); float g = 1.0 - smoothstep(0.03, 0.10, (mx - mn) / max(mx, 0.05)); diffuseColor.rgb = mix(diffuseColor.rgb, dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)) * vec3(1.35, 0.85, 0.55), g); }'); };
       o.castShadow = true; o.receiveShadow = true;
       state.tiles.push(o);
       stats.tris += o.geometry.index ? o.geometry.index.count / 3 : o.geometry.attributes.position.count / 3;

@@ -14,7 +14,7 @@ const GROUPS = [
     ['Mars24 sun position', 'Solar elevation and azimuth from the NASA GISS Mars24 algorithm (Allison and McEwen), 2015 update. Checked against the page worked examples.', 'https://www.giss.nasa.gov/tools/mars24/help/algorithm.html'],
     ['Pandolf load-carriage equation with Santee grade correction', 'Metabolic cost of walking by slope and load; method used by NASA JSC for traverse workload (Kim et al., IEEE EMBC 2024). Suit offset and Mars gravity factor are our assumptions.', 'https://ntrs.nasa.gov/api/citations/20240001423/downloads/IEEE%20EMBC%202024.pdf'],
     ['NASA EVA sizing numbers', '8 h EVA, 50 lbm carried mass, 2.2 mph walkback speed, 1200 BTU/hr average (Ogilvie et al., ICES-2026-127). The 15 to 20 degree slope limit is a planning threshold from Apollo experience, not a NASA requirement.', 'https://ntrs.nasa.gov/citations/20260005410'],
-    ['Radio line of sight (comms shadow)', 'Viewshed over the DTM from the lander. Our modelled assumption, not a NASA figure.', null],
+    ['Radio line of sight (comms shadow)', 'Viewshed over the DTM from the relay rover parked on high ground, the comms source. The 10 min limit is an assumed mission rule, not a NASA figure.', null],
   ]],
   ['simulated', 'SIMULATED', 'Placeholders, labelled in the UI. No real data behind them yet.', [
     ['Dust haze (tau)', 'Slider-driven fog and visibility. A mission would use orbiter dust opacity plus local weather stations.', null],
