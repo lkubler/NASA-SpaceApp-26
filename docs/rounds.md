@@ -34,3 +34,8 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Did: recorded human chat decisions in DECISIONS.md (idea, stack proposal, hosting, theme, deadline 15:45, walkback 2–3.5 km, desktop only); designer wrote `docs/design.md`; data-scout sourced Quela + dust hazards; builder 3D spike started on `spike-3d`.
 - Result: design system (white paper UI + Mars red, dark glass HUD, provenance colors, magenta comms shadow). Quela "Murray Butte 12" + cross-bedding sourced only via Universe Today (secondary); Access Mars INTERFERENCE POI supports comms shadow. Dust: 2018 storm tau 8.5 at Gale, labelled tau table; winds can't blow people over.
 - Next: 3D spike go/no-go; after 14:00 confirmation create BUILD tasks (designer section 16 list).
+
+## Round 7 — Sat 14.11. 13:38 (EXPLORE)
+- Did: reviewed builder 3D spike (branch `spike-3d`, bd1895c, not merged); copied `research/spike-3d.md` + screenshot to main.
+- Result: GO. Vite + Three.js loads Access Mars Murray Buttes glb (64 tiles, 128k tris), WASD + pointer lock, raycast ground height, uphill slowdown, 0.5 m heightmap (256×256, ~45 ms, 2 holes) matching raycast within 3 mm. Gotchas: 2017 Draco needs the original decoder (`oldDraco.js`); root scale ×100. Median slope 7.8°, p95 34° → hazard thresholds will trigger often. FPS unmeasured on real GPU (headless software GL only) — a human should try it once.
+- Next: humans confirm idea/stack at 14:00, then BUILD tasks (planner + comms shadow + reserve first, 3D walk second, visuals third).
