@@ -11,7 +11,7 @@ Each round:
 
 By phase:
 - EXPLORE: start with `intel`, `scout`, `data-scout`. Route new notes in `notes.md` to `triage`. Before the idea decision, ask `jury` to compare the top candidates. Humans decide idea and stack.
-- BUILD: right after the idea decision, run `designer` for visual directions (humans pick one) before the first UI work. Break the project into small tasks with clear done criteria and separate areas per person. Run `ux-tester` after significant merges. Reassess scope at the halfway point. Run `designer` for a polish pass and `jury` on the prototype before freeze.
+- BUILD: right after the idea decision, run `designer` to propose themes; the humans pick one once (or the recommendation stands after ~1 hour). After that, design runs without human review. Break the project into small tasks with clear done criteria and separate areas per person. Run `ux-tester` after significant merges. Reassess scope at the halfway point. Run `designer` for a polish pass and `jury` on the prototype before freeze.
 - FREEZE: fixes, polish, demo. `pitch`, `designer` (demo visuals), and `compliance`.
 - SUBMIT: final `compliance` check. Leave a buffer before the deadline.
 

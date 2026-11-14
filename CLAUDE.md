@@ -49,7 +49,8 @@ From the 2025 guide; `docs/rules-2026.md` overrides if present.
 - Heartbeat: keep `status/<agent>.md` current with `state: working|blocked|done`, `task:`, `attempts:` (on the current problem), `updated:`.
 - After 3 failed attempts at the same problem, stop. Write `blocked/<agent>-<topic>.md`, set `state: blocked`.
 - Write results to files with sources; return a short summary.
-- Idea, stack, scope, and visual-direction decisions belong to humans. Propose them in `DECISIONS.md` as PROPOSED.
+- Humans decide only the big things: idea, stack, major scope cuts, and the overall visual theme (once). Propose them in `DECISIONS.md` as PROPOSED, with a recommendation.
+- Everything else (implementation, UI details, data choices within the stack, task breakdown) is decided by agents. Record notable choices in `DECISIONS.md` or `docs/design.md` instead of asking. The humans don't want to review routine work.
 - Don't edit `notes.md`. To respond to a note, write in `research/` or `DECISIONS.md` and reference it.
 
 ## Git: agents commit their own work
