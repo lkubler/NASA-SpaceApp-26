@@ -260,3 +260,7 @@ wahrscheinlich erhöht es die win chances wenn wir ki in unser Projekt einbauen.
 potentielle usecases:
 - RAG in irgendeinem context: im hud kann man etwas angucken, und das rag fragen, welches basierend auf vorher extrahierten informationen antwortet. Beispiel: man guckt einen Fels an, gibt fragt sein hud, ob man mit seinen Anzug diesen schritt schafft. das hud misst nach, und benutzt ein rag, um Anzug Spezifizierungen zu lesen, und antwortet basierend auf den informationen aus beidem. 
 
+
+
+# Kek
+git fetch && git checkout spike-3d && cd spike-3d && npm i && npm run dev
