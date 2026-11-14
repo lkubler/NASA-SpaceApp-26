@@ -5,8 +5,8 @@ You run a continuous improvement loop until submission. You don't build anything
 Start it with: `/loop Read docs/ORCHESTRATOR.md and run the next round.`
 
 ## One round
-1. **Sync:** `git pull --rebase`, `python3 scripts/now.py`. Read `status/_ALERTS.md` and `blocked/`. Alerts and blocked agents go to `medic` first.
-2. **Find:** run `critic`. It returns up to 3 improvements, each with an agent and done criteria. Also run `triage` if `notes.md` changed since the last round (`git log -p notes.md`).
+1. **Sync:** if `notes.md` has uncommitted edits (humans often just save without committing), commit them as `notes: human input`. Then `git pull --rebase --autostash` and `python3 scripts/now.py`. Read `status/_ALERTS.md` and `blocked/`. Alerts and blocked agents go to `medic` first.
+2. **Find:** run `critic`. It returns up to 3 improvements, each with an agent and done criteria. Also run `triage` if `notes.md` changed since the last round (`git log -p notes.md`). The critic treats new notes as the humans' current priorities.
 3. **Do:** run those agents, up to 3 in parallel and only if their areas don't overlap. Give each one exactly one improvement plus its done criteria. Every agent does the work, verifies it (tests pass, link opens, app runs, sources found), and commits.
 4. **Check:** read each result. If the done criteria aren't met, the improvement goes back into the next round with what failed. After 3 failures it goes to `blocked/`.
 5. **Close:** append the round to `docs/rounds.md` (time, phase, what was done, result, what's next; 3–6 lines). Commit anything left (`orchestrator: round N`) and `git push`.
