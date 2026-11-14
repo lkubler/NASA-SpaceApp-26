@@ -110,3 +110,8 @@
 .step--debrief .dbf__checks { display: flex; flex-wrap: wrap; gap: 0.4em 1.6em; }
 .step--debrief .dbf__checks .check { font-size: var(--fs-small); }
 .step--debrief .dbf__foot .pill { flex: none; }
+/* a warning in the list shows its place on the map (feedback-1, Maps) */
+.step--debrief .dbf__wi.is-link { cursor: pointer; border-radius: 8px; margin: -0.2em -0.35em; padding: 0.2em 0.35em; transition: background var(--fade); }
+.step--debrief .dbf__wi.is-link:hover, .step--debrief .dbf__wi.is-link:focus-visible { background: var(--surface-2); outline: none; }
+.step--debrief .dbf__wi.is-focus { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.step--debrief .map-marker.dbf-wm.is-focus circle { stroke: #fff; stroke-width: 1.4; filter: drop-shadow(0 0 3px #fff); }

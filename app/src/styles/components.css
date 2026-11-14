@@ -139,3 +139,15 @@ button.check:hover .check__text { text-decoration: underline; text-underline-off
 .map-marker--point circle { fill: #fff; stroke: #000; stroke-width: 0.6; }
 .map-marker--dot circle { fill: #fff; }
 .map-marker__label { fill: #fff; font: 500 4.6px var(--font-text); paint-order: stroke; stroke: rgba(0,0,0,0.55); stroke-width: 1.2px; }
+/* map pan / zoom (feedback-1, Maps): drag to move, small + / − / reset buttons bottom right */
+.map { touch-action: none; user-select: none; }
+.map__svg, .map__canvas { cursor: grab; }
+.map.is-dragging, .map.is-dragging .map__svg, .map.is-dragging .map__svg * { cursor: grabbing !important; }
+.map__zoom { position: absolute; right: 3.5%; bottom: 4%; display: flex; flex-direction: column; gap: 4px; z-index: 2; }
+.map__btn {
+  width: 28px; height: 28px; display: grid; place-items: center; padding: 0;
+  background: rgba(12, 12, 13, 0.82); color: var(--text); border: 1px solid var(--line-strong); border-radius: 8px;
+  font: 500 16px/1 var(--font-mono); cursor: pointer; transition: border-color var(--fade), color var(--fade);
+}
+.map__btn:hover, .map__btn:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+.map-leader { stroke: #fff; stroke-width: 1; opacity: 0.85; pointer-events: none; }
