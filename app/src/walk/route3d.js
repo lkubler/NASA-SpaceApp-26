@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import * as comms from '../model/comms.js';
 import { app } from '../state.js';
+import { mountStations } from './stations.js';
 
 const LAPSE_S = 24; // guided walk: the whole EVA plays in ~24 s of wall time
 const STEP = 0.5, HALF = 64, INSET = 0.75, LIFT = 0.14, SLOPE_WARN = 20;
@@ -37,6 +38,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     clearTimeout(toastT); toastT = setTimeout(() => { warnEl.hidden = true; }, 4500);
   }
 
+  const stations = mountStations({ container, state });
   const flashEl = document.createElement('div'); flashEl.className = 'walk-flash'; container.append(flashEl);
   function flash() { flashEl.classList.remove('on'); void flashEl.offsetWidth; flashEl.classList.add('on'); }
 
@@ -147,6 +149,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
   }
 
   function update(dt, slopeDeg = 0) {
+    stations.update();
     const cur = app.get().route;
     if (cur !== routeRef) { routeRef = cur; build(); }
     if (!R) return;
@@ -199,7 +202,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     if (document.pointerLockElement) document.exitPointerLock();
     const m = document.getElementById('msg'); if (m) m.style.display = 'none';
   });
-  app.on((st) => { btn.style.display = st.view === 'walk' && R && R.first >= 0 ? '' : 'none'; if (st.view !== 'walk' && guided) stop(); });
+  app.on((st) => { btn.style.display = st.view === 'walk' && R && R.first >= 0 ? '' : 'none'; if (st.view !== 'walk') { stations.hide(); if (guided) stop(); } });
 
-  return { update, spawn, rebuild: build, toast, seek(frac) { if (R && R.hasEl) lapseT = R.el[R.el.length - 1] * frac; }, tbFrac() { return R && R.hasEl && R.tb > 0 ? R.el[R.tb] / R.el[R.el.length - 1] : null; }, get built() { return R; }, get guided() { return guided; }, setGuided(v) { if (v !== guided) btn.click(); } };
+  return { stations, update, spawn, rebuild: build, toast, seek(frac) { if (R && R.hasEl) lapseT = R.el[R.el.length - 1] * frac; }, tbFrac() { return R && R.hasEl && R.tb > 0 ? R.el[R.tb] / R.el[R.el.length - 1] : null; }, get built() { return R; }, get guided() { return guided; }, setGuided(v) { if (v !== guided) btn.click(); } };
 }
