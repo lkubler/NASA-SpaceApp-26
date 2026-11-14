@@ -22,10 +22,19 @@ export const DISPLAY = {
   roverHalfLenM: 2.3,
   roverHalfWidthM: 1.45,
   roverMarginM: 0.4,
-  lockDriftEvents: 2,     // the cursor moved this many times under the pointer lock: the lock does not hold it, drag look instead
+  lockDriftEvents: 2,     // the cursor moved this many times under the pointer lock: the lock does not hold it, free look instead
+  lockOffsetPx: 150,      // ... or this many movementX events in a row, all the same way and each at least lockOffsetPx:
+  lockOffsetEvents: 8,    //     offsets from the lock point, not steps (assumption: no real hand moves 1200 px in 8 events)
+  lockPendingMs: 1000,    // after a lock request, the cursor's own way does not turn the view until locked or refused, at most this long
+  // free look (no pointer lock): the plain cursor movement turns the view; resting near an edge keeps turning
+  edgeZoneFrac: 0.06,     // edge zone: this share of the view's width (left / right) and height (top / bottom)
+  edgeZoneMinPx: 24,      // ... but at least this many pixels
+  edgeTurnDegS: 90,       // turning speed while the cursor rests in the left / right edge zone
+  edgePitchDegS: 40,      // looking up / down while it rests in the top / bottom edge zone
   clickMaxPx: 6,         // a press that moves the mouse less than this is a click (aim mode: jump), more is a drag (look)
   tapMaxMs: 250,          // a Shift press shorter than this is a tap (longer: a hold for fast walk)
   doubleTapMs: 400,       // two Shift taps within this time: demo speed on / off
+  repeatGapMs: 30,        // a Shift keydown this soon after its keyup is the same press (auto-repeat sent as up + down pairs)
   jumpMaxM: 40,           // aim mode (F): the crosshair ray meets the ground within this distance
   jumpStepM: 0.25,        // a jump is logged in steps of at most this length (warnings, radio time as walked)
   jumpNoteS: 4,           // "Jump: counted as walked" stays this long after a jump

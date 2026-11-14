@@ -179,3 +179,6 @@
 .walk-aim.is-bad .walk-aim__label { color: var(--text); }
 .walk-aim.is-free .walk-aim__ring { display: none; }
 .walk-aim.is-quiet .walk-aim__label { visibility: hidden; }
+
+/* ?mousedebug=1 only: mouse look readout (dev) */
+.walk-mdebug { position: fixed; left: 8px; bottom: 44px; z-index: 50; margin: 0; padding: 0.5em 0.7em; pointer-events: none; font-family: var(--font-mono); font-size: 12px; line-height: 1.35; color: #fff; background: rgba(0, 0, 0, 0.75); border-radius: 6px; white-space: pre; }
