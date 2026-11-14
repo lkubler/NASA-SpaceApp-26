@@ -8,6 +8,7 @@
 .tile .num { font: 500 32px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
 .tile .unit { font: 400 12px var(--font-body); color: var(--ink-muted); }
 .tile-f { display: flex; justify-content: flex-end; }
+.tile[data-state="ok"] .num { color: var(--ok-ink); }
 .tile[data-state="warn"] .num { color: var(--warn-ink); }
 .tile[data-state="danger"] .num { color: var(--danger-ink); }
 

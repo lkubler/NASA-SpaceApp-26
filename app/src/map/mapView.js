@@ -478,7 +478,7 @@ export function mountMap(el) {
   const hint = h('p', 'mp-hint'); hint.innerHTML = 'Click the map: add station &middot; drag: move lander, relay or station &middot; right-click: remove &middot; wheel: zoom &middot; shift-drag: pan &middot; click a ring: Curiosity photo.';
   const fold = (title, body, open, id) => { const d = h('details', 'mp-fold'); d.id = id; d.open = !!open; d.append(h('summary', null, title), body); return d; };
   const more = h('div'); more.append(hint, auto, moreDyn, provLegend(), note);
-  panel.append(head, ctl, tilesBox, verdictBox, btnRow, fold('Stations: tasks and times', stBody, window.innerHeight >= 800, 'mp-f-st'), fold('Check against Curiosity and RAD data', valBody, false, 'mp-f-val'), fold('Comms rule, light time, legend, hints', more, false, 'mp-f-more'));
+  panel.append(head, ctl, tilesBox, verdictBox, btnRow, fold('Stations: tasks and times', stBody, window.innerHeight >= 800, 'mp-f-st'), fold('Check against Curiosity and RAD measurements', valBody, false, 'mp-f-val'), fold('Radio rule, light time, tips', more, false, 'mp-f-more'));
   panel.addEventListener('input', (e) => { if (e.target.id === 'mp-cap') { capacityPct = +e.target.value; panel.querySelector('#mp-capv').textContent = capacityPct + '%'; replan(false); } });
   panel.addEventListener('change', (e) => {
     const t = e.target;
@@ -521,7 +521,7 @@ export function mountMap(el) {
     const clk = tile({ label: 'EVA length', value: last ? (P.at(-1).elapsed_s / 3600).toFixed(1) : '--', unit: 'h', prov: 'modelled', state: night && (night.afterSunset || night.beforeSunrise) ? 'warn' : undefined });
     // reserve at the lander, coloured by margin against the 20 % buffer; the sentence below says why (same numbers)
     const endFrac = last ? last.remainingFraction : 0;
-    const res = tile({ label: 'Reserve at lander', value: last ? Math.round(endFrac * 100) : '--', unit: '% (buffer ' + Math.round(buf * 100) + ')', prov: 'modelled', state: tb || endFrac < buf ? 'danger' : endFrac < buf + 0.05 ? 'warn' : undefined });
+    const res = tile({ label: 'Reserve at lander', value: last ? Math.round(endFrac * 100) : '--', unit: '% (buffer ' + Math.round(buf * 100) + ')', prov: 'modelled', state: tb || endFrac < buf ? 'danger' : endFrac < buf + 0.05 ? 'warn' : 'ok' });
     const worst = sh.reduce((m, s) => Math.max(m, s.duration_s), 0);
     const cm = tile({ label: 'Comms shadow', value: sh.length ? Math.round(worst / 60) : 0, unit: sh.length ? 'min longest' : 'min', prov: 'modelled', state: sh.some((s) => s.exceedsLimit) ? 'danger' : sh.length ? 'warn' : undefined });
     tiles.append(dist, clk, res, cm); tilesBox.append(tiles);
@@ -559,7 +559,7 @@ export function mountMap(el) {
     });
     stBody.append(tbl);
     const homeLeg = route.legs[route.legs.length - 1];
-    if (homeLeg && homeLeg.feasible && waypoints.length) stBody.append(h('p', 'mp-assume', `Last leg home: ${Math.round(homeLeg.dist_m)} m. "home" = best path to the lander from that station, not the outbound path reversed. Amber = slope above ${SLOPE_PREFER_DEG}°; red = after the turn-back point or infeasible.`));
+    if (homeLeg && homeLeg.feasible && waypoints.length) stBody.append(h('p', 'mp-assume', `Last leg home: ${Math.round(homeLeg.dist_m)} m. "home" = best path to the lander from that station, not the outbound path reversed. Amber bar = a steep leg (slope above ${SLOPE_PREFER_DEG}°), still within budget; red = after the turn-back point or infeasible.`));
     const seg = h('p', 'mp-res'); seg.innerHTML = `<span class="sw"></span> Comms shadow on route (${COMMS_SOURCE_NAME}): ` + (sh.length ? sh.length + ' segment(s), longest ' + fmtT(worst) + (sh.some((s) => s.exceedsLimit) ? ` <b class="bad-t">exceeds assumed ${Math.round(shadowLimit_s / 60)} min mission rule</b>` : '') : 'none');
     moreDyn.append(seg);
     const lim = h('label', 'mp-assume'); lim.innerHTML = `Assumed mission rule: max min out of contact <input id="mp-limit" type="number" min="1" max="240" value="${Math.round(shadowLimit_s / 60)}" style="width:4em"> (our assumption, not a NASA figure)`;

@@ -21,9 +21,9 @@ const GROUPS = [
     ['NASA EVA sizing numbers', '8 h EVA, 50 lbm carried mass, 2.2 mph walkback speed, 1200 BTU/hr average (Ogilvie et al., ICES-2026-127). The 15 to 20 degree slope limit is a planning threshold from Apollo experience, not a NASA requirement.', 'https://ntrs.nasa.gov/citations/20260005410'],
     ['Radio line of sight (comms shadow)', 'Viewshed over the DTM from the relay rover parked on high ground, the comms source. The 10 min limit is an assumed mission rule, not a NASA figure.', null],
   ]],
-  ['simulated', 'SIMULATED', 'Placeholders, labelled in the UI. No real data behind them yet.', [
-    ['Dust haze (tau)', 'Slider-driven fog and visibility. A mission would use orbiter dust opacity plus local weather stations.', null],
-    ['Local weather window', 'Simulated forecast. REMS-style stations would feed it in the field.', null],
+  ['simulated', 'ILLUSTRATIVE INPUTS', 'Adjustable inputs, labelled in the UI. In the field each would be fed by the real source named below.', [
+    ['Dust haze (tau)', 'Slider-driven fog and visibility. Planned source: orbiter dust opacity maps plus local weather stations (REMS).', null],
+    ['Local weather window', 'Illustrative forecast. Planned source: REMS-style weather stations in the field.', null],
   ]],
 ];
 const CODE = [
@@ -32,6 +32,7 @@ const CODE = [
   ['Barlow Semi Condensed, IBM Plex Sans, IBM Plex Mono via Fontsource (SIL OFL 1.1)', 'https://fontsource.org'],
 ];
 
+function label(url) { try { const u = new URL(url); const last = decodeURIComponent(u.pathname.split('/').filter(Boolean).pop() || ''); const short = last.length > 28 ? last.slice(0, 26) + '...' : last; return u.hostname.replace(/^www\./, '') + (short ? ' / ' + short : ''); } catch (e) { return url; } }
 function link(text, url) { const a = h('a', 'src-a', text); a.href = url; a.target = '_blank'; a.rel = 'noopener'; return a; }
 
 export function mountSources(root) {
@@ -46,7 +47,7 @@ export function mountSources(root) {
     items.forEach(([t, d, url]) => {
       const it = h('div', 'src-item');
       it.append(h('div', 'src-t', t), h('div', 'src-d', d));
-      if (url) it.append(link(url.replace(/^https?:\/\//, '').slice(0, 64), url));
+      if (url) it.append(link(label(url), url));
       c.append(it);
     });
     cols.append(c);
