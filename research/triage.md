@@ -109,3 +109,79 @@ Pitch framing "layer below Mars Trek" is not a feature; adopt it as the one-sent
 - `scout`: suit limits and EVA reserve sources; novelty check against Mars Trek and earlier Space Apps entries.
 - `builder`: 3D terrain spike.
 - `pitch` and `designer`: after 14:00.
+
+## Update: new notes (12:50)
+
+Scope: new items at the end of notes.md. No new core ideas; all are extensions of the chosen route planner or open questions. Scores are judgement; all data claims not backed by `research/data.md` are marked UNVERIFIED.
+
+### Minimap (HUD bottom-left, route, auto-zoom, recompute on mission change)
+- Summary: small 2D map in the HUD showing the planned route and position; fits the route extent; reroutes with mission changes.
+- Scores: Impact 2, Creativity 2, Validity 4, Relevance 4, Presentation 4. Feasibility 5.
+- Verdict: **pursue (keep)**. Cheap: the 2D map, route polyline and DTM raster already exist for the dashboard. Auto-zoom is a bounding-box fit (fitBounds-style) with padding. Recompute-on-change comes free if the planner runs client-side (same dependency as live rerouting). Suggest: draw the comms-shadow overlay and a "you are here" arrow on it, so it also carries the signature feature. Use the cropped ortho as backdrop, no extra data.
+
+### Dust storms and other Mars-specific hazards
+- Answer (from existing research): the data layer already covers some; the rest are labelled simulation (Platzhalter-Prinzip).
+  - Dust/weather: Mars Climate Database (LMD, ESA/CNES-linked, free for research, TESTED in data.md) has a dust-scenario parameter (`dust=1`), so a modelled dust/temperature window for Gale is possible. REMS (PDS Atmospheres) gives measured temp/pressure/UV per sol; wind coverage UNVERIFIED (sensor damaged early).
+  - Global dust storm context: the 2018 storm ended Opportunity; Curiosity measured an opacity (tau) spike at Gale in 2018 (UNVERIFIED, from memory; scout to cite). Aug-Sep 2016 was not a storm period (UNVERIFIED).
+  - Mars-only hazards we can show with data we already have: low pressure/thermal swing (REMS), radiation incl. no magnetic field (RAD), dust on suit/solar panels and reduced sunlight (modelled tau), perchlorate dust toxicity (qualitative, briefing text), long radio delay (qualitative; our HUD has no live Earth link, so ground control would be delayed 4-24 min, UNVERIFIED exact range, well known 3-22 min), and sand ripples/traction (THEMIS too coarse; skip).
+- Verdict: **keep as a simulated, labelled weather/dust warning** (one HUD element plus one briefing line). Do not build a dust physics simulation. Optional visual: reduced visibility haze in the 3D scene tied to a tau slider (see graphics).
+- Cost: low (static JSON from MCD) to medium (visual haze). Missing: `data-scout` check MCD dust output for the EVA sol/season (Ls of Aug-Sep 2016, UNVERIFIED), REMS DATA file open.
+
+### Make it look great (WebGL/WASM, lighting, day/night)
+- Summary: visual polish through lighting, sun position, atmosphere, post effects.
+- Clarification: WebAssembly is not needed for graphics. WebGL/WebGPU through Three.js does shaders, shadows, fog and post-processing. WASM only helps heavy compute (e.g. pathfinding or viewshed in Rust/C++); JS typed arrays on a 2-3 km raster are fast enough. Recommend: Three.js, no WASM unless the viewshed profiles slow.
+- Verdict: **keep, ranked as polish (Presentation + Art & Technology award)**. Priority order by value per hour:
+  1. Directional sun light with real-looking shadows plus ortho texture and dusty-orange fog/haze (1-2 h).
+  2. Sun position by the Mars24 algorithm (already open item, about 1 h): ties day/night to the real EVA time window and to HUD "daylight left".
+  3. Day/night slider on the dashboard (timeline scrub), sky colour gradient, stars at dusk (2-3 h, stretch).
+  4. Bloom, vignette, helmet-glass overlay, dust particles (stretch, 1-2 h each).
+- Risks: Access Mars mesh is coarse (data.md); a displaced-DTM mesh at 1 m looks better with lighting. 60 fps on laptops must be tested. Do not let polish displace the comms shadow and route.
+- Owner: `designer` (look) plus `builder`.
+
+### Clear loading screen
+- Verdict: **keep, trivial (cost under 1 h)**. Progress bar tied to real asset loading (Three.js LoadingManager), rotating tips that double as storytelling (mission facts, "data vs simulated" legend, credits). Doubles as a place for required NASA credits. Suggest keeping total payload small (tile cache, compressed textures) so the screen is short; a loader hides slowness but judges still open the link on mixed connections.
+
+### Earth-style environment simulation models ("plant a tree at x") for Mars
+- Answer: no direct equivalent as an off-the-shelf tool for Mars surface what-ifs (UNVERIFIED, scout should confirm). What exists, from my knowledge, not checked in the project research:
+  - Global/mesoscale atmospheric models: Mars Climate Database/LMD Mars GCM (in data.md), NASA Ames Mars GCM, MarsWRF (UNVERIFIED availability). They answer "what is the weather at lat/lon/Ls/time", not "what changes if I add an object".
+  - Terraforming and ISRU studies (water extraction, habitat siting) are papers, not interactive models.
+  - The terrain-derived analogues we can build ourselves with the DTM: viewshed (comms shadow), shadow/insolation for a given sun position, cold-air/windshadow proxies. These are "what if I stand/place a relay here" analyses and are the direct Mars equivalent.
+- Verdict: **cut as a model transfer; adapt as a feature**. Suggest (feature, not core idea): "place a relay/beacon at point X and see how the comms shadow shrinks" - reuses the viewshed code, one extra click interaction (about 2-3 h, stretch). It answers the human's what-if intent and strengthens the signature feature. Needs human OK at 14:00 since it is a scope item.
+- Missing: `scout` for any published Mars site-placement tools (low priority).
+
+### Web-based, deployed, reachable by QR code
+- Fits: yes, the stack is already a web app and the submission needs public links without login (CLAUDE.md rules). Keep.
+- Hosting recommendation: **static site on GitHub Pages** (or Cloudflare Pages/Netlify as backup). Reasons: the app has no backend if routing and data are client-side and the data is precomputed into small committed files (data.md plan); free, HTTPS, stable URL for the project page; deploy by pushing a `gh-pages` branch or GitHub Action from `main`. Keep total assets small (limits: GitHub Pages site about 1 GB, repo files under 100 MB; keep each file well under it) and no raw DTM in the repo (it is gitignored).
+  - Verify: repo must be public for free Pages (UNVERIFIED for this account), no login, test in a private window, test on a phone (QR is scanned on mobile: add responsive layout or a "best on desktop" notice, and test touch/pointer-lock behaviour; first-person walk needs pointer lock/keyboard, so provide a mobile fallback such as auto-fly walkthrough or the 2D planner only).
+  - QR code: generate once from the final URL (any offline generator, e.g. a `qrcode` Python/JS library, our own code so no tracking), save as PNG, add it to the demo slides, project page and a printed sheet. Use a short stable URL; do not use a third-party shortener. Test scan with two phones before the pitch.
+  - Backup: ship a local build or screen recording in case venue Wi-Fi fails at the pitch.
+- Cost: low (about 1-2 h, mostly CI and testing). Needs: human to decide repo visibility and the domain/URL (small decision).
+
+### Dashboard components beyond the route planner
+- Summary: open question what else belongs on the dashboard.
+- Answer: only components that already map to the data and the challenge; avoid inventing new directions. Candidates, ranked by value per cost:
+  1. Mission time window panel: REMS/MCD temperature, UV, sun elevation and sunset over the EVA hours (low effort, real data).
+  2. Resource budget: O2/power vs distance and slope (simplified model, Simuliert label), with the return-reserve number.
+  3. Radiation dose budget per EVA with an SEP scenario toggle (published RAD numbers; RAD file access UNVERIFIED).
+  4. Elevation/slope profile along the route with comms-shadow segments marked (cheap from the DTM, very readable).
+  5. Science stops list (POIs) with ETA, time on site and photo.
+  6. Data-vs-simulated legend panel (Platzhalter-Prinzip), also required to disclose AI and data sources.
+- Verdict: take 1, 4, 5 and 6 as the dashboard; 2 and 3 as simple tiles. Limit tile count (5-6 max) to avoid a cluttered UI; Presentation judges a clear story.
+
+### Ranking of the new items (value per cost)
+1. Minimap (keep, 5 feasibility)
+2. Loading screen (keep, trivial)
+3. Web deploy + QR (keep, required in practice)
+4. Dashboard tiles (elevation profile, time window, POI list, legend)
+5. Lighting and sun/day-night polish (keep as polish, staged)
+6. Dust/hazards as labelled simulated warning (keep, small)
+7. Relay placement what-if (stretch, needs human OK)
+8. WASM, Earth-model transfer (cut)
+
+### New questions for the 14:00 meeting
+1. Hosting: OK to make the repo public and use GitHub Pages? Who owns deploy and the QR code?
+2. Mobile: QR users arrive on phones. Desktop-only EVA walk with a mobile 2D/auto-tour fallback, or full mobile support (recommend fallback)?
+3. Relay-placement what-if: approve as stretch feature on the comms shadow?
+4. Dust/weather: accept simulated, clearly labelled visuals (haze) with MCD/REMS-derived values, no storm physics?
+5. Polish budget: how many hours for lighting/day-night versus core features (recommend core first, polish after the walk works, freeze Sun 10:30)?
+6. Dispatch: `data-scout` for MCD dust/Ls, REMS DATA file, RAD; `scout` for citations on dust storms and any Mars site-what-if tools.
