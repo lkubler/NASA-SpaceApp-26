@@ -10,6 +10,8 @@ import { whenHeightmap, slopeGrid } from '../terrain/heightmap.js';
 import { planRoute, costGrid, SLOPE_HARD_DEG, SLOPE_PREFER_DEG } from './planner.js';
 import { makeHome } from './home.js';
 import { computeReserve, DEFAULTS, STATION_TASKS } from '../model/reserve.js';
+import { reserveSensitivity } from '../model/sensitivity.js';
+import { slopeAlongRoute } from '../terrain/slope1m.js';
 import { viewshed, HIDDEN, DEFAULT_SHADOW_LIMIT_S, COMMS_SOURCE_NAME, bestRelay, routeShadowScore } from '../model/comms.js';
 import { sunAtLtst } from '../model/mars24.js';
 import { tile, chip, badge, button, provLegend } from '../ui/components.js';
@@ -18,7 +20,7 @@ import { createStationCard } from '../ui/stationCard.js';
 import { loadScience, legGrades, routeGrades, slopeStats } from './science.js';
 import '../styles/science.css';
 
-// Comms source: ONE name everywhere (COMMS_SOURCE_NAME in model/comms.js): a relay rover parked on high ground.
+// Comms source: ONE name everywhere (COMMS_SOURCE_NAME in model/comms.js): a relay unit parked on high ground.
 // Geometric line of sight from its 2 m antenna [assumption]. The lander is not the source and must see the relay.
 // Default relay position: parked beside the lander (a plausible first guess; it sees little of the loop).
 // "Move relay to high ground" searches the DTM for the position that keeps the crew in contact best.
@@ -69,14 +71,14 @@ export function mountMap(el) {
     try { d1 = await loadDtm(); } catch (e) { console.warn('1 km DTM unavailable', e); }
     try { reg = await loadRegional(DTM_BASE_URL); } catch (e) { console.warn('regional DTM unavailable, using the 1 km grid', e); }
     if (reg && d1) {
-      L = reg; L.meta1 = d1.meta; frames = makeFrames(reg.meta, d1.meta.dtm.cell_m); tf1 = makeTransform(d1.meta);
+      L = reg; L.d1 = d1; L.meta1 = d1.meta; frames = makeFrames(reg.meta, d1.meta.dtm.cell_m); tf1 = makeTransform(d1.meta);
       const o = frames.off, h2 = tf1.walkHalf_m;
       L.tf = { // regional-frame transform; walk-view coordinates go through tf1 (1 km frame)
         sceneToLocal: (x, z) => frames.fromCrop(tf1.sceneToLocal(x, z)), localToScene: (px, py) => tf1.localToScene(px - o.x, py - o.y),
         lonLatToLocal: (a, b) => frames.fromCrop(tf1.lonLatToLocal(a, b)), walkHalf_m: h2,
       };
     } else if (d1) {
-      L = d1; L.meta1 = d1.meta; frames = makeFrames({ relation_to_1km_grid: { col_offset: 0, row_offset: 0 } }, d1.meta.dtm.cell_m); tf1 = makeTransform(d1.meta); L.tf = tf1;
+      L = d1; L.d1 = d1; L.meta1 = d1.meta; frames = makeFrames({ relation_to_1km_grid: { col_offset: 0, row_offset: 0 } }, d1.meta.dtm.cell_m); tf1 = makeTransform(d1.meta); L.tf = tf1;
     } else { // fallback layer: the Access Mars grid built by the Walk view
       const { hm } = await whenHeightmap(); L = { hm, slope: slopeGrid(hm), meta: null, name: 'Access Mars 0.5 m' };
     }
@@ -209,6 +211,7 @@ export function mountMap(el) {
         // true return cost: the best path home from each point on the same cost grid, not the outbound path reversed
         const rin = P.map((p) => { const [c, r] = cellOf(p); return { dist_m: p.dist_m, elev_m: p.elev_m, stationS: p.stationS, time_s: p.time_s, returnKJ: hm.returnKJ(c, r), returnS: hm.returnS(c, r) }; });
         const r = computeReserve(rin, { capacityKJ: capKJ });
+        route.sensIn = { rin, capKJ };
         route.reserve = r; route.turnBackIndex = r.turnBackIndex; route.turnBack = r.turnBack;
         P.forEach((p, i) => { const q = r.points[i]; p.elapsed_s = q.elapsed_s; p.remainingFraction = q.remainingFraction; p.metabolicW = q.metabolicW; p.returnKJ = q.returnCostKJ; p.returnS = rin[i].returnS; });
         route.startHour = startH;
@@ -300,6 +303,20 @@ export function mountMap(el) {
     }
     if (a >= 0) close(a, P.length - 1, dep(P[P.length - 1]));
   }
+  // Task 029: out-of-contact time if the lander were the only radio source (same line-of-sight rule, lander antenna assumed
+  // at the same height as the relay's). Cached by lander position; the viewshed is the slow part.
+  let landerVis = null, landerKey = '';
+  function landerOnlyContact(P) {
+    const key = start.x.toFixed(1) + ',' + start.y.toFixed(1);
+    if (!landerVis || key !== landerKey) { landerVis = viewshed(L.hm, { x: start.x, y: start.y, antennaHeight_m: RELAY_ANTENNA_M }, 1.8); landerKey = key; }
+    const { width: W, height: H } = L.hm, hid = (p) => landerVis[Math.min(H - 1, Math.max(0, Math.floor(p.y / cs()))) * W + Math.min(W - 1, Math.max(0, Math.floor(p.x / cs())))] === HIDDEN;
+    const arr = (p) => (p.elapsed_s ?? p.time_s) - (p.stationS || 0), dep = (p) => p.elapsed_s ?? p.time_s;
+    let total = 0, longest = 0, a = -1;
+    const close = (i0, endT) => { const d = endT - arr(P[i0]); if (d >= 30) { total += d; longest = Math.max(longest, d); } a = -1; };
+    for (let i = 0; i < P.length; i++) { const hd = hid(P[i]); if (hd && a < 0) a = i; else if (!hd && a >= 0) close(a, arr(P[i])); }
+    if (a >= 0) close(a, dep(P[P.length - 1]));
+    return { total_s: total, longest_s: longest };
+  }
   function scheduleReplan(commsToo) {
     if (commsToo) { // viewshed is the slow part: debounce while dragging
       clearTimeout(commsTimer);
@@ -387,7 +404,7 @@ export function mountMap(el) {
       ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x + 10, y + 8); ctx.lineTo(x - 10, y + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
       label('Lander (EVA start and end)', x + 13, y + 5);
     }
-    if (rover && start) { // thin dotted link: relay rover to lander (the lander must see the relay)
+    if (rover && start) { // thin dotted link: relay unit to lander (the lander must see the relay)
       const a = toScreen(rover), b = toScreen(start);
       ctx.save(); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 4]); ctx.stroke(); ctx.restore();
     }
@@ -493,8 +510,8 @@ export function mountMap(el) {
   const auto = autonomyBar(); auto.classList.add('auto-panel');
   const hint = h('p', 'mp-hint'); hint.innerHTML = 'Click the map: add station &middot; drag: move lander, relay or station &middot; right-click: remove &middot; wheel: zoom &middot; shift-drag: pan &middot; click a ring: Curiosity photo.';
   const fold = (title, body, open, id) => { const d = h('details', 'mp-fold'); d.id = id; d.open = !!open; d.append(h('summary', null, title), body); return d; };
-  const more = h('div'); more.append(hint, auto, moreDyn, provLegend(), note);
-  panel.append(head, ctl, tilesBox, verdictBox, btnRow, fold('Stations: tasks and times', stBody, window.innerHeight >= 800, 'mp-f-st'), fold('Check against Curiosity and RAD measurements', valBody, false, 'mp-f-val'), fold('Radio rule, light time, tips', more, false, 'mp-f-more'));
+  const sensBody = h('div'), more = h('div'); more.append(hint, auto, moreDyn, provLegend(), note);
+  panel.append(head, ctl, tilesBox, verdictBox, btnRow, fold('Stations: tasks and times', stBody, window.innerHeight >= 800, 'mp-f-st'), fold('What moves the reserve number', sensBody, false, 'mp-f-sens'), fold('Check against Curiosity and RAD measurements', valBody, false, 'mp-f-val'), fold('Radio rule, light time, tips', more, false, 'mp-f-more'));
   panel.addEventListener('input', (e) => { if (e.target.id === 'mp-cap') { capacityPct = +e.target.value; panel.querySelector('#mp-capv').textContent = capacityPct + '%'; replan(false); } });
   panel.addEventListener('change', (e) => {
     const t = e.target;
@@ -534,7 +551,7 @@ export function mountMap(el) {
     if (!L) return;
     panel.querySelector('.mp-sub').textContent = `${L.name} · slope limit ${SLOPE_HARD_DEG}°, prefer < ${SLOPE_PREFER_DEG}° · click map to add stations`;
     syncFixBtn();
-    for (const e of [tilesBox, verdictBox, stBody, moreDyn]) e.replaceChildren();
+    for (const e of [tilesBox, verdictBox, stBody, moreDyn, sensBody]) e.replaceChildren();
     const t = route && route.total;
     valBody.replaceChildren(); validationPanel(valBody);
     if (!t) { verdictBox.append(h('p', 'mp-res', 'Add at least one station.')); return; }
@@ -547,7 +564,8 @@ export function mountMap(el) {
     const endFrac = last ? last.remainingFraction : 0;
     const res = tile({ label: 'Reserve at lander', value: last ? Math.round(endFrac * 100) : '--', unit: '% (buffer ' + Math.round(buf * 100) + ')', prov: 'modelled', state: tb || endFrac < buf ? 'danger' : endFrac < buf + 0.015 ? 'warn' : 'ok' });
     const worst = sh.reduce((m, s) => Math.max(m, s.duration_s), 0);
-    const cm = tile({ label: 'Comms shadow', value: sh.length ? Math.round(worst / 60) : 0, unit: sh.length ? 'min longest' : 'min', prov: 'modelled', state: sh.some((s) => s.exceedsLimit) ? 'danger' : sh.length ? 'warn' : undefined });
+    const totalOut = sh.reduce((m, s) => m + s.duration_s, 0);
+    const cm = tile({ label: 'Out of contact', value: Math.round(totalOut / 60), unit: sh.length ? `min total, ${Math.round(worst / 60)} longest` : 'min', prov: 'modelled', state: sh.some((s) => s.exceedsLimit) ? 'danger' : sh.length ? 'warn' : undefined });
     tiles.append(dist, clk, res, cm); tilesBox.append(tiles);
     // One story, three places (tile, this sentence, map label): same clock time, same station, reserve against the buffer.
     const verdict = h('p', 'mp-res'), ts = route.turnBackStation, endPct = Math.round(endFrac * 100), bufPct = Math.round(buf * 100);
@@ -559,6 +577,15 @@ export function mountMap(el) {
       verdict.innerHTML = `Whole loop within budget: back at the lander at ${fmtClock(endH)} with ${endPct} % of the suit left (buffer ${bufPct} %). EVA ${fmtClock(startH)} to ${fmtClock(endH)}. Slack: about ${Math.max(0, Math.round(((endFrac - buf) * rs.capacityKJ * 1000) / DEFAULTS.stationRateW / 60))} min of extra station work before the buffer is used.`;
     }
     verdictBox.append(verdict);
+    verdictBox.append(h('p', 'mp-assume mp-proxy', 'Suit reserve = metabolic energy budget, a proxy for oxygen, CO2 removal, cooling and battery.'));
+    const s1 = L.d1 && frames && route.points.length > 1 ? slopeAlongRoute(P.map(toWalk), L.d1.hm, L.d1.slope, SLOPE_HARD_DEG) : null;
+    if (s1) {
+      const inCrop = Math.round(s1.n / Math.max(1, P.reduce((m, p, i) => m + (i ? Math.hypot(p.x - P[i - 1].x, p.y - P[i - 1].y) : 0), 0)) * 100);
+      const pl = route.total.maxSlope_deg, p1 = h('p', 'mp-assume mp-slope1m');
+      p1.append(chip('measured', 'Slope from the 1 m HiRISE DTM (NASA/JPL/University of Arizona), sampled about every metre along the route inside the 1 km crop around the lander.'));
+      p1.append(document.createTextNode(` Steepest slope on the route: ${s1.maxDeg.toFixed(0)}° on the 1 m terrain model (${Math.min(100, inCrop)} % of the route is inside its 1 km crop), planner ${pl.toFixed(0)}° on its 5 m grid.` + (s1.overLimit ? ` Above the ${SLOPE_HARD_DEG}° limit on ${(s1.overFrac * 100).toFixed(1)} % of those samples: the 5 m grid smooths short steep steps, so treat those few metres as a scramble.` : ` Within the ${SLOPE_HARD_DEG}° limit.`)));
+      verdictBox.append(p1);
+    }
     if (night && (night.afterSunset || night.beforeSunrise)) {
       const w = h('p', 'mp-res'); w.innerHTML = `<b class="bad-t">${night.afterSunset ? `Sunset is at ${fmtClock(night.set)}: this EVA ends at ${fmtClock(night.endH)} in the dark.` : `Sunrise is at ${fmtClock(night.rise)}: this EVA starts in the dark.`}</b> <span class="mp-assume">Sun from Mars24, sol 1440 (modelled).</span>`;
       verdictBox.append(w);
@@ -567,10 +594,15 @@ export function mountMap(el) {
       const now = Math.round(worst / 60), was = Math.round(relayState.was_s / 60);
       verdictBox.append(h('p', 'mp-res mp-relay', now === 0 ? `Relay on high ground (${relayState.m} m from the lander): contact all the way` + (was ? ` (was ${was} min out of contact with the relay at its start spot).` : '.') : `Relay on high ground (${relayState.m} m from the lander): longest time out of contact ${now} min (was ${was} min with the relay at its start spot).`));
     } else if (worst > 0) {
-      verdictBox.append(h('p', 'mp-res mp-relay', `Longest time out of contact ${Math.round(worst / 60)} min: the relay rover can't see you there. Try: Move relay to high ground.`));
+      verdictBox.append(h('p', 'mp-res mp-relay', `Longest time out of contact ${Math.round(worst / 60)} min: the relay unit can't see you there. Try: Move relay to high ground.`));
     }
-    const rs2 = h('div', 'mp-sec'); rs2.append(chip('modelled', `Assumption: relay rover ${Math.round(Math.hypot(rover.x - start.x, rover.y - start.y))} m from the lander, antenna ${RELAY_ANTENNA_M} m above ground, geometric line of sight (no diffraction).`), h('span', 'mp-assume', `relay ${Math.round(Math.hypot(rover.x - start.x, rover.y - start.y))} m from lander, ${RELAY_ANTENNA_M} m antenna (assumed)`));
+    if (!relayState && P.length > 1) {
+      const lo = landerOnlyContact(P), M = Math.round(P.at(-1).elapsed_s / 60);
+      verdictBox.append(h('p', 'mp-assume mp-lander', `With the lander as the only radio source: ${Math.round(lo.total_s / 60)} of ${M} min out of contact (longest ${Math.round(lo.longest_s / 60)} min). With the relay unit: ${Math.round(totalOut / 60)} min.`));
+    }
+    const rs2 = h('div', 'mp-sec'); rs2.append(chip('modelled', `Assumption: relay unit ${Math.round(Math.hypot(rover.x - start.x, rover.y - start.y))} m from the lander, antenna ${RELAY_ANTENNA_M} m above ground, geometric line of sight (no diffraction).`), h('span', 'mp-assume', `relay ${Math.round(Math.hypot(rover.x - start.x, rover.y - start.y))} m from lander, ${RELAY_ANTENNA_M} m antenna (assumed)`));
     verdictBox.append(rs2);
+    sensitivityPanel(sensBody);
     const sec = h('div', 'mp-sec'); sec.append(chip('modelled', 'Assumption: station durations are ours, plausible analog-EVA scale (research/science.md); editable.'), h('span', 'mp-assume', 'durations assumed, editable'));
     stBody.append(sec);
     const tbl = h('table', 'mp-st');
@@ -593,6 +625,22 @@ export function mountMap(el) {
     moreDyn.append(seg);
     const lim = h('label', 'mp-assume'); lim.innerHTML = `Assumed mission rule: max min out of contact <input id="mp-limit" type="number" min="1" max="240" value="${Math.round(shadowLimit_s / 60)}" style="width:4em"> (our assumption, not a NASA figure)`;
     moreDyn.append(lim);
+  }
+  function sensitivityPanel(box) {
+    const si = route && route.sensIn; if (!si) return;
+    const s = reserveSensitivity(si.rin, { capacityKJ: si.capKJ });
+    const pct = (f) => Math.round(f * 100);
+    const sec = h('div', 'mp-sec'); sec.append(chip('modelled', 'Each row re-runs the Pandolf-based reserve model on this exact route with one input changed. Changed inputs are our assumptions, not NASA figures.'), h('span', 'mp-assume', 'same route, one input changed'));
+    box.append(sec);
+    const tbl = h('table', 'mp-st mp-sens');
+    for (const r of s.rows) {
+      const tr = h('tr', r.kind === 'sanity' ? 'sanity' : ''), td = (t, c) => { const e = h('td', c, t); return e; };
+      tr.append(td(r.label), td(pct(r.frac) + ' %', 'num'), td(Math.abs(r.delta) < 0.5 ? 'base' : (r.delta > 0 ? '+' : '-') + Math.abs(r.delta).toFixed(0) + ' pts', 'num'));
+      tbl.append(tr);
+    }
+    box.append(tbl);
+    box.append(h('p', 'mp-res', `As planned the loop ends with ${pct(s.base)} %. These assumptions alone move it between ${pct(s.spread.lo)} % and ${pct(s.spread.hi)} %. The ${Math.round(DEFAULTS.bufferFrac * 100)} % buffer exists because the model is this uncertain.`));
+    box.append(h('p', 'mp-assume', 'Mars gravity is a first-order scaling of the Earth-fitted Pandolf terms (Mars-to-Earth cost ratio about 0.83 suited and flat; the one 0.38 g measurement, unsuited, found 0.68; plausible range 0.68 to 1.0). Not measured with a suit on Mars.'));
   }
   // Validation (jury change 5, cheapest honest version): slopes Curiosity really drove vs. our limits, plus one sourced shielding fact.
   function validationPanel(box) {

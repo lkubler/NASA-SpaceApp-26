@@ -176,7 +176,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     const tnow = performance.now();
     if (sh) {
       if (shSince < 0) shSince = tnow;
-      if (!shToast && tnow - shSince > 1000) { shToast = true; toast('Entering comms shadow: no link to the ' + (comms.COMMS_SOURCE_NAME ?? 'relay rover'), 'danger', 'shadow'); }
+      if (!shToast && tnow - shSince > 1000) { shToast = true; toast('Entering comms shadow: no link to the ' + (comms.COMMS_SOURCE_NAME ?? 'relay unit'), 'danger', 'shadow'); }
     } else { shSince = -1; if (shToast) { shToast = false; if (warnEl.dataset.id === 'shadow') warnEl.hidden = true; } }
     if (R.tb > 0 && (guided || d < 12)) {
       if (i >= R.tb && lastIdx >= 0 && lastIdx < R.tb && !tbPassed) { tbPassed = true; toast('TURN-BACK POINT PASSED: reserve no longer covers the walk back', 'turn'); flash(); }
