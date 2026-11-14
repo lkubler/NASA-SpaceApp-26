@@ -131,8 +131,8 @@ export default {
     const btn = pillButton({ text: 'Confirm route', onClick: () => ctx.next(), disabled: !ctx.state.route });
     const req = ctx.state.request;
     // the goal is set by the request from step 1; this step only plans the route to it
-    const reqBox = req ? h('div.plan-chip', { title: req.titleLong || req.title },
-      h('span.plan-chip__dot'), h('span.plan-chip__k', 'Request'), h('span.plan-chip__v', req.title)) : null;
+    const reqBox = req ? h('div.plan-goal', { title: req.titleLong || req.title },
+      h('span.plan-goal__k', 'Murray Buttes'), h('span.plan-goal__sep', '·'), h('span.plan-goal__v', req.title)) : null;
     // one short line that says what a click does now (and why a click did nothing)
     const hint = h('div.plan-hint', { role: 'status', 'aria-live': 'polite', tabindex: '-1' });
     Lay.panel.append(reqBox, headline('Plan your mission.'), hint, cards, relayCard, legs, h('div.plan-spacer'), totals, demo);
