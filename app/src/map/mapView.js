@@ -385,6 +385,7 @@ export function mountMap(el) {
   }
   let hatch = null, tmp = null;
   function drawComms(W, H) {
+    if (!canvas.width || !canvas.height || !comms || !comms.width || !comms.height) return; // hidden map (0×0) would throw in drawImage
     if (!hatch) {
       const t = document.createElement('canvas'); t.width = t.height = 8; const g = t.getContext('2d');
       g.strokeStyle = css('--comms-shadow'); g.lineWidth = 2; g.beginPath(); g.moveTo(-1, 9); g.lineTo(9, -1); g.moveTo(-1, 1); g.lineTo(1, -1); g.moveTo(7, 9); g.lineTo(9, 7); g.stroke();
