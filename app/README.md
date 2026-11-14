@@ -12,6 +12,14 @@ npm test           # core unit tests (vitest, test/*.test.js)
 npm run tune [76]  # per-candidate plan numbers and detours for a demo factor
 ```
 
+Journey test (whole visitor journey in headless Chromium, no dev jump; screenshots to `../reviews/journey/<run>/`;
+fails on any console error or on numbers that differ between Plan, Go / no-go and Debrief). Playwright is not
+an app dependency: install it anywhere (`npm i playwright@1.46 && npx playwright install chromium`).
+```
+npm run dev &
+PW=/path/to/node_modules/playwright/index.mjs node scripts/journey.mjs http://localhost:5173/ [near-1280 far-1280 far-1920]
+```
+
 ## Dev jump
 `?step=N` opens step N with the state the earlier steps would have produced (each step's `devFixture`).
 `&spot=F7` picks the spot in step 2 (default F3). Example: `?step=5&spot=F7`.
