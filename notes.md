@@ -34,7 +34,27 @@ Routenlogik
 
 
 
+# User Story:
 
+Story-Website, die einen Mars-Außeneinsatz von der Anreise bis zum Spaziergang in Ich-Perspektive erzählt. Alle Routen basieren auf echten NASA-Daten.
+
+## Ablauf
+1. **Start (Scroll-Animation):** Aufwändig animierter Raketenstart von der Erde, gesteuert per Scrollen.
+2. **Ortswahl:** Der User wählt einen Ort auf dem Mars. Zur Auswahl stehen nur Orte, für die es ein 3D-Gelände gibt (siehe 3D-Basis).
+3. **Landung (Scroll-Animation):** Die Rakete landet in einer Basis nahe dem gewählten Ort.
+4. **Rover-Route (2D-Karte):** Der User setzt Wegpunkte von der Basis zum 3D-Ort. Die Route wird für den Rover geplant (eigene Grenzwerte für Steigung und Hindernisse, z. B. Sanddünen meiden).
+5. **Spaziergang-Route (2D-Karte):** Startpunkt ist der 3D-Ort. Die Karte zeigt Points of Interest, an denen Messungen möglich sind. Der User wählt POIs, das Tool schlägt die sicherste Route vor, berechnet aus echten Daten (Steigung, Hindernisse).
+6. **Routen-Übersicht:** Stats der Route (Strecke, Dauer, Höhenmeter, max. Steigung, Strahlungsdosis, Warnungen) und ein Button „Einsatz starten“.
+7. **3D-Ansicht:** Ich-Perspektive im echten 3D-Gelände des Orts. Ein Helm-HUD zeigt die Route dynamisch an (Richtung, Entfernung zum nächsten POI) und warnt (z. B. zu steiler Hang im Blickfeld).
+8. **Nächster Ort:** Danach kann der User denselben Ablauf für einen anderen Ort starten.
+
+## Optional
+- Customizer des Hud. also freie Platzierung der hud Elemente
+
+## 3D-Basis
+- Access Mars: https://github.com/googlecreativelab/access-mars
+- Nur Gelände-Dateien nutzen (`public/terrain/<ort>/terrain.glb` + `tiles/`), nicht den alten App-Code
+- Hauptort: Murray Buttes. Weitere, falls möglich: Landing Site, Pahrump Hills, Marias Pass, Live Site
 
 
 
