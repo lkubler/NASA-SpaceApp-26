@@ -5,6 +5,7 @@
 import { app } from '../state.js';
 import { chip } from '../ui/components.js';
 import { autonomyBar, radCounter } from '../ui/autonomy.js';
+import '../styles/walk-ux.css';
 import { routeTotalS, routeElapsedAt } from '../model/rad.js';
 
 function cell(label, prov) {
@@ -43,7 +44,21 @@ export function mountHud(root) {
   const showHint = () => { hint.hidden = false; clearTimeout(hintT); hintT = setTimeout(() => { hint.hidden = true; }, 14000); };
   let wasWalk = false;
   app.on((st) => { const w = st.view === 'walk'; if (w && !wasWalk) showHint(); wasWalk = w; });
-  root.append(frame, cross, warn, hint, auto, bar);
+  const area = document.createElement('div'); area.className = 'hud-area on-glass'; area.hidden = true;
+  root.append(frame, cross, warn, hint, area, auto, bar);
+  // "3D walk area: 128 m square at station N. Next station: ..." from the planned route (stations by route order; nearest = closest route station to the walk-area centre)
+  let areaKey = '';
+  function areaLine(st, x, z) {
+    const r = st.route, S = r && r.stations, ts = r && typeof r.toScene === 'function' ? r.toScene : null;
+    if (!S || !S.length || !ts) { area.hidden = true; return; }
+    const sc = (i) => { const p = r.points[i]; return p ? ts(p.x, p.y) : null; };
+    let at = null, ad = Infinity; for (const s of S) { const q = sc(s.idx); if (!q) continue; const d = Math.hypot(q.x, q.z); if (d < ad) { ad = d; at = s; } }
+    let ni = 0, nd = Infinity; r.points.forEach((p, i) => { const q = ts(p.x, p.y), d = (q.x - x) ** 2 + (q.z - z) ** 2; if (d < nd) { nd = d; ni = i; } });
+    const next = S.find((s) => s.idx > ni && s !== at) || S.find((s) => s.idx > ni);
+    const txt = '3D walk area: 128 m square at station ' + (at ? at.n : '?') + '.' + (next ? ' Next station: ' + next.n + ' ' + (next.short || next.task) + '.' : ' No further station on the route.');
+    if (txt !== areaKey) { areaKey = txt; area.textContent = txt; }
+    area.hidden = false;
+  }
   const hh = (h) => { const m = Math.round(((h % 24) + 24) % 24 * 60) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
 
   function update({ slopeDeg = 0, speed: sp = 0, mult = 1, x = 0, z = 0 } = {}) {
@@ -53,6 +68,7 @@ export function mountHud(root) {
     const re = tl ? tl.elapsed_s : routeElapsedAt(st.route, x, z); // guided time-lapse clock, else route elapsed_s at nearest point, else wall-clock
     const ev = re ?? evaS;
     rad.update(ev, rt);
+    areaLine(st, x, z);
     const sh0 = st.route && typeof st.route.startHour === 'number' ? st.route.startHour : null;
     clk.v.textContent = sh0 != null ? hh(sh0 + ev / 3600) : 'T+' + Math.floor(ev / 3600) + 'h' + String(Math.floor(ev / 60) % 60).padStart(2, '0');
     clk.s.textContent = (sh0 != null ? 'T+' + Math.floor(ev / 3600) + 'h' + String(Math.floor(ev / 60) % 60).padStart(2, '0') + ' ' : '') + (tl ? 'time-lapse' : 'local solar time');

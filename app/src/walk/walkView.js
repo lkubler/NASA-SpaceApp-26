@@ -6,6 +6,7 @@ import { speedMult, WALK_SPEED_MS } from '../model/speed.js';
 import { buildHeightmap as buildHm, provideHeightmap } from '../terrain/heightmap.js';
 import { mountHud } from './hud.js';
 import { initSky } from './sky.js';
+import { routeElapsedAt } from '../model/rad.js';
 import { mountRoute3d } from './route3d.js';
 
 const BASE = import.meta.env.BASE_URL + 'murray/';
@@ -159,14 +160,19 @@ function step(dt) {
   if (ry !== null) { state.pos.y = ry; maxDiff = Math.max(maxDiff, Math.abs(ry - hAt(state.pos.x, state.pos.z))); }
   state.eyeY += (state.pos.y + EYE - state.eyeY) * Math.min(1, dt * 12);
 }
-// Guided walk: sun time follows the EVA clock (time-lapse lighting); the sky slider overrides until the next guided walk.
-let evaWas = false;
+// One clock: sky time always follows the EVA clock (guided time-lapse, else route elapsed time at the nearest route point,
+// the same value the HUD shows). The sky slider or T key override it ("manual") until the next guided walk.
+let evaWas = false, clkTick = 0;
 function syncSkyToEva() {
-  const st = app.get(), ev = st.eva, on = !!(ev && st.route && typeof st.route.startHour === 'number');
-  if (on && !evaWas) sky.st.manual = false;
-  evaWas = on;
-  if (!on || sky.st.manual) return;
-  const h = (((st.route.startHour + ev.elapsed_s / 3600) % 24) + 24) % 24;
+  const st = app.get(), ev = st.eva, rt = st.route;
+  if (!rt || typeof rt.startHour !== 'number') return;
+  if (ev && !evaWas) sky.st.manual = false;
+  evaWas = !!ev;
+  if (sky.st.manual) return;
+  let el = ev ? ev.elapsed_s : null;
+  if (el == null) { if (clkTick++ % 10) return; el = routeElapsedAt(rt, state.pos.x, state.pos.z); }
+  if (el == null) return;
+  const h = (((rt.startHour + el / 3600) % 24) + 24) % 24;
   if (Math.abs(h - sky.st.hour) > 0.005) sky.setHour(h, true);
 }
 function frame(now) {

@@ -33,8 +33,8 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
   const colRoute = cssColor('--route', '#35d0ff'), colShadow = new THREE.Color(0xff2bd6), colTurn = cssColor('--turnback', '#FFB224');
   const warnEl = document.createElement('div'); warnEl.className = 'walk-toast'; warnEl.hidden = true; container.append(warnEl);
   let toastT = 0;
-  function toast(text, kind = 'warn') {
-    warnEl.textContent = text; warnEl.dataset.kind = kind; warnEl.hidden = false;
+  function toast(text, kind = 'warn', id = '') {
+    warnEl.textContent = text; warnEl.dataset.kind = kind; warnEl.dataset.id = id; warnEl.hidden = false;
     clearTimeout(toastT); toastT = setTimeout(() => { warnEl.hidden = true; }, 4500);
   }
 
@@ -43,9 +43,12 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
   function flash() { flashEl.classList.remove('on'); void flashEl.offsetWidth; flashEl.classList.add('on'); }
 
   let R = null; // built route
-  let routeRef = null, lapseT = 0, guided = false, lastIdx = -1, wasShadow = false, tbPassed = false, slopeAt = -1e9, pubKey = '';
+  let routeRef = null, lapseT = 0, guided = false, lastIdx = -1, shSince = -1, shToast = false, tbPassed = false, slopeAt = -1e9, pubKey = '';
   const btn = document.createElement('button'); btn.className = 'walk-guide'; btn.textContent = 'Guided walk'; btn.hidden = true;
   container.append(btn);
+  const photoBtn = document.createElement('button'); photoBtn.className = 'walk-photo'; photoBtn.type = 'button'; photoBtn.textContent = 'Show station photo'; photoBtn.hidden = true;
+  photoBtn.addEventListener('click', (e) => { e.stopPropagation(); stations.showNearest(); });
+  container.append(photoBtn);
 
   function clear() {
     group.traverse((o) => { if (o.geometry && !o.userData.shared) o.geometry.dispose(); if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
@@ -54,7 +57,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
   const ground = (x, z) => groundRaycast(x, z) ?? hAt(x, z);
 
   function build() {
-    clear(); R = null; guided = false; btn.textContent = 'Guided walk'; pubKey = ''; if (app.get().eva) app.set({ eva: null });
+    clear(); R = null; guided = false; shSince = -1; shToast = false; warnEl.hidden = true; btn.textContent = 'Guided walk'; pubKey = ''; if (app.get().eva) app.set({ eva: null });
     const route = app.get().route;
     const P = route && route.points, ts = route && typeof route.toScene === 'function' ? route.toScene : null;
     if (!P || P.length < 2 || !ts) { btn.hidden = true; return; }
@@ -129,7 +132,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     let lastIn = -1; S.forEach((s, i) => { if (s.in) lastIn = i; });
     R = { sc, S, rf, inSh, el, hasEl, lastIn, startHour: typeof route.startHour === 'number' ? route.startHour : null, tb: Number.isInteger(tb) ? tb : -1, first: S.findIndex((s) => s.in) };
     btn.hidden = R.first < 0;
-    lastIdx = -1; wasShadow = false; tbPassed = false;
+    lastIdx = -1; tbPassed = false;
     spawn();
   }
 
@@ -169,8 +172,12 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
       if (f != null) patch.reserve = { fraction: f };
       app.set(patch);
     }
-    if (sh && !wasShadow) toast('Entering comms shadow: no link to the ' + (comms.COMMS_SOURCE_NAME ?? 'relay rover'), 'danger');
-    wasShadow = sh;
+    // toast follows the same sample as the SIGNAL tile (sh); only the toast start is debounced (1 s), and it clears when the shadow ends
+    const tnow = performance.now();
+    if (sh) {
+      if (shSince < 0) shSince = tnow;
+      if (!shToast && tnow - shSince > 1000) { shToast = true; toast('Entering comms shadow: no link to the ' + (comms.COMMS_SOURCE_NAME ?? 'relay rover'), 'danger', 'shadow'); }
+    } else { shSince = -1; if (shToast) { shToast = false; if (warnEl.dataset.id === 'shadow') warnEl.hidden = true; } }
     if (R.tb > 0 && (guided || d < 12)) {
       if (i >= R.tb && lastIdx >= 0 && lastIdx < R.tb && !tbPassed) { tbPassed = true; toast('TURN-BACK POINT PASSED: reserve no longer covers the walk back', 'turn'); flash(); }
       if (i < R.tb - 3) tbPassed = false;
@@ -197,12 +204,12 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     if (guided) { stop(); return; }
-    guided = true; lapseT = 0; btn.textContent = 'Stop guided walk';
-    spawn(); lastIdx = -1; wasShadow = false; tbPassed = false; // start at the lander so the walk opens with LINK
+    guided = true; lapseT = R.hasEl ? R.el[R.S[R.first].idx] : 0; /* continue from the clock the walk shows: never jump backwards */ btn.textContent = 'Stop guided walk';
+    spawn(); lastIdx = -1; shSince = -1; shToast = false; tbPassed = false; // start at the lander so the walk opens with LINK
     if (document.pointerLockElement) document.exitPointerLock();
     const m = document.getElementById('msg'); if (m) m.style.display = 'none';
   });
-  app.on((st) => { btn.style.display = st.view === 'walk' && R && R.first >= 0 ? '' : 'none'; if (st.view !== 'walk') { stations.hide(); if (guided) stop(); } });
+  app.on((st) => { photoBtn.hidden = st.view !== 'walk'; btn.style.display = st.view === 'walk' && R && R.first >= 0 ? '' : 'none'; if (st.view !== 'walk') { stations.hide(); if (guided) stop(); } });
 
   return { stations, update, spawn, rebuild: build, toast, seek(frac) { if (R && R.hasEl) lapseT = R.el[R.el.length - 1] * frac; }, tbFrac() { return R && R.hasEl && R.tb > 0 ? R.el[R.tb] / R.el[R.el.length - 1] : null; }, get built() { return R; }, get guided() { return guided; }, setGuided(v) { if (v !== guided) btn.click(); } };
 }
