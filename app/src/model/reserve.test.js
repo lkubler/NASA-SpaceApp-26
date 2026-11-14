@@ -95,3 +95,21 @@ test('empty and single-point routes do not throw', () => {
   assert.equal(computeReserve([]).turnBackIndex, -1);
   assert.equal(computeReserve([{ dist_m: 0, elev_m: 0 }]).points.length, 1);
 });
+
+test('station time: energy at stationRateW, clock and fraction, turn-back emerges', () => {
+  const pts = [0, 100, 200].map((d) => ({ dist_m: d, elev_m: 0 }));
+  const flat = computeReserve(pts, { stationRateW: 360 });
+  pts[1].stationS = 3600; // 1 h at 360 W = 1296 kJ
+  const r = computeReserve(pts, { stationRateW: 360 });
+  near(r.points[1].stationKJ, 1296);
+  near(r.points[1].usedKJ - flat.points[1].usedKJ, 1296);
+  near(r.points[2].usedKJ - flat.points[2].usedKJ, 1296, 1e-6); // carried to later points
+  near(r.points[1].elapsed_s - flat.points[1].elapsed_s, 3600);
+  near(r.points[0].elapsed_s, 0);
+  near(r.points[1].remainingFraction, r.points[1].remainingKJ / r.capacityKJ);
+  // return cost ignores stations
+  near(r.points[2].returnCostKJ, flat.points[2].returnCostKJ);
+  assert.equal(flat.turnBackIndex, -1);
+  pts[1].stationS = 7 * 3600; // 7 h of work: cannot also walk home with the 20 % buffer
+  assert.equal(computeReserve(pts, { stationRateW: 360 }).turnBackIndex, 1);
+});
