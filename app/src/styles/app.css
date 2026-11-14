@@ -30,7 +30,7 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .hud-cell { background: var(--scrim); min-width: 150px; padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: 2px; color: var(--hud-text); }
 .hud-l { font: 600 13px/16px var(--font-display); text-transform: uppercase; letter-spacing: .1em; opacity: .7; }
 .hud-v { font: 500 36px/40px var(--font-mono); font-variant-numeric: tabular-nums; }
-.hud-s { font: 500 14px/16px var(--font-mono); text-transform: uppercase; letter-spacing: .06em; opacity: .75; margin-bottom: var(--s-1); }
+.hud-s { font: 500 14px/16px var(--font-mono); text-transform: none; letter-spacing: .03em; opacity: .75; margin-bottom: var(--s-1); }
 .hud-cell .chip { align-self: flex-start; background-color: rgba(0,0,0,.25); }
 .hud-cell[data-state="warn"] .hud-v { color: var(--warn); }
 .hud-cell[data-state="danger"] .hud-v { color: var(--danger); }
@@ -65,3 +65,23 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .rad-cell [hidden], .rad-cell .chip[hidden] { display: none !important; }
 #hud { z-index: 6; }
 .hud-s { white-space: nowrap; }
+
+/* Task 020: walk intro hint, time-lapse clock */
+.hud-hint { position: absolute; left: 50%; bottom: calc(var(--s-5) + 200px); transform: translateX(-50%); width: max-content; max-width: 90%; padding: var(--s-3) var(--s-5);
+  background: var(--scrim); border: 1px solid var(--hud-line); border-left: 6px solid #fff; border-radius: var(--radius); color: var(--hud-text);
+  font: 500 16px/1.4 var(--font-body); text-align: center; animation: hintin 400ms var(--ease); }
+.hud-hint[hidden] { display: none; }
+.hud-hint b { font: 600 13px var(--font-display); letter-spacing: .12em; text-transform: uppercase; margin-right: var(--s-2); opacity: .75; }
+.hud-hint i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 4px 0 var(--s-3); }
+.hud-hint .k-mag { background: var(--comms-shadow); } .hud-hint .k-amb { background: var(--warn); }
+@keyframes hintin { from { opacity: 0; transform: translate(-50%, 8px); } }
+.hud-cell { min-width: 140px; }
+
+/* Task 020: HUD bar fits narrow viewports */
+.hud-bar { width: max-content; max-width: calc(100% - 2 * var(--s-4)); }
+.hud-cell { min-width: 0; flex: 0 0 auto; padding: var(--s-3); }
+.hud-cell .hud-v { white-space: nowrap; }
+.hud-bar .hud-v { font-size: 32px; }
+.rad-cell { min-width: 0; max-width: 260px; flex: 0 0 auto; }
+.rad-cell .hud-s { white-space: normal; }
+.hud-bar .hud-s { font-size: 13px; }

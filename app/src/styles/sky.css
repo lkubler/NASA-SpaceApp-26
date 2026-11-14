@@ -37,3 +37,16 @@
 .sky-panel[data-collapsed="true"] { width: auto; }
 .sky-panel[data-collapsed="true"] .sky-body { display: none; }
 .sky-dustwarn { top: calc(var(--s-5) + 56px); }
+
+/* Task 020: expanded panel never reaches the HUD bar (bar ~190 px tall at the bottom) */
+.sky-panel { max-height: calc(100vh - 128px - 236px); overflow-y: auto; }
+.sky-panel .sky-h .label { text-transform: none; letter-spacing: .06em; font-size: 13px; }
+.sky-panel[data-collapsed="false"] .sky-chip { position: sticky; top: 0; background: var(--scrim); }
+.sky-body { padding-top: var(--s-3); }
+.sky-chip-t { white-space: nowrap; }
+
+/* Task 020: dust veil. Storm changes the whole view at once: tinted haze, darker edges, a short surge on entry. */
+.dust-veil { position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0; transition: opacity 600ms var(--ease);
+  background: radial-gradient(ellipse at 50% 55%, rgba(176,118,76,.72) 0%, rgba(120,72,44,.88) 70%, rgba(60,34,22,.95) 100%); }
+.dust-veil.hit { animation: dustsurge 900ms var(--ease); }
+@keyframes dustsurge { 0% { filter: brightness(1.6); } 100% { filter: none; } }
