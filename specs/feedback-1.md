@@ -26,7 +26,9 @@ Mouse look => works in Firefox and Chromium on Linux, both directions; no moveme
 Mouse look without captured cursor => holding the mouse button and dragging turns the view
 Shift held => fast walk: about 1.5 x speed, work rate from the suit model at that speed; label model
 Shift tapped twice => demo speed on / off: about 5 x on screen; suit time and consumption count as a normal walk over the same distance; the display says "Demo speed: movement only"
-F => jump along the route to the next stop (next warning point, the spot, or the rover on the way home); suit time and consumption count as a normal walk over the skipped distance; the display says so
+F => aim mode: a marker on the ground shows where you will land, following the crosshair; left click jumps there; F again or esc cancels
+F, landing point => only on ground you could walk to (inside the site, not over 20°); otherwise the marker shows "not reachable" and the click does nothing
+F, suit => time and consumption count as a normal walk from here to there on the best rule-keeping way; the display says "Jump: counted as walked"
 Key hints => show Shift and F
 Helmet frame => `app/public/helm.webp` (grey), green keyed out, "AI-generated image" in the pixels; replaces the old frame
 
