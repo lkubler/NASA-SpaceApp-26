@@ -50,6 +50,9 @@ export function createHud(el) {
 
   // minimap + target
   const miniCv = h('canvas.walk-mini__cv');
+  // a round: where in the round the walk is ("Stop 2 of 3", "Way home · stop 3 skipped"); hidden for one stop
+  const tgtStep = h('div.walk-target__step.mono');
+  tgtStep.hidden = true;
   const tgtName = h('div.walk-target__name');
   const tgtLineTxt = h('span');
   const tgtLine = h('div.walk-target__line.mono', tgtLineTxt, ' ', tag(ROUTE_TAG));
@@ -57,7 +60,7 @@ export function createHud(el) {
   // the request from Earth (step 1) is the current task; ticked once the sample is taken
   const taskV = h('span.walk-task__v');
   const task = h('div.walk-task', { hidden: true }, h('span.walk-task__mark'), h('span.walk-task__k', 'Task'), taskV);
-  const mini = h('div.walk-mini', h('div.walk-mini__disc', miniCv, h('span.walk-mini__n.mono', 'N')), h('div.walk-target', task, tgtName, tgtLine, tgtBar));
+  const mini = h('div.walk-mini', h('div.walk-mini__disc', miniCv, h('span.walk-mini__n.mono', 'N')), h('div.walk-target', task, tgtStep, tgtName, tgtLine, tgtBar));
   function setTask(title) { taskV.textContent = title || ''; task.hidden = !title; }
 
   // suit and body
@@ -198,10 +201,20 @@ export function createHud(el) {
     const [ox, oy] = toPx(t.min, t.max);
     g.imageSmoothingEnabled = true;
     g.drawImage(reliefCv, ox, oy, t.extent * k, t.extent * k);
-    // route: both legs, cyan dots
-    g.fillStyle = '#4fcbff';
-    for (const L of [sim.route.out.points, sim.route.back.points]) {
-      for (let i = 0; i < L.length; i += 2) { const [px, py] = toPx(L[i].x, L[i].z); g.beginPath(); g.arc(px, py, 1.3 * dpr, 0, Math.PI * 2); g.fill(); }
+    // route: the leg to the current target in cyan dots; a round's other legs faint
+    const lg = sim.leg();
+    const planned = sim.route.legs || [sim.route.out, sim.route.back];
+    const dots = (L, r) => { for (let i = 0; i < L.length; i += 2) { const [px, py] = toPx(L[i].x, L[i].z); g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fill(); } };
+    if (planned.length > 2) {
+      g.fillStyle = 'rgba(79,203,255,0.35)';
+      for (const L of planned) if (L.points !== lg.points) dots(L.points, 0.9 * dpr);
+      g.fillStyle = '#4fcbff';
+      dots(lg.points, 1.3 * dpr);
+    } else {
+      // one stop: both legs, as before (and a way home from here after a turn back)
+      g.fillStyle = '#4fcbff';
+      for (const L of planned) dots(L.points, 1.3 * dpr);
+      if (!lg.planned) dots(lg.points, 1.3 * dpr);
     }
     // walked track
     const tr = sim.log.track;
@@ -220,11 +233,28 @@ export function createHud(el) {
     const [rx, ry] = rim(ROVER.x, ROVER.z);
     g.fillStyle = '#000'; g.strokeStyle = '#fff'; g.lineWidth = 1.4 * dpr;
     g.fillRect(rx - 4 * dpr, ry - 4 * dpr, 8 * dpr, 8 * dpr); g.strokeRect(rx - 4 * dpr, ry - 4 * dpr, 8 * dpr, 8 * dpr);
-    if (!sim.log.sample) {
-      const [sx, sy] = rim(sim.route.spot.x, sim.route.spot.z);
-      g.save(); g.translate(sx, sy); g.rotate(Math.PI / 4); g.strokeStyle = '#4fcbff'; g.lineWidth = 1.6 * dpr;
+    // stops not sampled yet: diamonds; the current target bright cyan, the others faint with their order
+    // number (a round); a sampled stop: a small filled dot
+    const several = sim.log.stops.length > 1;
+    sim.log.stops.forEach((st, k) => {
+      if (st.sampled) {
+        if (!several) return;
+        const [sx, sy] = toPx(st.x, st.z);
+        if (Math.hypot(sx - R, sy - R) > R - 4 * dpr) return;
+        g.fillStyle = 'rgba(79,203,255,0.8)'; g.beginPath(); g.arc(sx, sy, 2.4 * dpr, 0, Math.PI * 2); g.fill();
+        return;
+      }
+      const isTarget = lg.stop === k;
+      if (!isTarget && !several) return;
+      const [sx, sy] = rim(st.x, st.z);
+      g.save(); g.translate(sx, sy);
+      if (several && !isTarget) {
+        g.fillStyle = 'rgba(255,255,255,0.7)'; g.font = `${9 * dpr}px "JetBrains Mono", monospace`; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(String(st.order), 0, -9 * dpr);
+      }
+      g.rotate(Math.PI / 4); g.strokeStyle = isTarget ? '#4fcbff' : 'rgba(255,255,255,0.55)'; g.lineWidth = (isTarget ? 1.6 : 1.1) * dpr;
       g.strokeRect(-4 * dpr, -4 * dpr, 8 * dpr, 8 * dpr); g.restore();
-    }
+    });
     // own position and view direction
     const a = (headingDeg * Math.PI) / 180;
     g.save(); g.translate(R, R); g.rotate(a);
@@ -244,6 +274,10 @@ export function createHud(el) {
     drawMini(sim, headingDeg);
     const tg = sim.target();
     tgtName.textContent = tg.kind === 'spot' ? (spotLabel(tg.id) || tg.name) : 'Rover';
+    const step = roundStep(tg);
+    if (step !== tgtStep.textContent) tgtStep.textContent = step;
+    tgtStep.hidden = !step;
+    tgtStep.classList.toggle('is-skipped', !!tg.skipped.length && tg.kind === 'rover');
     tgtLineTxt.textContent = `${fmtDistance(tg.metres)} · ${fmtDuration(tg.seconds)}`;
     tgtBar.firstChild.style.width = `${(tg.done * 100).toFixed(1)}%`;
 
@@ -298,7 +332,8 @@ export function createHud(el) {
     // prompt
     let p = '';
     if (!log.ended && !s.modal) {
-      if (sim.atTarget()) p = 'take';
+      const k = sim.stopHere();
+      if (k >= 0) p = 'take|' + (log.stops.length > 1 ? k + 1 : '');
       else if (sim.atRover()) {
         // the walk log counts to the rover's centre, like the plan: the last metres are added at planning pace
         const ll = sim.lastLeg();
@@ -308,7 +343,10 @@ export function createHud(el) {
     if (p !== lastPrompt) {
       lastPrompt = p;
       prompt.replaceChildren();
-      if (p === 'take') prompt.append(h('kbd', 'E'), h('span', `Take sample · ${fmtDuration(spotSeconds())} of work `, tag(DEMO.spotWorkMin)));
+      if (p.startsWith('take|')) {
+        const order = p.split('|')[1];
+        prompt.append(h('kbd', 'E'), h('span', `Take sample${order ? ` at stop ${order}` : ''} · ${fmtDuration(spotSeconds())} of work `, tag(DEMO.spotWorkMin)));
+      }
       if (p.startsWith('end|')) {
         const [, m, d] = p.split('|');
         prompt.append(h('kbd', 'E'), h('span', `End excursion · last ${m} `, tag(LAST_M_TAG), ` to the rover, ${d} `, tag(LAST_S_TAG)));
@@ -323,7 +361,12 @@ export function createHud(el) {
     const i = s.alertInfo[id] || {};
     const lim = `${RULES.slopeMaxDeg.value}°`;
     switch (id) {
-      case 'turnBack': return i.viaSpot
+      case 'turnBack': if (i.skipped) {
+        const n = i.skipped.map((x) => x.order);
+        const which = n.length === 1 ? `Stop ${n[0]} skipped` : `Stops ${n.slice(0, -1).join(', ')} and ${n[n.length - 1]} skipped`;
+        return ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, ` with the remaining stops. ${which}: head for the rover.`];
+      }
+      return i.viaSpot
         ? ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, ' if you go on to the spot and back. Head for the rover.']
         : ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, '. Head for the rover.'];
       case 'steepUnder': return [`${Math.round(i.slopeDeg)}° here `, { tag: SLOPE_TAG },
@@ -334,6 +377,15 @@ export function createHud(el) {
       case 'radioAhead': return [`No line of sight to the rover in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '.'];
       default: return [];
     }
+  }
+
+  /** The quiet progress line of a round above the target name; '' for one stop. */
+  function roundStep(tg) {
+    if (tg.of < 2) return '';
+    if (tg.kind === 'spot') return `Stop ${tg.order} of ${tg.of}`;
+    const n = tg.skipped;
+    if (n.length) return `Way home · ${n.length === 1 ? `stop ${n[0]}` : `stops ${n.join(', ')}`} skipped`;
+    return `Way home · ${tg.sampled} of ${tg.of} samples`;
   }
 
   // ---------- look-at card ----------
@@ -417,16 +469,24 @@ export function createHud(el) {
   }
 
   // ---------- modals ----------
-  function showSample(route, log) {
+  function showSample(sim, log) {
+    // the stop just sampled (a round: the last one taken) and where the walk goes next
+    const st = sim.log.stops[sim.s.lastSample] || sim.log.stops[0];
+    const tg = sim.target();
+    const several = sim.log.stops.length > 1;
+    const at = several ? st : log.sample; // one stop: where the sample was logged, as before
+    const next = tg.kind === 'spot'
+      ? `Next target: stop ${tg.order} of ${tg.of}, ${spotLabel(tg.id) || tg.name}. `
+      : several ? `${tg.sampled} of ${tg.of} samples taken. Next target: the rover. ` : 'Next target: the rover. ';
     modal.replaceChildren(h('div.walk-modal__card',
       h('div.walk-modal__kicker.mono', `Sample · +${fmtDuration(spotSeconds())} work`, ' ', tag(DEMO.spotWorkMin)),
-      h('div.walk-modal__title', 'Sample taken.'),
+      h('div.walk-modal__title', several ? `Sample ${tg.sampled} of ${tg.of} taken.` : 'Sample taken.'),
       log.sample.photo ? h('figure.walk-modal__photo',
         h('img', { src: log.sample.photo, alt: log.sample.photoTitle || 'Curiosity photo' }),
         h('figcaption.mono', `${log.sample.photoTitle || ''}. ${log.sample.photoMeta || 'Curiosity'}, ${log.sample.photoCredit || 'NASA/JPL-Caltech'} `,
           tag({ label: 'real', text: 'Real Curiosity photo of this rock, the sandstone of the Murray Buttes. Curiosity never stopped at this exact spot.', source: { title: `${log.sample.photoMeta || 'Curiosity'}, ${log.sample.photoCredit || 'NASA/JPL-Caltech'}`, url: log.sample.photoUrl || '', where: '' } }))) : null,
-      h('p.walk-modal__text', `${route.spot.name}: sandstone of the butte (Stimson formation), bagged ${fmtDistance(Math.hypot(log.sample.x - ROVER.x, log.sample.z - ROVER.z))} from the rover in a straight line `, tag(DIST_TAG), `. The photo shows this rock in the Murray Buttes as Curiosity saw it, not this exact spot.`),
-      h('div.walk-modal__next', 'Next target: the rover. ', h('kbd', 'E'), ' continue')));
+      h('p.walk-modal__text', `${st.name}: sandstone of the butte (Stimson formation), bagged ${fmtDistance(Math.hypot(at.x - ROVER.x, at.z - ROVER.z))} from the rover in a straight line `, tag(DIST_TAG), `. The photo shows this rock in the Murray Buttes as Curiosity saw it, not this exact spot.`),
+      h('div.walk-modal__next', next, h('kbd', 'E'), ' continue')));
     modal.classList.add('is-on');
   }
   function showEmpty(log) {

@@ -41,6 +41,9 @@
 .walk-task__v { color: #fff; font-weight: 600; }
 .walk-task.is-done .walk-task__mark { background: var(--accent); }
 .walk-task.is-done .walk-task__v { color: rgba(255, 255, 255, 0.75); text-decoration: line-through; text-decoration-color: rgba(79, 203, 255, 0.8); }
+/* a round: "Stop 2 of 3", "Way home · stop 3 skipped" (quiet, above the target name) */
+.walk-target__step { font-size: var(--fs-tag); font-weight: 600; color: #fff; letter-spacing: 0.04em; margin-bottom: 0.25em; text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 1px 2px rgba(0, 0, 0, 0.8); }
+.walk-target__step.is-skipped { color: var(--caution); }
 .walk-target__name { font-weight: 600; font-size: var(--fs-small); line-height: 1.25; }
 .walk-target__line { font-size: var(--fs-mono); margin-top: 0.2em; }
 .walk-target__bar { height: 3px; background: rgba(255, 255, 255, 0.25); border-radius: 2px; margin-top: 0.5em; width: 100%; overflow: hidden; }

@@ -62,11 +62,10 @@ export function planRound(terrain, stops) {
   const legs = [];
   for (let k = 0; k + 1 < places.length; k++) legs.push(legRoute(terrain, places[k], places[k + 1]));
   const first = stops[0];
-  // TODO(several-stops walk): spot / out / back are the bridge for the Walk and the Debrief, which still
-  // know one spot. The walk targets the FIRST stop (spot, along out = legs[0]), takes one sample there, then
-  // walks "home" along back = the remaining legs joined, which passes the other stops without a sample.
-  // The next builder replaces this with stop-by-stop targets from route.stops and route.legs.
-  // Plan and Go / no-go read only stops and legs. With one stop, out = legs[0] and back = legs[1] as before.
+  // stops and legs are the round: the Walk targets each stop in turn along legs[k] and the Debrief compares
+  // the whole round. spot / out / back are convenience fields kept for a one-stop route and older readers
+  // (Go / no-go's spot name, the Plan map bounds, plan numbers' spotId, tests): spot = the first stop,
+  // out = legs[0], back = the remaining legs joined. With one stop, out = legs[0] and back = legs[1] as before.
   return {
     spotId: first.id || null,
     spot: placeOf(first),

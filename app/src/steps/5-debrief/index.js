@@ -1,13 +1,15 @@
 // Step 5 Debrief (specs/5-debrief.md): did I get home, and how close was it.
 // Planned values from state.plan (core planNumbers), actual values from state.walk (core WalkLog).
 // Every number comes from the core; a missing field shows "no data".
-// Dev aid: ?step=5&outcome=home|broken|lost replaces the walk log once with a test log (fixtures.js).
+// Dev aid: ?step=5&outcome=home|broken|lost|turned|none replaces the walk log once with a test log (fixtures.js).
+// A round (specs/feedback-1.md "Several stops"): samples "2 of 3" with each stop taken / skipped, planned against
+// actual for the whole round, the whole round and the stops in order on the map; one stop: as before.
 import './style.css';
 import {
   h, s, headline, lede, bigNumber, pillButton, mapPanel, legend, checkItem, labelTag, marker,
   fmtDistance, fmtDuration,
 } from '../../ui/index.js';
-import { ROVER, spotLabel, spotNumber, ENVIRONMENT, DEMO, RULES } from '../../core/index.js';
+import { ROVER, spotLabel, spotNumber, ENVIRONMENT, DEMO, RULES, stopsOf, stopOrdinal } from '../../core/index.js';
 import { fixtureWalk } from './fixtures.js';
 
 const NO_DATA = 'no data';
@@ -35,6 +37,8 @@ const T = {
   planShadow: { label: 'model', src: 'WALK_TERRAIN', text: 'Planned time without line of sight to the rover at eye height, from the terrain grid.' },
   walkShadow: { label: 'model', src: 'WALK_TERRAIN', text: 'Time you spent without line of sight to the rover at eye height.' },
   spot: { label: 'model', src: 'WALK_TARGETS', text: 'Sample spot at the foot of a butte; its position is derived from the terrain.' },
+  stops: { label: 'model', src: 'WALK_TARGETS', text: 'The planned stops of this round in visiting order: sample spots at the foot of the buttes, positions derived from the terrain. Taken: a sample at that stop; skipped: left out by "Turn back now"; not taken: not visited or passed without a sample.' },
+  samples: { label: 'model', src: 'WALK_TERRAIN', text: 'Samples taken on your walk, one per planned stop; the request counts as done with at least one sample and the rover reached.' },
   warnings: { label: 'model', src: 'WALK_TERRAIN', text: 'Warnings the helmet raised during the walk from the NASA rules; where = distance from the rover and time into the excursion.' },
   suitEmpty: { label: 'simulated', src: 'NONE', text: 'The suit ran out before the rover. The walk ended there; this is a simulation.' },
   where: { label: 'model', src: 'WALK_TERRAIN', text: 'Where it happened: straight-line distance and direction from the rover on the 0.5 m terrain grid, and the suit time into the excursion (demo time).' },
@@ -124,10 +128,20 @@ export default {
     // not returned: where the suit ran out, or where the visitor ended the mission (esc)
     const stopAt = empty || (walk && walk.end) || null;
     const stopTag = empty ? 'suitEmpty' : 'ended';
+    // the round's stops in plan order with their walk state (one stop: the old single-spot view)
+    const stops = route ? stopsOf(route) : [];
+    const several = stops.length > 1;
+    const wStops = (walk && walk.stops) || [];
+    const stopState = (st, k) => {
+      const w = wStops.find((x) => x.id === st.id) || wStops[k];
+      return w && w.sampled ? 'taken' : w && w.skipped ? 'skipped' : 'not taken';
+    };
+    const taken = stops.filter((st, k) => stopState(st, k) === 'taken').length;
+    const roundPts = route ? (route.legs ? route.legs.flatMap((l) => l.points) : [...route.out.points, ...route.back.points]) : [];
 
     // ----- map: planned route and walked path together -----
     const map = mapPanel(terrain, { steep: true });
-    if (route) map.path([...route.out.points, ...route.back.points], { style: 'foot' });
+    if (route) map.path(roundPts, { style: 'foot' });
     if (walk && walk.track && walk.track.length) map.path(walk.track, { style: 'walked' });
     if (empty && num(empty.x)) map.path([empty, ROVER], { style: 'walked' }).setAttribute('class', 'map-path dbf-gap');
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Rover' });
@@ -140,8 +154,20 @@ export default {
       wms.push(g);
       wmOf.set(i, g);
     });
-    // the spot above the warning markers, so its number stays readable
-    const spotG = route ? map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: spotNumber(route.spotId) || '·', selected: true }) : null;
+    // the spot above the warning markers, so its number stays readable. A round: every stop with its visiting
+    // order ("1st"), filled when its sample was taken, open when not
+    const stopGs = [];
+    if (several) {
+      stops.forEach((st, k) => {
+        const g = map.addMarker(st.x, st.z, { kind: 'number', text: spotNumber(st.id) || '·', selected: stopState(st, k) === 'taken' });
+        g.append(s('g', { class: 'dbf-order', transform: 'translate(0 -15)' },
+          s('rect', { x: -12, y: -6, width: 24, height: 12, rx: 6 }),
+          s('text', { 'text-anchor': 'middle', dy: '0.36em' }, stopOrdinal(k + 1))));
+        g.classList.add('dbf-stop', `dbf-stop--${stopState(st, k).replace(' ', '-')}`);
+        stopGs.push(g);
+      });
+    }
+    const spotG = route && !several ? map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: spotNumber(route.spotId) || '·', selected: true }) : null;
     if (min && num(min.x)) {
       const g = map.addMarker(min.x, min.z, { kind: 'dot', label: 'Closest moment', layer: 'top' });
       g.classList.add('dbf-closest');
@@ -152,7 +178,8 @@ export default {
     // joins a moved marker to its real place), then the labels placed clear of the markers
     map.whenReady(() => {
       if (spotG) keepInside(map, spotG);
-      for (const g of wms) { keepInside(map, g); if (spotG) moveOff(map, g, spotG); }
+      for (const g of stopGs) keepInside(map, g);
+      for (const g of wms) { keepInside(map, g); if (spotG) moveOff(map, g, spotG); for (const sg of stopGs) moveOff(map, g, sg); }
       for (const g of [map.svg.querySelector('.dbf-closest'), emptyG]) {
         const lbl = g && g.querySelector('.map-marker__label');
         if (lbl) placeClear(map.svg, lbl);
@@ -160,11 +187,12 @@ export default {
     });
     map.setMarkerScale(MARKER_SIZE);
     map.setHome([
-      ...(route ? [...route.out.points, ...route.back.points] : []),
+      ...roundPts,
       ...((walk && walk.track) || []), ...warnings, ROVER, min, empty,
     ].filter((p) => p && num(p.x) && num(p.z)), { margin: HOME_MARGIN, maxK: HOME_MAX_ZOOM });
-    const legendItems = [{ kind: 'foot', text: 'Planned' }, { kind: 'walked', text: 'Walked' }, { kind: 'rover', text: 'Rover' },
-      { kind: 'selected', text: 'Spot' }, { kind: 'closest', text: 'Closest moment' }];
+    const legendItems = [{ kind: 'foot', text: several ? 'Planned round' : 'Planned' }, { kind: 'walked', text: 'Walked' }, { kind: 'rover', text: 'Rover' },
+      ...(several ? [{ kind: 'selected', text: 'Sample taken' }, { kind: 'dbf-open', text: 'No sample' }] : [{ kind: 'selected', text: 'Spot' }]),
+      { kind: 'closest', text: 'Closest moment' }];
     if (empty) legendItems.push({ kind: 'empty', text: 'Suit empty' });
 
     // ----- headline and outcome sentence -----
@@ -186,6 +214,8 @@ export default {
     } else {
       nums.append(bigNumber({ label: 'Reserve on return', value: dur(reserveHome), tag: T.walkReserve, tone: num(reserveHome) && reserveHome <= 0 ? 'warning' : null }));
     }
+    if (several) nums.classList.add('dbf__nums--4');
+    if (several) nums.append(bigNumber({ label: 'Samples', value: walk ? `${taken} of ${stops.length}` : NO_DATA, tag: T.samples, tone: walk && !taken ? 'warning' : null }));
     nums.append(
       bigNumber({ label: 'Closest moment', value: min ? dur(min.seconds) : NO_DATA, unit: min && min.name ? min.name.toLowerCase() : '', tag: T.closest, tone: min && min.seconds <= 0 ? 'warning' : null }),
       bigNumber({ label: 'Warnings', value: wCount, tag: T.warnings, tone: warnings.some((w) => w.level === 'warning') ? 'warning' : null }),
@@ -200,13 +230,20 @@ export default {
 
     // ----- planned next to actual -----
     const sample = walk && walk.sample;
+    const sampledStops = several ? stops.filter((st, k) => stopState(st, k) === 'taken') : [];
     const cell = (value, k) => h('td.dbf__td', h('span.mono', value), ' ', k ? tag(k) : null);
     const cellWrap = (value, k) => { const c = cell(value, k); c.classList.add('dbf__td--wrap'); return c; };
     const tr = (name, a, b) => h('tr', h('th.dbf__th', name), a, b);
     const table = h('table.dbf__table',
       h('thead', h('tr', h('th'), h('th.dbf__col', 'Planned'), h('th.dbf__col', 'Actual'))),
       h('tbody',
-        tr('Sample', cell(route ? spotName(route.spotId) : NO_DATA, route ? 'spot' : null), cell(walk ? (sample ? 'taken' : 'not taken') : NO_DATA, null)),
+        several
+          ? tr('Samples',
+            h('td.dbf__td', h('span.mono', `${stops.length} stops`), ' ', tag('stops'),
+              h('div.dbf__stops.mono', stops.map((st, k) => h('div', { title: spotName(st.id) }, h('b', stopOrdinal(k + 1)), ` spot ${spotNumber(st.id) || '·'}`)))),
+            h('td.dbf__td', h('span.mono', walk ? `${taken} of ${stops.length}` : NO_DATA), ' ', tag('samples'),
+              walk ? h('div.dbf__stops.mono', stops.map((st, k) => h(`div.is-${stopState(st, k).replace(' ', '-')}`, stopState(st, k)))) : null))
+          : tr('Sample', cell(route ? spotName(route.spotId) : NO_DATA, route ? 'spot' : null), cell(walk ? (sample ? 'taken' : 'not taken') : NO_DATA, null)),
         tr('Distance', cell(dist(plan && plan.distanceM), 'planDistance'), cell(dist(walk && walk.distanceM), 'walkDistance')),
         tr('Time', cell(dur(plan && plan.timeS), 'planTime'), cell(dur(walk && walk.tS), 'walkTime')),
         tr('Reserve on return', cell(dur(plan && plan.reserveS), 'planReserve'),
@@ -219,7 +256,7 @@ export default {
     const demo = h('div.dbf__demo', `Demo time ${DEMO.timeFactor.value}${DEMO.timeFactor.unit}: times are suit time. `, labelTag(DEMO.timeFactor));
 
     // ----- report to Earth -----
-    const report = reportCard(ctx, { sample, walk, outcome });
+    const report = reportCard(ctx, { sample, walk, outcome, sampled: several ? sampledStops.map((st) => ({ ...st, w: wStops.find((x) => x.id === st.id) })) : null });
 
     // ----- warnings list -----
     const wlist = h('div.dbf__warn',
@@ -274,8 +311,8 @@ export default {
       text: 'New mission', arrow: true,
       onClick: () => {
         const id = ctx.state.request && ctx.state.request.id;
-        // only a mission that took the sample and reached the rover finishes the request
-        if (id && home && sample && !ctx.state.requestsDone.includes(id)) ctx.set({ requestsDone: [...ctx.state.requestsDone, id] });
+        // only a mission that took a sample (a round: at least one) and reached the rover finishes the request
+        if (id && home && (several ? taken > 0 : sample) && !ctx.state.requestsDone.includes(id)) ctx.set({ requestsDone: [...ctx.state.requestsDone, id] });
         ctx.newMission();
       },
     });
@@ -356,7 +393,7 @@ function placeClear(svg, lbl) {
   lbl.setAttribute('text-anchor', 'start'); lbl.setAttribute('x', '5'); lbl.setAttribute('y', '1.6');
 }
 
-function reportCard(ctx, { sample, walk, outcome }) {
+function reportCard(ctx, { sample, walk, outcome, sampled = null }) {
   const photoBox = h('div.dbf__photo');
   const status = h('div.dbf__sent');
   const sendBtn = h('button.dbf__send', { type: 'button' }, 'Send report');
@@ -369,7 +406,16 @@ function reportCard(ctx, { sample, walk, outcome }) {
     status.classList.add('fade-in');
   });
 
-  const lines = sample
+  // a round: the stops sampled, in plan order, and when the last sample was taken
+  const last = sampled && sampled.length ? sampled.reduce((a, b) => ((b.w && b.w.tS) > (a.w && a.w.tS) ? b : a)) : null;
+  const lines = sampled
+    ? (sampled.length ? [
+      h('div.dbf__rrow', h('span.muted', sampled.length > 1 ? 'Spots ' : 'Spot '), sampled.map((st) => spotName(st.id)).join(', '), ' ', tag('spot')),
+      h('div.dbf__rrow', h('span.muted', 'Time '),
+        last && num(last.w && last.w.tS) ? `${lmst(last.w.tS)} local Mars time, ${fmtDuration(last.w.tS)} into the excursion${sampled.length > 1 ? ' (last sample)' : ''} ` : NO_DATA + ' ',
+        last && num(last.w && last.w.tS) ? labelTag(ENVIRONMENT.evaStartLmstH) : null),
+    ] : [h('div.dbf__rrow', h('span.muted', 'Samples '), walk ? 'none taken' : NO_DATA)])
+    : sample
     ? [
       h('div.dbf__rrow', h('span.muted', 'Spot '), spotName(sample.spotId), ' ', tag('spot')),
       h('div.dbf__rrow', h('span.muted', 'Time '),

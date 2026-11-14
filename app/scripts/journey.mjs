@@ -8,7 +8,8 @@
 // Playwright is not an app dependency: install it anywhere (npm i playwright@1.46 && npx playwright
 // install chromium) and point PW at its index.mjs (or have `playwright` resolvable).
 // Runs: near-1280 (nearest spot F1), far-1280 (farthest spot F7), far-1920 (F7 at 1920 x 1080).
-// Default: all three. Screenshots go to ../reviews/journey/<run>/.
+// Default: all three. Named only: stops-1280 and stops-turn-1280 (a round of three stops, see RUNS).
+// Screenshots go to ../reviews/journey/<run>/.
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -19,9 +20,11 @@ const RUNS = {
   'near-1280': { spot: 'F1', w: 1280, h: 720, request: 0 },
   'far-1280': { spot: 'F7', w: 1280, h: 720, request: 0 },
   'far-1920': { spot: 'F7', w: 1920, h: 1080, request: 0 },
-  // several stops (specs/feedback-1.md): 01, 02, 03 clicked in that order. Walk and Debrief still use the
-  // bridge of core planRound (TODO(several-stops walk)): sample at the first stop, then home past the others.
+  // several stops (specs/feedback-1.md): 01, 02, 03 clicked in that order; the walk follows each leg with one
+  // sample per stop (Debrief "3 of 3"). stops-turn-1280: after the sample at stop 2 the crew waits there until
+  // "Turn back now" skips stop 3, then walks home (Debrief "2 of 3").
   'stops-1280': { spot: 'F1', stops: ['F1', 'F2', 'F3'], w: 1280, h: 720, request: 0 },
+  'stops-turn-1280': { spot: 'F1', stops: ['F1', 'F2', 'F3'], turnAt: 2, w: 1280, h: 720, request: 0 },
 };
 const chosen = args.filter((a) => RUNS[a]);
 const runs = chosen.length ? chosen : Object.keys(RUNS).filter((r) => !RUNS[r].stops); // default: the three one-stop runs
@@ -118,7 +121,7 @@ for (const run of runs) {
       steep: await text('.plan-totals .bignum:nth-child(3) .bignum__value'),
       dist: (await text('.plan-cards .card__right')).replace(/\s*model$/, ''),
     };
-    // the first stop: in a round its number is in the leg list (the walk bridge targets it)
+    // the first stop: in a round its number is in the leg list (the walk's first target)
     planTxt.number = await text(cfg.stops ? '.plan-legs .plan-stop .marker' : '.plan-cards .marker');
     planTxt.label = `${planTxt.number} ${(await S()).candidates[k].candidate.name}`;
     if (planTxt.number !== String(k + 1).padStart(2, '0')) fail(run, `plan card number ${planTxt.number}, map number ${k + 1}`);
@@ -217,15 +220,64 @@ for (const run of runs) {
       await page.keyboard.up('KeyW');
       await page.evaluate(() => window.__walk.advance(0.1, true));
     };
-    await walkLeg(st.route.out.points, 'atTarget', 'walk-out', [0.3, 0.7]);
-    await shot('walk-at-target');
-    await page.keyboard.press('KeyE');
-    await page.evaluate(() => window.__walk.advance(0.1, true));
-    await shot('walk-sample');
-    if (!(await S()).walk.sample) fail(run, 'sample not logged');
-    await page.keyboard.press('KeyE');
-    await page.evaluate(() => window.__walk.advance(0.1, true));
-    await walkLeg(st.route.back.points, 'atRover', 'walk-back', [0.5]);
+    const nStops = cfg.stops ? cfg.stops.length : 1;
+    let samplesWant = 1;
+    if (!cfg.stops) {
+      await walkLeg(st.route.out.points, 'atTarget', 'walk-out', [0.3, 0.7]);
+      await shot('walk-at-target');
+      await page.keyboard.press('KeyE');
+      await page.evaluate(() => window.__walk.advance(0.1, true));
+      await shot('walk-sample');
+      if (!(await S()).walk.sample) fail(run, 'sample not logged');
+      await page.keyboard.press('KeyE');
+      await page.evaluate(() => window.__walk.advance(0.1, true));
+      await walkLeg(st.route.back.points, 'atRover', 'walk-back', [0.5]);
+    } else {
+      // a round: each leg in turn, the target and "Stop k of N" on the display, one sample per stop
+      const labelOf = (id) => `${String(cands.indexOf(id) + 1).padStart(2, '0')} ${st.candidates[cands.indexOf(id)].candidate.name}`;
+      const reserveNow = () => page.evaluate(() => window.__walk.info().reserveS);
+      for (let k = 0; k < nStops; k++) {
+        const tgName = await text('.walk-target__name');
+        const tgStep = await text('.walk-target__step');
+        if (tgName !== labelOf(cfg.stops[k])) fail(run, `leg ${k + 1}: walk target "${tgName}" vs plan "${labelOf(cfg.stops[k])}"`);
+        if (tgStep !== `Stop ${k + 1} of ${nStops}`) fail(run, `leg ${k + 1}: progress "${tgStep}"`);
+        await walkLeg(st.route.legs[k].points, 'atTarget', `walk-leg${k + 1}`, [0.5]);
+        await shot(`walk-at-stop${k + 1}`);
+        const before = await reserveNow();
+        await page.keyboard.press('KeyE');
+        await page.evaluate(() => window.__walk.advance(0.1, true));
+        await shot(`walk-sample${k + 1}`);
+        const wl = (await S()).walk;
+        if (!wl.stops[k] || !wl.stops[k].sampled) fail(run, `sample at stop ${k + 1} not logged`);
+        // the reserve already counted the work at this stop: no jump at the sample (one walk tick of slack)
+        const after = await reserveNow();
+        if (Math.abs(after - before) > 180) fail(run, `reserve jumped at sample ${k + 1}: ${Math.round(before)} s -> ${Math.round(after)} s`);
+        await page.keyboard.press('KeyE');
+        await page.evaluate(() => window.__walk.advance(0.1, true));
+        if (cfg.turnAt === k + 1) {
+          // wait at this stop until the reserve with the remaining stops runs out
+          let info;
+          for (let g = 0; g < 2000; g++) { info = await page.evaluate(() => window.__walk.advance(1)); if (info.alert === 'turnBack' || info.ended) break; }
+          await page.evaluate(() => window.__walk.advance(0.05, true));
+          await shot('walk-turn-back');
+          info = await page.evaluate(() => window.__walk.info());
+          const skipped = (await S()).walk.stops.filter((s) => s.skipped).map((s) => s.id);
+          if (info.alert !== 'turnBack') fail(run, `no "Turn back now" while waiting at stop ${k + 1}`);
+          if (info.target.kind !== 'rover') fail(run, `after turn back the target is ${info.target.kind}`);
+          if (skipped.join() !== cfg.stops.slice(k + 1).join()) fail(run, `skipped stops ${skipped}`);
+          const stepTxt = await text('.walk-target__step');
+          if (!/skipped/.test(stepTxt)) fail(run, `progress after turn back "${stepTxt}"`);
+          const alertTxt = await text('.walk-alert');
+          if (!/skipped/.test(alertTxt)) fail(run, `turn back warning does not say what was skipped: ${alertTxt}`);
+          samplesWant = k + 1;
+          break;
+        }
+      }
+      samplesWant = cfg.turnAt || nStops;
+      if ((await page.evaluate(() => window.__walk.info().target.kind)) !== 'rover') fail(run, 'after the last stop the target is not the rover');
+      const home = await page.evaluate(() => window.__walk.sim.leg().points);
+      await walkLeg(home, 'atRover', 'walk-home', [0.5]);
+    }
     await shot('walk-at-rover');
     await page.keyboard.press('KeyE');
 
@@ -240,7 +292,20 @@ for (const run of runs) {
     if (row('Distance')[1] !== planTxt.dist) fail(run, `planned distance Plan ${planTxt.dist} vs Debrief ${row('Distance')[1]}`);
     if (row('Reserve on return')[1] !== planTxt.reserve) fail(run, `planned reserve Plan ${planTxt.reserve} vs Debrief ${row('Reserve on return')[1]}`);
     if (row('Time')[1] !== planTxt.total.replace('≈ ', '')) fail(run, `planned time Plan ${planTxt.total} vs Debrief ${row('Time')[1]}`);
-    if (row('Sample')[1] !== planTxt.label || row('Sample')[2] !== 'taken') fail(run, `sample row ${row('Sample')} (plan: ${planTxt.label})`);
+    if (!cfg.stops && (row('Sample')[1] !== planTxt.label || row('Sample')[2] !== 'taken')) fail(run, `sample row ${row('Sample')} (plan: ${planTxt.label})`);
+    if (cfg.stops) {
+      // a round: "Samples k of N" in the big numbers and the table, each stop taken / skipped
+      const want = `${samplesWant} of ${nStops}`;
+      const big = await page.locator('.dbf__nums .bignum', { hasText: 'Samples' }).locator('.bignum__value').innerText();
+      if (big !== want) fail(run, `Debrief samples "${big}", want "${want}"`);
+      const r = row('Samples');
+      if (!(r[1] || '').startsWith(`${nStops} stops`) || !(r[2] || '').startsWith(want)) fail(run, `samples row ${JSON.stringify(r)}`);
+      const states = await page.locator('.dbf__table td:nth-child(3) .dbf__stops > div').allInnerTexts();
+      const wantStates = cfg.stops.map((id, i) => (i < samplesWant ? 'taken' : 'skipped'));
+      if (states.join() !== wantStates.join()) fail(run, `stop states ${states}, want ${wantStates}`);
+      const orders = await page.locator('.step--debrief .dbf-order text').allTextContents(); // SVG text: no innerText
+      if (orders.join() !== ['1st', '2nd', '3rd'].slice(0, nStops).join()) fail(run, `map order badges ${orders}`);
+    }
     const mins = (d) => { const m = /(?:(\d+) h )?(\d+)(?: min)?/.exec(d || ''); return m ? (+(m[1] || 0)) * 60 + +m[2] : NaN; };
     if (goTxt.radio && mins(goTxt.radio) > mins(row('Time in radio shadow')[1])) fail(run, `Go longest radio shadow ${goTxt.radio} exceeds the planned total ${row('Time in radio shadow')[1]}`);
     const head = await text('.step--debrief .headline');

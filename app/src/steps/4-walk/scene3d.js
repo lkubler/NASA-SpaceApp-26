@@ -11,7 +11,8 @@ import { DISPLAY as D } from './display.js';
 
 const ACCENT = 0x4fcbff; // --accent in styles/tokens.css
 
-export function createScene3d(host, t) {
+/** opts.keepOpen: cell lists of the planned round's legs; the steep border keeps its corridors open along them too. */
+export function createScene3d(host, t, opts = {}) {
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -31,7 +32,7 @@ export function createScene3d(host, t) {
   scene.add(patch);
   // ground cues near the walker (specs/feedback-1.md, Walk: display): steep ground and radio shadow edges.
   // Built once; the fade with distance runs in the shader (no per-frame work)
-  const cues = [steepWall(t), radioDots(t)].filter(Boolean);
+  const cues = [steepWall(t, opts.keepOpen), radioDots(t)].filter(Boolean);
   for (const c of cues) scene.add(c);
   // the rover: NASA's Space Exploration Vehicle model (public/models/sev.glb), loaded in the background; the
   // simple box model stands in until it is there and stays if it fails to load
@@ -197,11 +198,12 @@ const FADE_GLSL = `
  * a crisp bright line at the foot, a fill fading out upwards, faint stripes drifting along it. Depth-tested
  * against the terrain (the hill hides what lies behind it), no depth write, double sided.
  */
-function steepWall(t) {
+function steepWall(t, roundLegs = []) {
   // the planned routes to every candidate spot keep their open ground (the ways home in the rover's cost
-  // field, which the Walk builds before the scene): the border never runs across them
+  // field, which the Walk builds before the scene), and so do the legs of the planned round (spot to spot):
+  // the border never runs across them
   const home = roverField(t);
-  const lines = steepWallLines(t, D, CANDIDATES.map((c) => home.pathFrom(c.x, c.z)));
+  const lines = steepWallLines(t, D, [...CANDIDATES.map((c) => home.pathFrom(c.x, c.z)), ...roundLegs]);
   if (!lines.length) return null;
   const pos = [], wall = [], idx = [];
   const H = D.steepWallHeightM, B = D.steepWallBelowM;

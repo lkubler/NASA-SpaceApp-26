@@ -15,6 +15,7 @@ export const DISPLAY = {
   homeTurnM: 1.5,         // "heads home": the way home got this much shorter since the warning
   atTargetM: 2.5,         // close enough to take the sample
   atRoverM: 4,            // close enough to end the excursion
+  legStartM: 1,           // a round: standing this close to where the planned leg to the next target starts, that leg is shown (else the way from here)
   leftRoverM: 6,          // the visitor has left the rover (before that, no "end excursion")
   // the rover: NASA's Space Exploration Vehicle model (public/models/sev.glb), scaled to the vehicle's length
   // (4.5 m, 2008 SEV design as given on en.wikipedia.org/wiki/Space_Exploration_Vehicle; no primary NASA

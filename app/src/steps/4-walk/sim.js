@@ -5,6 +5,7 @@ import {
   RULES, WORK, ASTRONAUT, DEMO, ROVER,
   logMove, logPath, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, walkSeconds, hasRadio,
   radioShadowMask, roverField, spotField, isClosedAt, isClosed, findRoute,
+  stopsOf, initStops, remainingStops, markSampled,
 } from '../../core/index.js';
 import { DISPLAY as D } from './display.js';
 
@@ -33,8 +34,14 @@ const ORDER = Object.keys(ALERTS);
 export function createSim(t, route, log) {
   const shadow = radioShadowMask(t);
   const home = roverField(t);
-  const toSpot = spotField(t, route.spot);
-  const legs = [route.out.points, route.back.points];
+  // a round (specs/feedback-1.md "Several stops"): rover -> stop 1 -> ... -> stop N -> rover. The target is
+  // the next stop not sampled yet, in plan order; one sample per stop; then the rover
+  const stops = stopsOf(route), N = stops.length;
+  const plannedLegs = route.legs || [route.out, route.back];
+  const legs = plannedLegs.map((l) => l.points); // the whole planned round: "off the path" measures to it
+  const stopField = stops.map((st) => spotField(t, st));
+  const toSpot = stopField[0];
+  initStops(log, route);
 
   // the rover model's footprint: the visitor is kept outside it
   const ry = D.roverHeadingDeg * DEG;
@@ -54,8 +61,8 @@ export function createSim(t, route, log) {
     return { x: rc.x + fwd.x * a + side.x * b, z: rc.z + fwd.z * a + side.z * b };
   };
 
-  // start beside the rover, on the route, facing along it
-  const pts = route.out.points;
+  // start beside the rover, on the route, facing along it (the first leg)
+  const pts = legs[0];
   let k0 = pts.findIndex((p) => Math.hypot(p.x - ROVER.x, p.z - ROVER.z) >= D.startClearM && !insideRover(p.x, p.z));
   if (k0 < 0) k0 = Math.min(1, pts.length - 1);
   const a = pts[k0], b = pts[Math.min(pts.length - 1, k0 + 6)];
@@ -67,20 +74,51 @@ export function createSim(t, route, log) {
     reserve: null, timeLeft: null,
     active: {}, alert: null, alerts: [], alertInfo: {},
     tb: null, leftRover: false, atEdge: false, fast: false,
-    homeAtSample: null,
+    leg: null, lastSample: -1, // the leg shown now (band, minimap, steep ahead): { target, key, kind, stop, points, planned }
   };
   log.track.length || log.track.push({ x: ROVER.x, z: ROVER.z, tS: log.tS, reserveS: NaN, radio: true });
   // the metres from the rover to the start point are logged at planning pace right away, so the clock,
   // the distances and the reserve shown in the helmet all count from the rover, like the plan and the
   // debrief (the clock then runs from the first step)
   const startPath = [{ x: ROVER.x, z: ROVER.z }, ...pts.slice(1, k0 + 1)];
-  if (log.distanceM === 0 && log.tS === 0) logPath(log, t, startPath, { shadow, spot: route.spot });
+  if (log.distanceM === 0 && log.tS === 0) logPath(log, t, startPath, { shadow });
   s.radio = hasRadio(t, s.x, s.z);
   refreshReserve();
 
+  /** Reserve on return from here: the remaining stops in plan order (walk and work at each), then home. */
+  function reserveHere() { return reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: log.phase, stops: remainingStops(log) }); }
   function refreshReserve() {
-    s.reserve = reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: log.phase, spot: route.spot });
+    s.reserve = reserveHere();
     s.timeLeft = timeLeft(log.levels);
+  }
+
+  /** Index (in plan order) of the stop the walk heads for now, or -1: the rover. */
+  function nextStop() { return log.phase === 'out' ? log.stops.findIndex((st) => !st.sampled && !st.skipped) : -1; }
+  /**
+   * The leg shown now (band, minimap, steep ahead): the planned leg to the next stop (or home) when the walk
+   * stands where that leg starts (the rover at the start, the previous stop in plan order after its sample);
+   * otherwise (a stop sampled out of order, a turn back on the way) the fastest rule-keeping way from here,
+   * from the planner's cost field.
+   */
+  function currentLeg() {
+    const k = nextStop();
+    const target = k >= 0 ? 'stop' + k : 'rover';
+    if (s.leg && s.leg.target === target) return s.leg;
+    const li = k >= 0 ? k : N;
+    const from = li === 0 ? null : stops[li - 1];
+    const atStart = li === 0 ? !log.stops.some((st) => st.sampled) : Math.hypot(s.x - from.x, s.z - from.z) <= D.legStartM;
+    let points;
+    if (atStart) points = legs[li];
+    else {
+      const field = k >= 0 ? stopField[k] : home;
+      // from here along the cost field; the cell this point stands in is left out when it is here itself
+      const way = field.pathFrom(s.x, s.z).map((i) => t.pointOf(i)).filter((p, k) => k > 0 || Math.hypot(p.x - s.x, p.z - s.z) > 1e-3);
+      points = [{ x: s.x, z: s.z }, ...way];
+      if (points.length < 2) points.push(k >= 0 ? { x: stops[k].x, z: stops[k].z } : { x: ROVER.x, z: ROVER.z });
+    }
+    // key: one band per leg in the 3D view (a way from here gets its own)
+    s.leg = { target, key: atStart ? 'leg' + li : `${target}@${log.tS.toFixed(1)}`, kind: k >= 0 ? 'spot' : 'rover', stop: k, points, planned: atStart };
+    return s.leg;
   }
 
   const ground = (x, z) => t.heightAt(x, z);
@@ -142,7 +180,7 @@ export function createSim(t, route, log) {
     s.workW = workW;
     s.x = to.x; s.z = to.z;
     s.radio = hasRadio(t, s.x, s.z);
-    s.reserve = logMove(log, t, { from, to, dtS, workW, radio: s.radio, spot: route.spot });
+    s.reserve = logMove(log, t, { from, to, dtS, workW, radio: s.radio });
     s.timeLeft = timeLeft(log.levels);
     if (Math.hypot(s.x - ROVER.x, s.z - ROVER.z) > D.leftRoverM) s.leftRover = true;
     evaluate();
@@ -227,11 +265,13 @@ export function createSim(t, route, log) {
     return null;
   }
 
-  /** Distance to the planned route (both legs), and the nearest point on the current leg. */
+  /** Distance to the planned round (every leg, and the way shown now), and the nearest point on the current leg. */
   function nearRoute() {
     let best = Infinity, cur = null, bp = null;
-    const curLeg = log.phase === 'out' && !log.sample ? 0 : 1;
-    legs.forEach((L, li) => {
+    const lg = currentLeg();
+    const all = lg.planned ? legs : [...legs, lg.points];
+    const curLeg = lg.planned ? legs.indexOf(lg.points) : all.length - 1;
+    all.forEach((L, li) => {
       for (let i = 1; i < L.length; i++) {
         const p = L[i - 1], q = L[i];
         const dx = q.x - p.x, dz = q.z - p.z, l2 = dx * dx + dz * dz;
@@ -241,7 +281,7 @@ export function createSim(t, route, log) {
         if (li === curLeg && (!cur || d < cur.d)) cur = { d, i, u };
       }
     });
-    return { m: best, cur, L: legs[curLeg], p: bp };
+    return { m: best, cur, L: all[curLeg], p: bp };
   }
 
   /** Closed ground on the planned route ahead (the crew keeps to the band): metres to it, or null. */
@@ -301,20 +341,43 @@ export function createSim(t, route, log) {
 
     // Turn back now: from reserve zero until the crew heads home (the way home gets shorter)
     const hm = home.at(s.x, s.z).metres;
-    if (s.reserve.seconds <= 0) {
+    // a round: the reserve for the remaining stops has run out. The warning means "skip the remaining stops":
+    // they are skipped at once and the display shows the way home (target rover, band from here); the
+    // warning stays until the crew heads home. One stop: as before (the target switches when they head home)
+    if (N > 1 && log.phase === 'out' && s.reserve.seconds <= 0) {
+      const skipped = log.stops.filter((st) => !st.sampled && !st.skipped);
+      skipped.forEach((st) => { st.skipped = true; });
+      log.turnedBack = { x: s.x, z: s.z, tS: log.tS, reserveS: s.reserve.seconds, skipped: skipped.map((st) => st.id) };
+      log.phase = 'back';
+      const roundS = s.reserve.seconds;
+      s.reserve = reserveHere();
+      s.tb = { on: true, ref: hm, skip: { reserveS: roundS, stops: skipped.map((st) => ({ order: st.order, id: st.id })) } };
+    }
+    if (s.tb && s.tb.skip && s.reserve.seconds > 0) {
+      // skipped, and the way home itself still has reserve: the warning goes once the crew heads home
+      if (s.tb.on) {
+        s.tb.ref = Math.max(s.tb.ref, hm);
+        if (s.tb.ref - hm >= D.homeTurnM) s.tb = { ...s.tb, on: false };
+      }
+    } else if (s.reserve.seconds <= 0) {
       if (!s.tb) s.tb = { on: true, ref: hm };
       else if (s.tb.on) {
         s.tb.ref = Math.max(s.tb.ref, hm);
         if (s.tb.ref - hm >= D.homeTurnM) {
           s.tb = { on: false, ref: hm };
-          if (log.phase === 'out' && !log.sample) { log.phase = 'back'; s.reserve = reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: 'back' }); }
+          if (log.phase === 'out' && !log.sample) { log.phase = 'back'; s.reserve = reserveHere(); }
         }
       } else {
         s.tb.ref = Math.min(s.tb.ref, hm);
         if (hm - s.tb.ref >= D.homeTurnM) s.tb = { on: true, ref: hm };
       }
     } else s.tb = null;
-    if (s.tb && s.tb.on) { cur.turnBack = true; info.turnBack = { reserveS: s.reserve.seconds, viaSpot: log.phase === 'out' && !log.sample }; }
+    if (s.tb && s.tb.on) {
+      cur.turnBack = true;
+      info.turnBack = s.tb.skip
+        ? { reserveS: s.tb.skip.reserveS, skipped: s.tb.skip.stops }
+        : { reserveS: s.reserve.seconds, viaSpot: log.phase === 'out' && !log.sample };
+    }
 
     // broken rules (logged once per stretch)
     const movedM = Math.hypot(s.x - lastPos.x, s.z - lastPos.z);
@@ -338,23 +401,52 @@ export function createSim(t, route, log) {
 
   // ---------- actions ----------
   function distTo(p) { return Math.hypot(s.x - p.x, s.z - p.z); }
-  const atTarget = () => !log.ended && !log.sample && distTo(route.spot) <= D.atTargetM;
+  /**
+   * The stop the walker stands on, if a sample can be taken there: any planned stop not sampled yet (also one
+   * out of plan order, or one skipped by a turn back), the nearest within atTargetM; else -1.
+   */
+  function stopHere() {
+    if (log.ended) return -1;
+    let best = -1, bd = D.atTargetM;
+    log.stops.forEach((st, k) => { const d = distTo(st); if (!st.sampled && d <= bd) { bd = d; best = k; } });
+    return best;
+  }
+  const atTarget = () => stopHere() >= 0;
+  /** Points from here to p along the cost field's way (as field.at counts it): here, the cells, p itself. */
+  function wayTo(field, p) {
+    const pts = [{ x: s.x, z: s.z }];
+    const c = field.at(s.x, s.z);
+    const g = t.indexOf(p.x, p.z);
+    for (let i = c.index, n = 0; i !== -1 && i !== g && n < 4000; i = field.next[i], n++) pts.push(t.pointOf(i));
+    pts.push({ x: p.x, z: p.z });
+    return pts;
+  }
   const atRover = () => !log.ended && s.leftRover && distTo(ROVER) <= D.atRoverM;
 
   function takeSample() {
-    if (!atTarget()) return false;
+    const k = stopHere();
+    if (k < 0) return false;
+    const spot = log.stops[k];
     // the last metres to the spot are walked at planning pace and the crew stands at the spot for the work,
     // as the plan counts them: the reserve on return stays continuous across the sample (the reserve on
     // the way out already counted these metres; skipping them made it jump up by their time there and back)
-    const r0 = logPath(log, t, [{ x: s.x, z: s.z }, { x: route.spot.x, z: route.spot.z }], { shadow, spot: route.spot });
-    if (r0) { s.x = route.spot.x; s.z = route.spot.z; s.radio = hasRadio(t, s.x, s.z); }
-    log.phase = 'back';
+    // along the way the reserve counted (the stop's cost field from here), so it does not jump where that
+    // way bends round closed ground; straight when the walker stands in the stop's own cell
+    const r0 = logPath(log, t, wayTo(stopField[k], spot), { shadow });
+    if (r0) { s.x = spot.x; s.z = spot.z; s.radio = hasRadio(t, s.x, s.z); }
+    // the stop leaves the remaining stops before its work is logged: the reserve after the work counts the
+    // stops still ahead from here (after the last one: the way home), continuous with the reserve before
+    const first = !log.sample;
+    markSampled(log, k, { x: s.x, z: s.z });
     const p = { x: s.x, y: ground(s.x, s.z), z: s.z };
-    s.reserve = logMove(log, t, { from: p, to: p, dtS: spotSeconds(), workW: WORK.spotW.value, radio: s.radio, spot: route.spot });
+    s.reserve = logMove(log, t, { from: p, to: p, dtS: spotSeconds(), workW: WORK.spotW.value, radio: s.radio });
     s.timeLeft = timeLeft(log.levels);
-    log.sample = { spotId: route.spotId, x: s.x, z: s.z, tS: log.tS };
-    s.homeAtSample = home.at(s.x, s.z).metres;
-    s.tb = null;
+    // the sample's time: when the work is done (as before)
+    spot.tS = log.tS;
+    if (first) log.sample.tS = log.tS;
+    s.lastSample = k;
+    s.leg = null; // the band and the target follow from the stops left
+    if (!(s.tb && s.tb.skip)) s.tb = null;
     evaluate();
     if (s.timeLeft.seconds <= 0) suitEmpty();
     else s.modal = 'sample';
@@ -382,7 +474,7 @@ export function createSim(t, route, log) {
   function finish(returned) {
     if (returned) {
       // the last metres to the rover, straight, at planning pace
-      const r = logPath(log, t, lastPath(), { shadow, spot: route.spot });
+      const r = logPath(log, t, lastPath(), { shadow });
       if (r) { s.reserve = r; s.timeLeft = timeLeft(log.levels); }
     }
     log.ended = true;
@@ -405,18 +497,23 @@ export function createSim(t, route, log) {
   function endMission() { if (log.ended) return; finish(atRoverAny()); log.endedByVisitor = true; }
   const atRoverAny = () => distTo(ROVER) <= D.atRoverM;
 
-  /** Where the visitor is heading now: the sample spot, then the rover. */
+  /** Where the visitor is heading now: the next stop not sampled yet (plan order), then the rover. */
   let legStart = null;
   function target() {
-    const spotLeg = log.phase === 'out' && !log.sample;
-    const c = spotLeg ? toSpot.at(s.x, s.z) : home.at(s.x, s.z);
-    const kind = spotLeg ? 'spot' : 'rover';
-    if (!legStart || legStart.kind !== kind) legStart = { kind, m: Math.max(c.metres, 1e-6) };
+    const lg = currentLeg();
+    const k = lg.stop;
+    const spotLeg = k >= 0;
+    const c = spotLeg ? stopField[k].at(s.x, s.z) : home.at(s.x, s.z);
+    if (!legStart || legStart.key !== lg.target) legStart = { key: lg.target, m: Math.max(c.metres, 1e-6) };
     const base = spotLeg
-      ? { kind, name: route.spot.name || 'Sample spot', id: route.spotId, x: route.spot.x, z: route.spot.z }
-      : { kind, name: 'Rover', id: null, x: ROVER.x, z: ROVER.z };
-    return { ...base, metres: c.metres, seconds: c.seconds, done: Math.max(0, Math.min(1, 1 - c.metres / legStart.m)) };
+      ? { kind: 'spot', name: stops[k].name || 'Sample spot', id: stops[k].id || null, x: stops[k].x, z: stops[k].z, order: k + 1 }
+      : { kind: 'rover', name: 'Rover', id: null, x: ROVER.x, z: ROVER.z, order: null };
+    return {
+      ...base, metres: c.metres, seconds: c.seconds, done: Math.max(0, Math.min(1, 1 - c.metres / legStart.m)),
+      of: N, sampled: log.stops.filter((st) => st.sampled).length,
+      skipped: log.stops.filter((st) => st.skipped && !st.sampled).map((st) => st.order),
+    };
   }
 
-  return { s, log, route, lastLeg, step, canLand, jumpTo, takeSample, endExcursion, endMission, atTarget, atRover, target, refreshReserve, home, toSpot };
+  return { s, log, route, stops, lastLeg, step, canLand, jumpTo, takeSample, endExcursion, endMission, atTarget, atRover, stopHere, target, leg: currentLeg, refreshReserve, home, toSpot };
 }
