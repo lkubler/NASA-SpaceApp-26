@@ -132,3 +132,10 @@ Nichts soll einfach reingeworfen wirken. Jeder Platzhalter bekommt im UI ein Lab
 - Sauerstoff/Energie: Vereinfachtes Modell, Verbrauch abhängig von Steigung, Untergrund und Last. Real kämen die Werte live aus den Anzugsensoren.
 - Funk: Berechnet aus dem Geländemodell (Sichtlinie zum Rover). Ein reales System würde zusätzlich Relais-Satelliten und deren Überflugzeiten einbeziehen.
 → Zeigt der Jury, dass wir zwischen echten Daten, Modellen und Simulation unterscheiden
+
+- was ist mit Sandstürmen und anderen Problemen/Issues die wir auf dem Mars haben, aber nicht hier lokal? 
+- Wie könnten wir es möglichst cool machen? Ich dachte an vlt web assembly mit literly graphic effecten, licht simlation, tag/Nacht simulation, usw...
+- loading screen wichtig, es sollte klar sein hey, das braucht einen Moment...
+- für die Erde gibt es hier und da simulationen/Modelle im sinne von wie verändert sich das environment wenn man z. B. einne baum an position x pflanzt usw. usw... vlt gibt es solche Sachen auch für den Mars? Könnte adapted werden?
+- Es sollte web based sein + deployed + bereits reachable via qr code. 
+- was ebenfalls relevant ist, sind dashboard bestandteile, die Grundlegende Idee ist natürlich der Routen Planer, aber mal sehen was man noch machen könnte...
