@@ -63,3 +63,9 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Found: reserve at lander 0 % (below 20 % buffer), comms shadow covers nearly the whole route (434 → 124 min with relay), labels crowd near Quela / clip under panel → 024.
 - Next: 024 builder (running); then UX pass 2 + jury re-check before Sun 10:30 freeze; minimap; humans: pitch owner, AI 009 scope, cut 011.
 - 15:20: merged 024 (default scenario: 5.9 km, EVA 4.9 h, 22 % reserve at lander, slack ~10 min; relay 2 m antenna assumed; comms shadow 115 → 0 min with "Move relay"; labels avoid panel/key). Fixed 4 page errors from 022 (hatch drawImage on hidden 0×0 map canvas). 55 tests, all 4 views 0 errors. Known: relay search takes ~3 s; no turn-back shown in the feasible default (appears if drill time +10 min).
+
+## Round 12 — Sat 14.11. 15:20–15:40 (BUILD)
+- Did: ux-tester pass 2 (`research/ux-2.md`); merged 025 map fixes (relay busy state 4.7 s freeze → ~2 s with "Moving relay…", toggle back, hint line, loading placeholder, resize re-fit, deterministic framing, fewer labels, relay link line), 026 walk fixes (one clock, toast = tile, "Show station photo" + next-station HUD line), 027 polish (sources link labels + "Illustrative inputs", briefing "Your job", attribution, fold headings, station row bars); reserve tile green above buffer + 1.5 pts.
+- Result: 55 tests, build OK, all 4 views 0 console errors headless. Default map: 22 % green, 115 min shadow with hint → relay move → 0 min.
+- Open: free walking on a real GPU untested; 3 source links need a manual browser check (doi.org, JPL image policy, Mars24); humans: pitch owner, AI 009 scope, cut 011.
+- Next: jury re-check of the prototype; minimap (010) if still worth it.
