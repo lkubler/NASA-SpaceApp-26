@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OldDracoLoader } from './oldDraco.js';
 import { app } from '../state.js';
+import { mountHud } from './hud.js';
 
 const BASE = import.meta.env.BASE_URL + 'murray/';
 const CELL = 0.5, HALF = 64, N = (HALF * 2) / CELL; // 256 x 256 cells
@@ -31,7 +32,7 @@ const SUN_DIR = new THREE.Vector3(-0.5, 0.55, -0.4).normalize(); // placeholder;
 function placeSun() { sun.position.copy(camera.position).addScaledVector(SUN_DIR, 120); sun.target.position.copy(camera.position); sun.target.updateMatrixWorld(); }
 
 const state = { tiles: [], ready: false, yaw: 0, pitch: 0, pos: new THREE.Vector3(), eyeY: 0, keys: {}, speed: 0, slope: 0, mult: 1 };
-const hud = document.getElementById('hud'), msg = document.getElementById('msg');
+const hud = mountHud(document.getElementById('hud')), msg = document.getElementById('msg');
 const stats = { heightmapMs: 0, gridCells: N * N, tris: 0, texLoaded: 0 };
 
 // ---- load ----
@@ -183,11 +184,7 @@ function frame(now) {
   renderer.render(scene, camera);
   stat.frames++;
   if (now - stat.t > 1000) { stat.fps = stat.frames * 1000 / (now - stat.t); stat.frames = 0; stat.t = now; }
-  if (state.ready) hud.textContent =
-    `SLOPE ${state.slope.toFixed(1)} deg (${(Math.tan(state.slope * Math.PI / 180) * 100).toFixed(0)} %)\n` +
-    `SPEED ${state.speed.toFixed(2)} m/s  (x${state.mult.toFixed(2)})\n` +
-    `POS   ${state.pos.x.toFixed(1)}, ${state.pos.z.toFixed(1)}  h ${state.pos.y.toFixed(2)} m\n` +
-    `FPS   ${stat.fps.toFixed(0)}   heightmap ${N}x${N} @${CELL} m in ${stats.heightmapMs.toFixed(0)} ms`;
+  if (state.ready) hud.update({ slopeDeg: state.slope, speed: state.speed, mult: state.mult });
 }
 requestAnimationFrame(frame);
 
