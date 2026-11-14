@@ -50,3 +50,9 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Result: 35 tests pass, build OK, all 4 views 0 console errors. End-to-end headless: default scenario at Murray Buttes → 6 stations, 6.2 h EVA, turn-back at 14:39 before station 6, suit 22 % at end, one 122 min comms shadow; Walk shows route ribbon, magenta shadow, HUD signal NONE, light-time 7.1 min, dose.
 - Found: route dose shows 0.004 mSv (should be ~0.17) and SIGNAL chip says simulated (should be modelled) → 013b; map slope layer too dominant, label collisions, Guided-walk button overlaps sky panel, dim overlay → 014 designer polish.
 - Next: 013b, 014; then ux-tester + jury on the prototype; AI feature 009 waits for human OK on `claude -p` usage.
+
+## Round 10 — Sat 14.11. 14:25–14:50 (BUILD)
+- Did: merged 013b (route dose 0.17 mSv, signal chip modelled), 014 visual polish, 017 label fixes, 015 true return reserve. jury prototype checkpoint (`research/jury-prototype.md`, 16/25, 19–20 reachable); ux-tester pass 1 (`research/ux-1.md`); data-scout 016 (HiRISE ortho, Curiosity track, 6 photos).
+- Result: 44 tests pass. Default scenario: 1.5 km loop, 5 named stations, best-path-home turn-back ("leave station 5 by 14:31"), relay fix button 277 → 3 min shadow, shadow + TB inside walk square, one speed model, sunset warning.
+- Open: walk home only 1–7 min inside 1 km DTM → data-scout preparing 4 km regional layer. Humans: pitch/video owner, AI 009 minimal scope, cut 011.
+- Next: 018+019 (science map + panel fold), 020 (walk HUD time-lapse), regional layer; then UX pass 2.
