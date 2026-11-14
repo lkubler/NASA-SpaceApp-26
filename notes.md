@@ -38,10 +38,31 @@ Routenlogik
 
 
 
-Orte:
-- Gale Crater:
-  rover / data from: Curiosity
-  links:
-  -  NASA PDS Analyst’s Notebook: https://an.rsl.wustl.edu/msl/AN/an3.aspx
-  -  Ort:https://trek.nasa.gov/mars/#v=0.1&x=137.34923560455954&y=-4.529538328419656&z=7&p=urn%3Aogc%3Adef%3Acrs%3AEPSG%3A%3A104905&d=&locale=&b=mars&e=133.39415755333584%2C-6.644406453032323%2C141.30431365578323%2C-2.4146702038069905&sfz=&w=
-  - 3d map: https://github.com/googlecreativelab/access-mars
+
+### Gale Crater / Murray Buttes
+Einsatzort am unteren Mount Sharp. Curiosity war dort Aug–Sep 2016.
+Rover / Daten von: Curiosity
+
+Gelände
+- 3D-Gelände Startpunkt (Access Mars, nur glTF + Texturen nutzen, nicht den alten Code): https://github.com/googlecreativelab/access-mars
+  - Ordner: public/terrain/murray_buttes/ (terrain.glb, tiles/, background.jpg)
+- Höhenmodell + Orthobilder Murray Buttes (HiRISE DTM, 1 m/px): https://hirise.lpl.arizona.edu/dtm/PSP_009650_1755
+  - DTM: DTEEC_009650_1755_009716_1755_U01 (833 MB)
+  - Orthobild zum Start: PSP_009650_1755_RED_C_01_ORTHO (1 m, ~60 MB), farbig IRB_C (~27 MB)
+  - Orthobild Nahansicht: RED_A (25 cm, ~776 MB)
+- Infos zu HiRISE-DTMs (Auflösung, bekannte Fehler): https://www.uahirise.org/dtm/about.php
+
+Rover-Daten (Position, Fotos, RAD, REMS)
+- NASA PDS Analyst's Notebook (Curiosity): https://an.rsl.wustl.edu/msl/AN/an3.aspx
+  - Traverse-Karte + Positionsdaten: Tab „Resources“
+  - Fotos, RAD (Strahlung), REMS (Wetter): Sol-Ansicht, Marstage Aug–Sep 2016
+  - TODO: Sonnenteilchen-Ereignis in RAD-Daten finden (Weltraumwetter-Szenario)
+
+Orientierung & Hintergrund
+- Mars Trek (Gale Crater): https://trek.nasa.gov/mars/#v=0.1&x=137.34923560455954&y=-4.529538328419656&z=7&p=urn%3Aogc%3Adef%3Acrs%3AEPSG%3A%3A104905&d=&locale=&b=mars&e=133.39415755333584%2C-6.644406453032323%2C141.30431365578323%2C-2.4146702038069905&sfz=&w=
+- Murray Buttes aus dem Orbit (HiRISE): https://www.jpl.nasa.gov/images/pia17587-murray-buttes-at-foot-of-mount-sharp-on-mars/
+- Panorama Eingang Murray Buttes (Geologie: Murray-Tonstein + Stimson-Sandstein): https://science.nasa.gov/resource/rovers-panorama-of-entrance-to-murray-buttes-on-mars
+- 3D-Ansicht Murray Buttes (Stereopaar): https://www.planetary.org/space-images/3d-view-of-the-murray-buttes-zoom
+
+Noch offen
+- Sonnenstand berechnen (Mars24-Algorithmus, NASA GISS) – Link noch suchen
