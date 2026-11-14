@@ -32,3 +32,6 @@ The whole-journey test and the dev parameters are described in `app/README.md`.
 | `scripts/preprocess/` | Rebuilds that data from the raw NASA files |
 
 The status line shows time, phase and plan usage (`scripts/statusline.py`, `scripts/now.py`).
+
+## AI use
+The idea and the specs are the team's. The code, the research files and the reviews in this repository were written with an AI coding agent (Claude Code, Anthropic) from those specs. The helmet frame image in the walk and the mockups in `docs/mockups/` are AI-generated or AI-assisted. Full log: `docs/ai-use.md`.

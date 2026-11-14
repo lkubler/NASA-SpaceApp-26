@@ -8,3 +8,5 @@ Screen designs for the mission flow (see `Mission_flow.md`), in order:
 4. `04-helmet-view.png`: 3D mission in helmet view with HUD
 
 Values and terrain in the mockups are placeholders.
+
+All four images are AI-generated (made by a team member with an AI tool). They are internal design references and not part of the product.

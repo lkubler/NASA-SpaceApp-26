@@ -1,5 +1,6 @@
 {
   "name": "martian-map",
+  "description": "Martian Map: plan and walk one excursion on Mars. Code written with an AI coding agent (Claude Code, Anthropic) from the team's specs.",
   "private": true,
   "version": "0.1.0",
   "type": "module",

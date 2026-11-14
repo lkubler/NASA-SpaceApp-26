@@ -74,3 +74,6 @@ A step builder edits only its own directory (and its own `style.css`).
 ## Demo factor
 `DEMO.timeFactor` = 76 (assumption): the farthest candidate F7 (138 m round trip) comes back with about 1 h 12 reserve;
 detours on the way can force a turn back. See `npm run tune`.
+
+## AI use
+This app's code was written with an AI coding agent (Claude Code, Anthropic) from the team's specs. The helmet frame image is AI-generated and marked as such on screen. Log: `../docs/ai-use.md`.
