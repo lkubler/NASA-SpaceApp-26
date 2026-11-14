@@ -128,7 +128,7 @@ export const DEMO = {
     'Demo time: the clock and the suit’s consumption run this many times faster than reality, so turning back becomes a real decision inside the 128 m site.'),
   spotWorkMin: v(20, 'min', 'assumption', 'NONE', '',
     'Fixed time for taking the sample at the spot, counted in time and consumption.'),
-  craterHeightFactor: v(2.5, '×', 'assumption', 'NONE', 'display choice of the team',
+  craterHeightFactor: v(2.5, '×', 'assumption', 'TEAM', 'vertical exaggeration for readability, chosen by the team',
     'Heights in the 3D view of Gale crater (step 1) are drawn this many times taller than they are, so the crater rim and Mount Sharp are easy to see. Distances across the ground are true to scale.'),
 };
 
@@ -159,6 +159,40 @@ export const PLANNER = {
 };
 
 export const ALL = { RULES, ASTRONAUT, WORK, SUIT, RADIO, ENVIRONMENT, DEMO, BODY, HOME, PLANNER };
+
+// Readable name of each value (Sources page); entries that already carry a name keep it.
+const NAMES = {
+  RULES: {
+    slopeMaxDeg: 'Steepest slope on foot', distancePlanM: 'Planning distance from the rover', distanceLimitM: 'Distance limit on foot',
+    walkBackRateFactor: 'Work rate on the way home', secondaryO2H: 'Secondary oxygen', evaPlannedH: 'Planned excursion length',
+    evaLimitH: 'Longest excursion',
+  },
+  ASTRONAUT: {
+    bodyMassKg: 'Body mass', loadKg: 'Carried load', suitMassKg: 'Suit mass', marsG: 'Mars gravity', earthG: 'Earth gravity',
+    paceMS: 'Walking pace',
+  },
+  WORK: {
+    walkW: 'Work rate walking', spotW: 'Work rate at the spot', restW: 'Work rate standing', terrainEta: 'Terrain coefficient',
+    pandolf: 'Effort equation (Pandolf)',
+  },
+  SUIT: { designW: 'Backpack design work rate', designH: 'Backpack supply time' },
+  RADIO: { eyeHeightM: 'Eye height', roverAntennaM: 'Rover antenna height' },
+  ENVIRONMENT: {
+    doseMSvPerDay: 'Radiation dose rate at Gale crater', airTempK: 'Air temperature at Murray Buttes', solSeconds: 'Length of a Mars day',
+    evaStartLmstH: 'Excursion start, local Mars time', signalDelayMinMin: 'Shortest signal delay Earth to Mars',
+    signalDelayMaxMin: 'Longest signal delay Earth to Mars', signalDelayNowMin: 'Signal delay on mission day',
+  },
+  DEMO: { timeFactor: 'Demo time factor', spotWorkMin: 'Work time at the spot', craterHeightFactor: 'Crater height factor (step 1 view)' },
+  BODY: {
+    heartRestBpm: 'Resting heart rate', heartPerW: 'Heart rate per watt of work', coreTempC: 'Core temperature',
+    coreTempPerW: 'Core temperature per watt of work', suitPressureKPa: 'Suit pressure', co2KPa: 'CO2 in the helmet',
+  },
+  HOME: { rover: 'Rover position' },
+  PLANNER: { steepPenalty: 'Cost of closed ground in the fallback route', edgeToleranceM: 'Closed-cell edge tolerance' },
+};
+for (const [group, names] of Object.entries(NAMES)) {
+  for (const [key, name] of Object.entries(names)) if (ALL[group][key] && !ALL[group][key].name) ALL[group][key].name = name;
+}
 
 /** Source document for a value entry: { title, url, where }. */
 export function sourceOf(entry) {

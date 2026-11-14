@@ -51,7 +51,7 @@ export function sourcesPage(onClose) {
         )))),
 
       h('h2', 'Documents'),
-      h('ul.sources__docs', Object.entries(DOCS).filter(([k]) => k !== 'NONE').map(([k, d]) => h('li', h('span.mono.muted', k + ' '), link(d.url, d.title), d.moon ? h('span.muted', ' (Moon)') : null))),
+      h('ul.sources__docs', Object.entries(DOCS).filter(([k]) => k !== 'NONE' && k !== 'TEAM').map(([k, d]) => h('li', h('span.mono.muted', k + ' '), link(d.url, d.title), d.moon ? h('span.muted', ' (Moon)') : null))),
 
       h('h2', 'Tools and code'),
       h('div.sources__list', TOOLS.map((t) => h('div.sources__item',

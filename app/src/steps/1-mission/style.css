@@ -102,6 +102,8 @@
 .step--mission .m1-req__why { margin: 0; color: var(--text-2); font-size: var(--fs-small); line-height: 1.4; }
 .step--mission .m1-req__signal { margin-top: auto; font-size: var(--fs-tag); color: #cfcfd3; display: flex; flex-wrap: wrap; align-items: center; gap: 0.15em 0.45em; }
 .step--mission .m1-req__sep { color: var(--text-3); }
+/* value and its tag stay on one line */
+.step--mission .m1-req__delay, .step--mission .m1-panel__delay { white-space: nowrap; }
 
 .step--mission.m1--site .m1-hero .lede { opacity: 0.85; }
 @media (prefers-reduced-motion: reduce) { .step--mission .m1-pin--murray .m1-pin__dot { animation: none; } }

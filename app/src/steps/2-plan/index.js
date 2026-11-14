@@ -31,6 +31,11 @@ const SPOT_WORK = () => fmtDuration(DEMO.spotWorkMin.value * 60);
 /** What the spot is, from its terrain description (walk-targets.md): beside a butte wall or at the foot of a butte. */
 const spotPlace = (c) => (/wall/i.test(c.name) && /beside/i.test(c.name) ? 'Beside a butte wall' : 'At the foot of a butte');
 /** The task of the chosen request (step 1). */
+// map drawing sizes in SVG units (one unit = one grid cell): an Access Mars point is drawn at least
+// MARK_CLEAR from a numbered marker's centre (marker radius 6.5 + point radius 3.4 + a gap), and its centre at
+// least POINT_INSET inside the visible map edge
+const MARK_CLEAR = 11.5;
+const POINT_INSET = 5.5;
 const taskOf = (r) => (!r ? 'Work at the spot' : r.kind === 'measurement' ? 'One radiation measurement' : 'One sample');
 
 function cheapestId(cands) {
@@ -169,6 +174,14 @@ export default {
       h('p.plan-tip__text', p.text),
     ];
 
+    // the part of the map grid (SVG units) the cropped (slice) map box shows
+    const visibleBox = () => {
+      const n = terrain.n, W = map.el.clientWidth, H = map.el.clientHeight;
+      if (!W || !H) return { x0: 0, y0: 0, x1: n, y1: n };
+      const k = Math.max(W, H) / n, vw = W / k, vh = H / k;
+      return { x0: (n - vw) / 2, y0: (n - vh) / 2, x1: (n + vw) / 2, y1: (n + vh) / 2 };
+    };
+
     function drawMap() {
       ['areas', 'routes', 'markers', 'top'].forEach((n) => map.clearLayer(n));
       const sel = cands.find((x) => x.candidate.id === ctx.state.spotId);
@@ -212,10 +225,28 @@ export default {
       });
 
       // Access Mars points with their text (on top: the Buttes point sits beside spot 02)
+      // Drawn off its real place only to stay readable (a leader line joins both): pushed east or west
+      // clear of a numbered marker, and kept fully inside the visible map with a small inset.
+      const nums = cands.map(({ candidate: c }) => map.project(c.x, c.z));
+      const view = visibleBox();
       for (const p of ACCESS_MARS_POINTS) {
-        const g = map.addMarker(p.x, p.z, { kind: 'point', label: p.name, layer: 'top' });
+        const q = map.project(p.x, p.z);
+        let { px, py } = q;
+        for (const m of nums) {
+          const dy = py - m.py, need = MARK_CLEAR;
+          if (Math.abs(dy) >= need || Math.hypot(px - m.px, dy) >= need) continue;
+          const side = px >= m.px ? 1 : -1;
+          px = m.px + side * Math.sqrt(need * need - dy * dy);
+        }
+        px = Math.min(view.x1 - POINT_INSET, Math.max(view.x0 + POINT_INSET, px));
+        py = Math.min(view.y1 - POINT_INSET, Math.max(view.y0 + POINT_INSET, py));
+        if (Math.hypot(px - q.px, py - q.py) > 0.5) {
+          map.layer('top').append(s('line', { class: 'plan-leader', x1: q.px, y1: q.py, x2: px, y2: py }));
+        }
+        const at = map.unproject(px, py);
+        const g = map.addMarker(at.x, at.z, { kind: 'point', label: p.name, layer: 'top' });
         const lab = g.querySelector('.map-marker__label');
-        const fx = map.project(p.x, p.z).px / terrain.n;
+        const fx = px / terrain.n;
         // label beside the point, not below, so it stays clear of the numbered markers;
         // raised when another point lies just south of it (Buttes above Monument Valley)
         if (lab) {

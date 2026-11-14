@@ -50,8 +50,9 @@
 .step--go .goprof__focusrange { fill: currentColor; opacity: 0.14; }
 .step--go .goprof__marks { position: absolute; inset: 0; pointer-events: none; }
 .step--go .goprof__shadowlabel {
-  position: absolute; top: 0; transform: translateX(-50%); font-family: var(--font-mono); font-size: var(--fs-tag);
-  color: var(--text-2); white-space: nowrap;
+  position: absolute; top: 0; transform: translate(-50%, -35%); font-family: var(--font-mono); font-size: var(--fs-tag);
+  color: var(--text); white-space: nowrap; background: var(--bg, #000); padding: 0.15em 0.6em; border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
 }
 .step--go .goprof.has-focus .goprof__shadowlabel { opacity: 0.35; }
 .step--go .goprof__dot {
@@ -94,7 +95,8 @@
 .step--go .gocheck__why { font-size: var(--fs-small); color: var(--warning); }
 .step--go .gocheck__vals { display: flex; flex-direction: column; gap: 0.05em; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-2); }
 .step--go .gocheck__v { line-height: 1.5; }
-.step--go .gocheck__v .vlabel { font-size: 0.92em; padding: 0 0.25em; }
+/* no left padding: a tag that wraps onto its own line starts flush with the value above */
+.step--go .gocheck__v .vlabel { font-size: 0.92em; padding: 0 0.25em 0 0; }
 .step--go .go__suit { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4em 1.6em; font-size: var(--fs-small); padding-left: 0.6em; }
 .step--go .gosuit { display: inline-flex; align-items: center; gap: 0.55em; color: var(--text); }
 .step--go .gosuit .check__icon { color: var(--accent); }

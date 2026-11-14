@@ -18,6 +18,12 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 /** One line "value [label]" for a check. */
 function val(text, spec) { return h('span.gocheck__v', text, ' ', labelTag(spec)); }
 
+/** Marker number as the plan map shows it: the candidate's number, else its place in the plan's list (test point 07). */
+function numberOfSpot(id, cands = []) {
+  const k = cands.findIndex((c) => c.candidate.id === id);
+  return spotNumber(id) || (k >= 0 ? String(k + 1).padStart(2, '0') : '·');
+}
+
 /** Planned value and limit of each rule check, and the text shown where it occurs. */
 function describe(c, plan) {
   switch (c.id) {
@@ -102,7 +108,7 @@ export default {
     if (wide) { map.el.classList.add('go-map--wide'); map.svg.setAttribute('preserveAspectRatio', 'xMidYMid slice'); }
     drawRoute(map, plan);
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover' });
-    map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: spotNumber(route.spotId) || '·', selected: true });
+    map.addMarker(route.spot.x, route.spot.z, { kind: 'number', text: numberOfSpot(route.spotId, ctx.state.candidates), selected: true });
     const hasShadow = plan.radioStretches.length > 0;
     const mapBox = h('section.go__map', map.el, legend([
       { kind: 'rover', text: 'Rover' },
@@ -173,7 +179,7 @@ export default {
       h('span', `Astronaut ${A.bodyMassKg.value} ${A.bodyMassKg.unit} `), labelTag(A.bodyMassKg),
       h('span', ` + load ${A.loadKg.value} ${A.loadKg.unit} `), labelTag(A.loadKg),
       h('i', ' · '), h('span', `Suit ${A.suitMassKg.value} ${A.suitMassKg.unit} `), labelTag(A.suitMassKg),
-      h('i', ' · '), h('span', `Secondary oxygen ${O2.value} ${O2.unit}, never planned with `), labelTag(O2));
+      h('i', ' · '), h('span', `Secondary oxygen: ${O2.value} ${O2.unit}, not counted in the plan `), labelTag(O2));
 
     const btn = pillButton({
       text: broken ? `Start with ${plural(broken, 'broken rule')}` : 'Start excursion',

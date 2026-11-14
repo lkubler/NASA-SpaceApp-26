@@ -24,9 +24,8 @@ const TIME_TAG = { label: 'model', text: 'Suit time since you left the rover, co
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
 export function createHud(el) {
-  // frame and the mark on it
+  // frame; the "AI-generated image" mark is drawn into the image pixels (bottom left of the frame)
   const frame = h('img.walk-frame', { src: frameUrl, alt: '', draggable: 'false' });
-  const aiMark = h('div.walk-aimark.mono', 'AI-generated image');
   // the ground Access Mars has only grey imagery for is tinted in our own colour (core/groundColor.js)
   const groundMark = h('div.walk-groundmark.mono', 'Ground colour ', tag(GROUND_TAG));
 
@@ -95,7 +94,7 @@ export function createHud(el) {
   const loading = h('div.walk-loading.mono', 'Loading terrain…');
 
   const hud = h('div.walk-hud', compass, mini, bodyCard, reserve, missionCard, alertEl, reticle, lookCard, prompt, hint);
-  el.append(marks, frame, aiMark, groundMark, hud, escHint, modal, loading);
+  el.append(marks, frame, groundMark, hud, escHint, modal, loading);
 
   // ---------- minimap background (once): shaded relief, closed ground darker ----------
   let reliefCv = null, terr = null;

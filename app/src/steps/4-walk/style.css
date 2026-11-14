@@ -5,9 +5,9 @@
 .walk-layer { position: absolute; inset: 0; pointer-events: none; }
 .walk-layer button, .walk-layer .vlabel { pointer-events: auto; }
 
-/* helmet frame over the view: the keyed image (docs/design/helmet-frame.png, green removed) */
+/* helmet frame over the view: the keyed image (docs/design/helmet-frame.png, green removed);
+   "AI-generated image" is drawn into its pixels, bottom left; object-fit: fill never crops it */
 .walk-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; user-select: none; }
-.walk-aimark { position: absolute; left: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
 .walk-groundmark { position: absolute; right: 1.4%; bottom: 1.6%; font-size: var(--fs-tag); color: rgba(255, 255, 255, 0.55); letter-spacing: 0.04em; }
 
 /* HUD sits inside the visor */
@@ -50,6 +50,8 @@
 .walk-row__v { white-space: nowrap; font-size: var(--fs-mono); }
 .walk-row__v b { font-family: var(--font-display); font-weight: 600; font-size: 1.35em; letter-spacing: -0.01em; }
 .walk-row__v small { color: var(--text-2); font-family: var(--font-mono); font-size: var(--fs-tag); margin-left: 0.35em; }
+/* a rule the plan broke: red text on a dark red backing, readable on the light card */
+.walk-row__v.tone-warning { color: #ff8a8c; font-weight: 600; background: rgba(70, 6, 8, 0.82); border: 1px solid var(--warning); border-radius: 5px; padding: 0.05em 0.45em; }
 
 /* reserve chip, lower left */
 .walk-reserve {
