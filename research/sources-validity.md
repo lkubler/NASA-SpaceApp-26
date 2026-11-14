@@ -108,3 +108,94 @@ Load effect on speed and slope:
 - Slope-linked speed: no NASA table found; Marquez/SEXTANT uses one constant velocity per slope (Kluis, V). Linking speed to slope in the demo is consistent with that precedent.
 - Slope limit: the team's xEMU ConOps 20 deg and Apollo 15 about 17 deg are consistent with my finds (15 deg below-threshold in EPSC 2024, 22.1 deg max traversed incl. LRV in LROC). Load-dependent limit remains our own construct, no NASA source.
 - Comms: NASA statement is qualitative (EVA white paper section 9). The notes' claim that NASA names "max time without line of sight to lander" as an operational limit is not verified by me; the slide deck is not in my sources. Get its title or NTRS link from the humans before citing.
+
+## Quela / "Murray Butte 12" / cross-bedding source check (data-scout, Sat 14.11.)
+
+Marker: V = page text read and quoted, S = search snippet only, M = from memory, not verified, C = our own calculation.
+
+**Result: the claims are NOT in the Access Mars repo. They are in a NASA-derived news article.**
+
+Access Mars repo, shallow clone at commit `4b0a445f4e3b3fbfbc6b06f3adf07c24c05a2c57` (https://github.com/googlecreativelab/access-mars/commit/4b0a445f4e3b3fbfbc6b06f3adf07c24c05a2c57). V, case-insensitive grep over all text files (excluding node_modules/.git) for `quela`, `murray butte`, `cross-bed`, `stimson`, `M12`:
+- `Quela`: 0 hits. `Stimson`: 0 hits. `cross-bedding` / `crossbed`: 0 hits. "Murray Butte 12": 0 hits. (`m12` hits are only three.js matrix variables in `public/js/vr.js`.)
+- Murray Buttes text exists only as 4 POIs in `public/index.html` lines 207-210 (https://github.com/googlecreativelab/access-mars/blob/4b0a445f4e3b3fbfbc6b06f3adf07c24c05a2c57/public/index.html#L207-L210). Quotes:
+  - BUTTES (13.8, 1.2, 6.9): "These are the Murray Buttes. Buttes are steep, knob-like rock formations. The largest one here is about as tall as a three-story building. These buttes served as Curiosity's entryway to its main destination: Mount Sharp."
+  - BRUCE MURRAY (-10.56, 1.80, -12.90): named after the late Bruce Murray, Caltech planetary scientist and JPL director.
+  - MONUMENT VALLEY (21, 6.2, 3.7): "These buttes are similar to ones you'd find on Earth, formed when wind erodes ancient sandstone. Scientists have compared the region to Monument Valley."
+  - INTERFERENCE (-63.5, -3.9, 35.2): "The buttes are beautiful, but are sometimes tall enough to block the signal between Curiosity and the Mars orbiters that fly overhead. That can temporarily reduce the amount of data that Curiosity can send back to Earth."
+- Useful by-product: the INTERFERENCE POI is a Google/NASA-JPL-sourced statement that the buttes can block the orbiter relay link. This supports a line-of-sight / comms-shadow feature at Murray Buttes (qualitative, no numbers). Also the scene's POIs are at the +/-64 m edge for that one (x = -63.5).
+- Repo site-card distances (index.html line 286-289): Pahrump 9.7 km, Marias 10.8 km, Murray 14.1 km from the landing site (V, odometry-style distance as stated by Google, not straight line; our earlier straight-line figure Bradbury to Murray was about 8 km).
+
+**Where the claims are actually stated:**
+- V. Ken Kremer, Universe Today, article "Drilling at Unfathomable Alien Landscapes - All in a Sols (Day's) Work for Curiosity", https://www.universetoday.com/articles/drilling-at-unfathomable-alien-landscapes-all-in-a-days-work-for-curiosity (page shows no publication date; latest date it mentions is Sol 1470, 24 Sep 2016). Exact sentences: "The rock target named "Quela" is located at the base of one of the buttes dubbed "Murray Butte number 12,"" and "The drill (successful at second attempt) is at Quela." and "The presence of "cross-bedding" indicates that the sandstone was deposited by wind as migrating sand dunes, says the team." The page does not use the word Stimson. Secondary source (journalist relaying the Curiosity team's updates), not NASA itself. Quote it as "reported by Universe Today, relaying the Curiosity team". If the pitch needs a primary NASA citation, use the NASA blog below for Quela location plus the Banham paper for Stimson.
+- V (earlier, see addendum above). NASA blog "Sols 1456-1458: Settling in at Quela", https://science.nasa.gov/blog/sols-1456-1458-settling-in-at-quela/: Quela is at the base of a Murray Butte; mentions Stimson block "Uutapi".
+- S only. Banham et al. 2018, Sedimentology, "Ancient Martian aeolian processes and palaeomorphology reconstructed from the Stimson formation" (USGS listing https://www.usgs.gov/publications/ancient-martian-aeolian-processes-and-palaeomorphology-reconstructed-stimson-formation, https://pubs.usgs.gov/publication/70196324). Snippet says: Stimson is cross-bedded sandstone about 1 m thick sets separated by bounding surfaces, net transport toward the NE; simple crescentic dunes about 10 m high, wavelength about 150 m; Stimson rests unconformably on the lake-deposited Murray formation. I did not open the paper; use only after reading.
+- S only. A 2021 Mastcam study of Murray Buttes dunes (British Library catalogue record, https://eld.bl.uk/catalog/100179285047_0x000001): oblique dunes, draas migrating NNW. Not read; do not cite.
+- Safe wording: "Quela, drilled at the base of Murray Butte 12 (Curiosity team, Sep 2016); cross-bedding in the sandstone shows it was deposited by wind-blown dunes." Add "Stimson formation" only with the NASA blog (Uutapi) or Banham paper as the source.
+
+## Mars dust storm and EVA hazard data (data-scout, Sat 14.11.)
+
+### A. Datasets that exist (access tested by curl, Sat 14.11.)
+
+| Source | What it gives | Access (tested) | License / terms | Fit for prototype |
+|---|---|---|---|---|
+| Mars Climate Database (LMD, with ESA/CNES) | Modelled T, pressure, density, winds, dust column, radiation-relevant fields by Ls, local time, lat/lon, altitude. Dust/EUV scenarios incl. climatology, cold, warm, "dust storm" (min/ave/max solar) and year-specific MY24-MY35 | Web interface http://www-mars.lmd.jussieu.fr/mcd_python/ returned 200 and its form lists "dust storm min/ave/max solar", "warm", "cold" scenarios (V). Dust scenario NetCDFs and docs at https://www-mars.lmd.jussieu.fr/mars/dust_scenarios/ (200, V). Full database by request form (S, EPSC 2024 abstract) | Free for research on request (S). Exact license text not read | One-point lookups via the web form are enough for a demo table. Do not integrate the database. |
+| MCD dust scenario definition | Climatology = average of kriged MY24-31 maps excluding MY25 and MY28 global storms; cold = minimum over MY24-31 then -50 %; warm = maximum (excluding storms) then +50 % | V (page text) | as above | Gives the labelled dust scenarios. Note the unit: daily IR 9.3 micron absorption column optical depth normalised to 610 Pa, 5 x 5 deg. IR to visible conversion is about 1.6 to 2 (Lemmon 2023 uses 1.61 multiplier, V quote in their text); so a visible tau is roughly 1.6x the IR value. |
+| MSL Mastcam tau record, Lemmon et al., "The Mars Science Laboratory record of optical depth measurements via solar imaging", https://arxiv.org/pdf/2309.07378 (V, read) | 880 nm optical depth at Gale from sol about 3644 back to 2012, all seasons, 5+ Mars years | Paper open on arXiv. Data archive is in PDS Atmospheres node (paper cites archive in Sec. 3.3, not opened) | Open | Source for seasonal shape. The paper states trends only in figure form; I could not get numbers from the text (see table C). |
+| MSL REMS (pressure, air and ground temp, humidity, UV, wind) | 1 Hz, 5-min samples each hour plus extra, ENV/MOD RDR products | PDS Atmospheres page https://pds-atmospheres.nmsu.edu/data_and_services/atmospheres_data/MARS/curiosity/rems.html returned 200 (V) | NASA PDS open data | Good for diurnal temperature and pressure range at Gale. Not downloaded. |
+| MRO MARCI weekly weather reports (MSSS) | Weekly text plus image captions of dust storms, global view, since 2007 | https://www.msss.com/msss_images/subject/weather_reports.html redirects (302) to asimov.msss.com, 200. Listing I fetched ends at the week of 31 Jan 2022 (V), so it may be frozen or paused; not checked beyond | Image captions NASA/JPL/MSSS, standard NASA media use | Good for narrative and the 2018 storm images. Not a quantitative feed. Check the archive end date before claiming "live". |
+| Curiosity 2018 storm campaign | Mastcam, Navcam, REMS, RAD during sols 2075 to 2169 | Papers below | open arXiv/NTRS | The one real "worst case" for Gale |
+
+No programmatic API for any of these was tested beyond HTTP 200. The simplest prototype input is a small hand-made table of labelled values (section D), each with its source.
+
+### B. 2018 (MY34) global dust storm at Gale: numbers
+
+- V. Guzewich et al. 2019, GRL 46(1), doi 10.1029/2018GL080839, "Mars Science Laboratory Observations of the 2018/Mars Year 34 Global Dust Storm" (NTRS https://ntrs.nasa.gov/citations/20190001691, abstract read): campaign about 100 sols; Mastcam 880 nm optical depth reached **8.5**; incident total UV fell by **97 %**; diurnal range of air temperature fell by **30 K**; semidiurnal pressure tide amplitude rose to **40 Pa**; no active dust lifting inside Gale (dust came from outside).
+- V. Chen-Chen et al. (Navcam retrieval, https://www.arxiv.org/pdf/2008.01968 via the saved PDF text): storm start Ls 184.9 deg (30-31 May 2018, MSL sol 2067); campaign sols 2075 (Ls 188.7, 7 Jun 2018) to 2169 (Ls 248.2, 11 Sep 2018); pre-storm tau 1.2 rising steeply to tau > 9 in their retrieval; tau about 7.0 on sol 2084 (citing Lemmon 2019); dust particle effective radius 1 to 4 micron during the storm. Mastcam rise "from 0.6 up to 8.5 over a period of about 10 sols" (their citation of Lemmon et al. 2019).
+- V. Guzewich et al., dust particle size abstract (LPSC-type, saved PDF text): particle radius exceeded 4 micron, possibly 5 micron, at storm height; sol 2097 data not used because opacity was "~8" and the signal too poor. Typical seasonal particle size about 2 micron.
+- S. Viudez-Moreiras et al. 2019, JGR Planets 124(7), 1899-1912, doi 10.1029/2019JE005985 (REMS): daily maximum UV fell 90 % between sol 2075 (tau about 1) and sol 2085 (tau about 8.5). Abstract only seen via search snippets; full paper not read.
+- V. JPL news 13 Jun 2018 https://www.jpl.nasa.gov/news/nasa-encounters-the-perfect-storm-for-science: on 12 Jun 2018 tau at Curiosity was between 1.0 and 2.0, "average for dust season" though usually later in the season; storm covered about 35 million km^2 (a quarter of the planet) and was still growing; Opportunity (solar) cut science as tau rose ("When the tau value is high, the rover's power levels drop"; no power numbers); Curiosity is nuclear-powered and not affected; global storms recur roughly every 3-4 Mars years (6-8 Earth years); previous in 2007. Quote: "the most powerful surface winds encountered on Mars would not topple a spacecraft."
+- V. Other storms for scale (Chen-Chen intro): Spirit measured 880 nm tau up to 4.3 in 2007; Opportunity 4.6 to 5; Viking storms about 3 and 3.7 to 9 (1977).
+
+### C. Seasonal baseline at Gale (tau, 880 nm)
+
+- V (Lemmon et al.): optical depth "declined to low values during LS 0-140"; dust generally increases around Ls 140-150; regional storms near Ls 210 and Ls 315; every year looks qualitatively alike; Ls 90-140 isolated points 0.1-0.2 above neighbours are ice hazes; about 25 % of column optical depth was high-altitude ice in Ls 90-135 (aphelion cloud belt); diurnal change: tau peaks in the morning in southern spring/summer.
+- V (Lemmon, quoting Jezero comparison): infrared tau 0.2-0.3 corresponds to visible 0.3-0.5.
+- **Numeric seasonal tau at Gale was not obtainable from text in this session.** Only figure-read values exist. For the planner use, labelled as approximate and unverified by us: clear season (Ls 0-140): about 0.4 to 0.7 (M; consistent with the 0.6 start of the 2018 Mastcam rise); dust season (Ls 180-330): about 1 to 2 (V in part: JPL 1.0-2.0 on 12 Jun 2018 "average for dust season", Chen-Chen pre-storm 1.2); regional storm peaks about 2.5 to 4 (M, not verified); global storm 2018: 8.5 (V). Ask a human or the Lemmon Fig. 4 data archive before showing the first two as facts. If shown, label "typical, approximate, Mastcam record (Lemmon et al.)".
+
+### D. Suggested labelled inputs for the EVA planner (our own scenario table, each line with source)
+
+| Scenario | tau (880 nm) | Basis | Confidence |
+|---|---|---|---|
+| Clear | 0.5 | Gale low-dust season, Lemmon record (trend V, value M) | medium-low |
+| Typical dust season | 1.0 to 2.0 | JPL 12 Jun 2018 statement, Chen-Chen pre-storm 1.2 (V) | medium-high |
+| Regional storm | about 3 | Order of Spirit/Opportunity 2007 values 4.3-5 (V) and Viking 3 (V); Gale-specific value not verified | low |
+| Global storm 2018 peak | 8.5 | Guzewich 2019 (V) | high |
+
+Derived effects at these inputs (use the formula as a clearly labelled assumption):
+- Surface UV: -90 % at tau about 8.5 early rise (S Viudez-Moreiras), -97 % total UV at peak (V Guzewich).
+- Direct sunlight: Beer-Lambert e^(-tau / cos z). At tau 8.5, noon sun: e^-8.5 = 0.0002 (C). That is why Opportunity lost power. But diffuse light remains; the Sun was still seen in Mastcam images at tau about 7 (V Chen-Chen sol 2084), and sol 2097 at about 8 was "poor signal". Surface is dim, not dark; daytime light scales with diffuse sky (no numeric flux found; do not state a lux figure).
+- Visibility (C, own reasoning, not sourced): tau is a vertical column. If dust is mixed over about 10 km, horizontal extinction is about tau/10 km = 0.85 per km at tau 8.5, so a contrast-visibility distance (3.9 / extinction) of a few km (about 4.6 km). Mixed to higher altitudes during storms (Lemmon: dust enhanced at altitude) and surface layer concentration unknown, so treat as "kilometre scale, not zero". At tau 1-2 the horizontal path is clear over any EVA radius (about 2 to 3.5 km). Flag as estimate; no published surface-visibility number found.
+- Temperature: global storm cut the diurnal air temperature range by 30 K (V). The storm warms the night and cools the day at the surface. REMS diurnal range at Gale in normal season is on the order of 60-90 K (M, not checked). So EVA thermal load is reduced in the afternoon and night cold is milder.
+- Pressure: tide amplitude up to 40 Pa (V). Mean Gale pressure about 700 to 900 Pa (M). Variation is under about 6 percent, irrelevant to suit operations or to radiation shielding.
+- Solar power: for a solar-powered asset (rover, habitat panels, comms relay) loss is the dominant effect; no number for Opportunity in the JPL article (V). Curiosity RTG is unaffected (V). Do not give a % output; use "direct beam transmission e^-tau" as a clearly labelled model.
+- Comms: UHF relay to orbiters is not noticeably tied to dust (no source found that dust attenuates UHF; S-band to X-band attenuation by Mars dust is small at these frequencies, M, not verified). Terrain blocking is the real comms limit; Access Mars POI INTERFERENCE (V above) says buttes block the orbiter link.
+- Radiation shielding by atmosphere: not tied to dust in any source I read. The atmosphere column at Gale (about 20 g/cm^2, M) changes by the pressure tide (under about 6 percent), so shielding is effectively constant across scenarios (C). Gale surface dose about 0.6 mSv/day from the RAD instrument (M, not verified here). Do not claim dust storms add or remove radiation protection. UV does drop (V above).
+- Dust on suits: Apollo lunar dust experience is NASA-documented, but the EVA architecture white paper's dust mitigation section (section 2) is lunar regolith (V text, saved earlier). No Mars-specific suit dust data found this session. Mars dust is also reported to contain perchlorate at around 0.5 wt% at Gale (M, not verified): treat as a chemical caution, flag as unverified. Note Mars dust particles are about 1-4 micron (V Chen-Chen, Guzewich); the instrument finding that "cameras collected saltating sand in their sunshades 1.97 m above the surface" (V, Lemmon abstract) shows sand is lifted to head height at Gale.
+
+### E. What winds can really do at Mars pressure (to avoid the movie myth)
+
+- V. JPL 2018: "the most powerful surface winds encountered on Mars would not topple a spacecraft" (https://www.jpl.nasa.gov/news/nasa-encounters-the-perfect-storm-for-science).
+- V. Universe Today, 8 Oct 2025, on Science Advances paper using ESA CaSSIS (TGO) and HRSC (Mars Express), 50,000+ images: dust devils and their winds "can reach speeds of up to 44 m/s, or 160 km/h"; earlier measurements "generally remain below 50 km/h", rare 100 km/h; atmosphere "less than 1% as dense as Earth's". https://www.universetoday.com/articles/the-winds-on-mars-are-stronger-than-we-thought
+- C. Dynamic pressure q = 0.5 * rho * v^2. For rho about 0.018 kg/m^3 (P 800 Pa, T 230 K, R 192 J/kg/K; assumed Gale-like values), v = 30 m/s gives q about 8 Pa; v = 44 m/s gives about 17 Pa. The same 30 m/s on Earth (rho 1.2) gives about 540 Pa, so the Mars force is about 1.5 % of Earth at equal speed. On a person-sized frontal area of about 0.7 m^2 with drag coefficient about 1: roughly 6 N at 30 m/s and 12 N at 44 m/s, i.e. less than the weight of a 1.5 kg object (Earth). A 44 m/s Earth wind is about 1.3 kPa (and ~0.9 kN on a person). So wind will not knock an astronaut over or tear equipment; the realistic effects are visibility/dimming, sand abrasion and fine dust ingress, electrostatic charging (M), and lofted dust for solar panels.
+- Wind sources also disagree on typical values: REMS and Viking report sustained winds on the order of 5-10 m/s and gusts of tens of m/s, but I did not verify these. Viking 2 did not show a strong link between storm and the highest winds (S, search snippet, not opened).
+- Safe pitch line: "Dust storms on Mars darken the sky and clog solar panels; they do not blow people or rovers away. At 44 m/s and Mars air density the push on a person is under 15 N (our calculation)."
+
+### F. Recommendation (smallest set for a hazard layer)
+
+1. A four-row labelled tau table (D) with sources, user-selectable. No data download needed.
+2. Quote Guzewich 2019 (8.5, -97 % UV, -30 K, 40 Pa) and JPL 2018 (1.0-2.0 average) as the two anchor numbers; both are V.
+3. Wind myth: ship the q calculation, with rho stated as an assumption.
+4. Optional later: MCD web form for one Gale point (lat -4.59, lon 137.44) at one Ls per scenario, to cross-check tau and temperatures. Not attempted because it needs form interaction.
+5. Do not claim: numeric surface visibility, solar power %, comms attenuation, radiation change, perchlorate level; each is M or C here.
+
+Not verified: Viudez-Moreiras full text; Lemmon Fig. 4 numeric seasonal values; MCD form outputs; MARCI archive end date; Banham paper text.
