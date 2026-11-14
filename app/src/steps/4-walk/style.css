@@ -108,6 +108,9 @@
 .walk-mark--target .walk-mark__label b { color: var(--accent); font-weight: 600; font-size: var(--fs-mono); }
 .walk-mark--rover .walk-mark__label { position: absolute; left: -2.5em; bottom: 4px; white-space: nowrap; font-size: var(--fs-small); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
 .walk-mark--rover .vlabel { color: #fff; background: rgba(0, 0, 0, 0.35); }
+/* marker labels sit on a dark backing so the distance reads against bright sky and rock */
+.walk-mark--target .walk-mark__label, .walk-mark--rover .walk-mark__label { background: rgba(0, 0, 0, 0.42); border-radius: 6px; padding: 0.15em 0.5em; }
+.walk-mark--target .vlabel { color: rgba(255, 255, 255, 0.8); }
 .walk-mark--rover b { color: var(--accent); font-weight: 600; font-size: var(--fs-mono); }
 .walk-mark--rover .walk-mark__dia { display: none; position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border: 2px solid var(--accent); transform: rotate(45deg); box-shadow: 0 0 10px rgba(79, 203, 255, 0.55); }
 .walk-mark--rover.is-target .walk-mark__dia { display: block; }
