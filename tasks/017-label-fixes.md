@@ -1,6 +1,6 @@
 # 017 Label and number fixes outside the map
 owner: designer
-state: open
+state: done
 area: app/src/walk/sky.js, app/src/walk/hud.js, app/src/ui/briefing.js, app/src/ui/sources.js, app/src/walk/route3d.js
 
 ## Goal
@@ -14,3 +14,6 @@ From research/jury-prototype.md label fixes (outside app/src/map — task 015 ow
 
 ## Done when
 Build, 0 console errors, screenshots docs/ui-017-*.png.
+
+## Result
+Done on branch task-017-labels. Sky: "light reaching the ground ~N % of clear-sky (approx.)" = dayK*exp(-0.25 tau). Dose: live 2 sig digits + EVA total with chest X-ray (0.1 mSv) and Earth background (2.4 mSv/yr) references. Toast uses comms.COMMS_SOURCE_NAME ?? "relay rover" (015 should export it). Grey slab was grey-fill texels inside photo tiles: graded to ochre in shader. Not done: "assumed mission rule / editable" next to 10 min limit (map file, task 015).

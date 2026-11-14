@@ -4,6 +4,7 @@
 // Route coordinates arrive in DTM local metres; route.toScene(x, y) -> {x, z} converts (mapView). Every route
 // field is read defensively: missing reserve/shadows/turnBackIndex just disable that feature.
 import * as THREE from 'three';
+import * as comms from '../model/comms.js';
 import { app } from '../state.js';
 
 const STEP = 0.5, HALF = 64, INSET = 0.75, LIFT = 0.14, SLOPE_WARN = 20;
@@ -69,7 +70,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     S.forEach((s) => { s.in = inside(s.x, s.z); });
 
     // ribbon: one mesh, vertex colours, split into runs of in-square samples
-    const pos = [], col = [], ind = [], W = 0.3;
+    const pos = [], col = [], ind = [], W = 0.17; // thin ribbon: calm cyan at 45 % alpha, magenta only in shadow runs
     let runStart = -1;
     const flush = (end) => {
       if (runStart < 0) return;
@@ -78,7 +79,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
         const p = S[i], q = S[Math.min(end - 1, i + 1)], o = S[Math.max(runStart, i - 1)];
         let tx = q.x - o.x, tz = q.z - o.z; const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
         const nx = -tz * W, nz = tx * W, y = ground(p.x, p.z) + LIFT, c = p.sh ? colShadow : colRoute;
-        pos.push(p.x + nx, y, p.z + nz, p.x - nx, y, p.z - nz); col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+        const al = p.sh ? 0.7 : 0.45; pos.push(p.x + nx, y, p.z + nz, p.x - nx, y, p.z - nz); col.push(c.r, c.g, c.b, al, c.r, c.g, c.b, al);
       }
       for (let i = 0; i < end - runStart - 1; i++) { const a = base + i * 2; ind.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
       runStart = -1;
@@ -87,8 +88,8 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
     flush(S.length);
     if (pos.length) {
       const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(ind);
-      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4)); g.setIndex(ind);
+      const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
       m.frustumCulled = false; group.add(m);
     }
     // edge arrows where the route crosses the square boundary
@@ -149,7 +150,7 @@ export function mountRoute3d({ scene, state, groundRaycast, hAt, container, eye 
       if (f != null) patch.reserve = { fraction: f };
       app.set(patch);
     }
-    if (sh && !wasShadow) toast('Entering comms shadow: no link to the lander', 'danger');
+    if (sh && !wasShadow) toast('Entering comms shadow: no link to the ' + (comms.COMMS_SOURCE_NAME ?? 'relay rover'), 'danger');
     wasShadow = sh;
     if (R.tb > 0 && d < 12) {
       if (i >= R.tb && lastIdx >= 0 && lastIdx < R.tb && !tbPassed) { tbPassed = true; toast('Turn-back point passed: reserve no longer covers the walk back', 'warn'); }
