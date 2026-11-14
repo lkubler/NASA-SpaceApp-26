@@ -1,0 +1,7 @@
+mars.glb
+Source: NASA Science, "Planet Mars, 3D Model", credit NASA/JPL-Caltech (April 27, 2019),
+https://science.nasa.gov/resource/planet-mars-3d-model/
+File: glTF download 24881_Mars_1_6792.glb (3.85 MB),
+https://assets.science.nasa.gov/content/dam/science/psd/mars/resources/gltf_files/24881_Mars_1_6792.glb
+Renamed to mars.glb; file not edited. At load time the app subdivides the mesh onto a smooth sphere
+(src/steps/1-mission/planet.js); the texture is unchanged.

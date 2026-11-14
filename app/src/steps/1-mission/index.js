@@ -5,8 +5,11 @@ import { h, headline, lede, pillButton, labelTag, fmtTimeOfDay, LOCK_SVG } from 
 import { ENVIRONMENT, DEMO } from '../../core/values.js';
 import { REQUESTS } from './requests.js';
 import { loadGale, craterView, VERTICAL_EXAGGERATION } from './crater.js';
+import { planetView } from './planet.js';
 
 const PHOTO_BASE = 'data/murray/photos/';
+// opening -> crater transition: globe zoom (ms), crater fly-in (ms), Gale's share of the screen width at the handoff
+const ZOOM_MS = 2600, FLY_MS = 3400, HANDOFF_FILL = 0.11; // speeds meet at the handoff (planet.js, crater.js)
 const DELAY = ENVIRONMENT.signalDelayNowMin;
 
 let cleanup = null;
@@ -68,13 +71,51 @@ export default {
             ' each way ', labelTag(ENVIRONMENT.signalDelayMaxMin), '.'),
           h('p.m1-intro__line.m1-intro__q', 'Before every step outside, one question: can I still get home?')),
         h('div.m1-intro__action', begin));
+      const globe = h('div.m1-globe', { 'aria-hidden': 'true' });
+      const skyCredit = h('div.m1-intro__credit.mono', 'Mars: NASA/JPL-Caltech 3D model ',
+        labelTag({ label: 'real', text: 'NASA’s 3D model of Mars, with a surface texture from spacecraft imagery. Shown as a backdrop; it turns slowly.', source: { title: 'NASA Science, Planet Mars, 3D Model — NASA/JPL-Caltech', url: 'https://science.nasa.gov/resource/planet-mars-3d-model/' } }),
+        h('span', ' · Stars: NASA/Goddard SVS Deep Star Maps 2020 '),
+        labelTag({ label: 'real', text: 'The star field is a real sky map built from the Hipparcos-2, Tycho-2 and Gaia DR2 star catalogs, centred on the core of the Milky Way.', source: { title: 'NASA/Goddard Space Flight Center Scientific Visualization Studio, Deep Star Maps 2020 (Gaia DR2: ESA/Gaia/DPAC)', url: 'https://svs.gsfc.nasa.gov/4851' } }));
+      intro.style.backgroundImage = `url(${import.meta.env.BASE_URL || './'}sky/milky-way.jpg)`;
+      intro.prepend(globe);
+      intro.append(skyCredit);
       el.append(intro);
+      const planet = planetView(globe);
+      let planetGone = false;
+      const dropPlanet = () => { if (!planetGone) { planetGone = true; planet.dispose(); } };
+      disposers.push(dropPlanet);
       el.classList.add('m1--intro');
-      const closeOpening = () => {
+      let leaving = false;
+      const closeOpening = async () => {
+        if (leaving) return;
+        leaving = true;
         openingSeen = true;
-        intro.classList.add('is-leaving');
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduced || !view) { // plain fade
+          intro.classList.add('is-leaving');
+          el.classList.remove('m1--intro');
+          setTimeout(() => { dropPlanet(); intro.remove(); }, 260);
+          return;
+        }
+        // globe turns Gale to the centre and zooms in; then the 3D crater appears over it in the same place
+        // and scale, the globe follows the crater camera down, and fades while the camera tilts
+        intro.classList.add('is-zooming');
+        el.classList.add('m1--flying');
+        await planet.zoomToGale(ZOOM_MS, HANDOFF_FILL);
+        if (!alive) return;
         el.classList.remove('m1--intro');
-        setTimeout(() => intro.remove(), 260);
+        el.classList.add('m1--handoff');
+        await view.flyIn({
+          dur: FLY_MS, fill: HANDOFF_FILL,
+          onFrame: (kmPerPx, k) => {
+            planet.follow(kmPerPx);
+            const f = Math.min(1, Math.max(0, (k - 0.4) / 0.3));
+            intro.style.opacity = String(1 - f * f * (3 - 2 * f));
+          },
+        });
+        dropPlanet(); intro.remove();
+        el.classList.remove('m1--handoff');
+        if (alive) el.classList.remove('m1--flying');
       };
       setTimeout(() => begin.focus(), 50);
     }
@@ -88,8 +129,8 @@ export default {
 
     function buildCredit(meta) {
       credit.append(
-        h('span', 'Gale crater · MOLA elevation, ', `${Math.round(meta.km_per_pixel * 1000)} m per pixel `),
-        labelTag({ label: 'real', text: `Elevation of Gale crater from the Mars Orbiter Laser Altimeter on Mars Global Surveyor (MOLA MEGDR, 128 pixels per degree), a ${Math.round(meta.width_km)} km square. Site positions from Curiosity's drive path; Mount Sharp is the highest point of the central mound in this grid.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
+        h('span', 'Gale crater · HRSC elevation (ESA Mars Express) via NASA 3D model, ', `${Math.round(meta.km_per_pixel * 1000)} m per pixel `),
+        labelTag({ label: 'real', text: `Elevation of Gale crater from NASA's printable 3D model, made from stereo images of the HRSC camera on ESA's Mars Express; ${Math.round(meta.width_km)} × ${Math.round(meta.height_km)} km. We placed it on the map and converted it to metres by fitting it to MOLA laser altimetry (correlation ${meta.fit.r}). Surface colour from the same NASA Mars 3D model as the opening globe (low resolution, about 6 pixels per degree). Site positions from Curiosity's drive path; Mount Sharp is the highest point of the central mound in this grid.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
         h('span', ` · height ×${VERTICAL_EXAGGERATION} `),
         labelTag(DEMO.craterHeightFactor),
       );
@@ -106,18 +147,24 @@ export default {
     }
     function buildMarkers(meta) {
       pin(view.pointOf(meta.mount_sharp, 0.4), h('div.m1-pin.m1-pin--peak', h('span.m1-pin__peak'), h('span.m1-pin__name', 'Mount Sharp')));
+      // The three sites lie within 2 km of each other, a few pixels apart at this scale: one ring at their
+      // centre, the sites spread on it in their real directions (view looks south: west is on the right).
+      const pts = meta.sites.map((s) => view.pointOf(s, 0.05));
+      const centre = pts.reduce((a, p) => a.add(p), pts[0].clone().multiplyScalar(0)).multiplyScalar(1 / pts.length);
+      const cluster = h('div.m1-pin.m1-cluster', { title: 'The three sites lie within 2 km of each other; spread out here so they can be read.' },
+        h('span.m1-cluster__ring'));
       for (const s of meta.sites) {
-        const p = view.pointOf(s, 0.05);
         if (s.id === 'murray') {
-          murrayBtn = h('button.m1-pin.m1-pin--site.m1-pin--murray', { type: 'button', 'aria-label': 'Select Murray Buttes', onclick: () => selectSite() },
-            h('span.m1-pin__dot'), h('span.m1-pin__name', h('span.m1-pin__arrow', '← '), s.name));
-          pin(p, murrayBtn);
+          murrayBtn = h('button.m1-site.m1-site--murray', { type: 'button', 'aria-label': 'Select Murray Buttes', onclick: () => selectSite() },
+            h('span.m1-site__dot'), h('span.m1-site__name', h('span.m1-site__arrow', '← '), s.name));
+          cluster.append(murrayBtn);
         } else {
-          pin(p, h(`div.m1-pin.m1-pin--site.m1-pin--locked.m1-pin--${s.id}`, { title: `${s.name}: not in this demo` },
-            h('span.m1-pin__lead'), h('span.m1-pin__dot'),
-            h('span.m1-pin__name', h('span.m1-pin__lock', { html: LOCK_SVG }), s.name, h('span.m1-pin__note', 'not in this demo'))));
+          cluster.append(h(`div.m1-site.m1-site--locked.m1-site--${s.id}`, { title: `${s.name}: not in this demo` },
+            h('span.m1-site__dot'),
+            h('span.m1-site__name', h('span.m1-site__lock', { html: LOCK_SVG }), s.name)));
         }
       }
+      pin(centre, cluster);
       view.onRender(place);
       place();
     }

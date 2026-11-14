@@ -9,8 +9,8 @@
   position: absolute; left: var(--gutter); bottom: calc(var(--gutter) + 1.6em); max-width: calc(100vw - 2 * var(--gutter));
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6); transition: opacity var(--fade);
 }
-.step--mission .m1-hero .headline { font-size: var(--fs-hero); white-space: nowrap; }
-.step--mission .m1-hero .lede { color: #d6d6da; max-width: 30em; }
+.step--mission .m1-hero .headline { font-size: var(--fs-hero); max-width: 7.2em; line-height: 1.02; }
+.step--mission .m1-hero .lede { color: #d6d6da; max-width: 26em; }
 
 .step--mission .m1-credit {
   position: absolute; left: var(--gutter); bottom: calc(var(--gutter) * 0.45); font-size: var(--fs-tag);
@@ -26,33 +26,34 @@
 }
 .step--mission .m1-pin--peak .m1-pin__name { left: 10px; top: -0.75em; font-size: var(--fs-small); color: #e8e8ea; }
 
-.step--mission .m1-pin__dot {
+/* the three sites: a ring at their centre, the sites spread on it */
+.step--mission .m1-cluster__ring {
+  position: absolute; left: -54px; top: -54px; width: 108px; height: 108px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16); background: radial-gradient(circle, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0) 70%);
+}
+.step--mission .m1-site { position: absolute; left: var(--x); top: var(--y); padding: 0; border: 0; background: none; color: inherit; font: inherit; }
+.step--mission .m1-site--murray { --x: 30px; --y: -2px; pointer-events: auto; cursor: pointer; }
+.step--mission .m1-site--marias { --x: -6px; --y: -30px; }
+.step--mission .m1-site--pahrump { --x: -30px; --y: 10px; }
+.step--mission .m1-site__dot {
   position: absolute; left: -7px; top: -7px; width: 14px; height: 14px; border-radius: 50%;
   background: #0d0d0e; border: 1.5px solid rgba(255, 255, 255, 0.85);
 }
-.step--mission .m1-pin--murray { pointer-events: auto; }
-.step--mission .m1-pin--murray::before { /* generous click target */
-  content: ''; position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%;
+.step--mission .m1-site__name { position: absolute; white-space: nowrap; font-weight: 600; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.85); }
+.step--mission .m1-site--murray::before { /* generous click target */
+  content: ''; position: absolute; left: -20px; top: -20px; width: 40px; height: 40px; border-radius: 50%;
 }
-.step--mission .m1-pin--murray .m1-pin__dot { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(79, 203, 255, 0.18); animation: m1-pulse 2.2s ease-in-out infinite; }
-.step--mission .m1-pin--murray.is-selected .m1-pin__dot { background: var(--accent); box-shadow: 0 0 0 6px rgba(79, 203, 255, 0.22), 0 0 18px var(--accent-glow); animation: none; }
-.step--mission .m1-pin--murray .m1-pin__name {
-  left: 16px; top: -0.75em; font-weight: 600; font-size: var(--fs-title); color: #fff; pointer-events: auto; cursor: pointer;
-}
-.step--mission .m1-pin--murray:hover .m1-pin__name, .step--mission .m1-pin--murray:focus-visible .m1-pin__name { text-decoration: underline; text-underline-offset: 4px; }
-.step--mission .m1-pin__arrow { color: var(--accent); }
-.step--mission .m1-pin--murray.is-selected .m1-pin__arrow { display: none; }
-
-.step--mission .m1-pin--locked .m1-pin__dot { width: 10px; height: 10px; left: -5px; top: -5px; border-color: rgba(255, 255, 255, 0.6); }
-.step--mission .m1-pin--locked .m1-pin__name { color: #b9b9be; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35em; }
-.step--mission .m1-pin__note { font-family: var(--font-mono); font-weight: 400; font-size: var(--fs-tag); color: var(--text-2); margin-left: 0.4em; }
-.step--mission .m1-pin__lock { display: inline-flex; color: var(--text-2); }
-.step--mission .m1-pin--marias .m1-pin__name { right: 62px; bottom: 34px; }
-.step--mission .m1-pin--pahrump .m1-pin__name { right: 62px; top: 32px; }
-/* leader lines: the three sites lie close together, so the two locked labels sit apart with a line to their dot */
-.step--mission .m1-pin__lead { position: absolute; left: 0; top: 0; height: 1px; width: 70px; background: rgba(255, 255, 255, 0.55); transform-origin: 0 0; }
-.step--mission .m1-pin--marias .m1-pin__lead { transform: rotate(-145deg); }
-.step--mission .m1-pin--pahrump .m1-pin__lead { transform: rotate(145deg); }
+.step--mission .m1-site--murray .m1-site__dot { width: 16px; height: 16px; left: -8px; top: -8px; border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 4px rgba(79, 203, 255, 0.18), 0 0 14px var(--accent-glow); animation: m1-pulse 2.2s ease-in-out infinite; }
+.step--mission .m1-site--murray.is-selected .m1-site__dot { box-shadow: 0 0 0 6px rgba(79, 203, 255, 0.25), 0 0 20px var(--accent-glow); animation: none; }
+.step--mission .m1-site--murray .m1-site__name { left: 18px; top: -0.72em; font-size: var(--fs-title); color: #fff; }
+.step--mission .m1-site--murray:hover .m1-site__name, .step--mission .m1-site--murray:focus-visible .m1-site__name { text-decoration: underline; text-underline-offset: 4px; }
+.step--mission .m1-site__arrow { color: var(--accent); }
+.step--mission .m1-site--murray.is-selected .m1-site__arrow { display: none; }
+.step--mission .m1-site--locked .m1-site__dot { width: 12px; height: 12px; left: -6px; top: -6px; border-color: rgba(255, 255, 255, 0.7); }
+.step--mission .m1-site--locked .m1-site__name { color: #b9b9be; font-size: var(--fs-text); display: inline-flex; align-items: center; gap: 0.35em; }
+.step--mission .m1-site--marias .m1-site__name { left: 50%; transform: translateX(-50%); bottom: 12px; }
+.step--mission .m1-site--pahrump .m1-site__name { right: 14px; top: -0.7em; }
+.step--mission .m1-site__lock { display: inline-flex; color: var(--text-2); }
 
 @keyframes m1-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(79, 203, 255, 0.18); } 50% { box-shadow: 0 0 0 9px rgba(79, 203, 255, 0.05); } }
 
@@ -104,8 +105,33 @@
 .step--mission .m1-req__sep { color: var(--text-3); }
 
 .step--mission.m1--site .m1-hero .lede { opacity: 0.85; }
-@media (prefers-reduced-motion: reduce) { .step--mission .m1-pin--murray .m1-pin__dot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .step--mission .m1-site--murray .m1-site__dot { animation: none; } }
 
 /* a request finished on an earlier mission (state.requestsDone) */
 .step--mission .m1-req__done { margin-left: 0.8em; color: var(--accent); border: 1px solid currentColor; border-radius: var(--radius-pill); padding: 0 0.6em; }
 .step--mission .m1-req.is-done:not(.is-selected) { opacity: 0.75; }
+
+/* opening: star sky (NASA SVS Deep Star Maps) and a huge Mars rising from the bottom */
+.step--mission .m1-intro { background-color: #000; background-position: center 30%; background-size: cover; background-repeat: no-repeat; }
+.step--mission .m1-intro__text, .step--mission .m1-intro__action { z-index: 1; }
+.step--mission .m1-intro__text { position: relative; }
+.step--mission .m1-globe { position: absolute; inset: 0; opacity: 0; transition: opacity 1200ms ease-out; pointer-events: none; }
+.step--mission .m1-globe.is-ready { opacity: 1; }
+.step--mission .m1-globe canvas { display: block; width: 100%; height: 100%; }
+.step--mission .m1-intro__credit {
+  position: absolute; left: var(--gutter); bottom: calc(var(--gutter) * 0.45); z-index: 1;
+  font-size: var(--fs-tag); color: #d6d6da; display: flex; align-items: center; gap: 0.35em;
+  background: rgba(0, 0, 0, 0.55); padding: 0.25em 0.6em; border-radius: var(--radius-pill);
+}
+.step--mission .m1-intro__line { text-shadow: 0 2px 16px rgba(0, 0, 0, 0.75), 0 1px 3px rgba(0, 0, 0, 0.6); }
+
+/* opening -> crater: text leaves first, the globe zooms, then the whole opening fades into the crater */
+.step--mission .m1-intro.is-zooming .m1-intro__text,
+.step--mission .m1-intro.is-zooming .m1-intro__action,
+.step--mission .m1-intro.is-zooming .m1-intro__credit { opacity: 0; transform: translateY(-8px); transition: opacity 450ms ease-out, transform 450ms ease-out; }
+/* handoff: the crater canvas sits above the opening and fades in over the globe */
+.step--mission.m1--handoff .m1-view { z-index: 31; animation: m1-view-in 200ms linear both; }
+@keyframes m1-view-in { from { opacity: 0; } to { opacity: 1; } }
+.step--mission.m1--flying .m1-overlay, .step--mission.m1--flying .m1-hero, .step--mission.m1--flying .m1-credit { opacity: 0; }
+.step--mission .m1-overlay { transition: opacity 600ms ease-out; }
+.step--mission .m1-hero, .step--mission .m1-credit { transition: opacity 600ms ease-out; }
