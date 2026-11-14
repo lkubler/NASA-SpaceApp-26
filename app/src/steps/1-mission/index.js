@@ -14,6 +14,19 @@ const DELAY = ENVIRONMENT.signalDelayNowMin;
 
 let cleanup = null;
 let openingSeen = false; // UI only: the opening shows once per page load
+// crater data, loaded once per page load and kept (a return to step 1 builds the view without waiting for the network)
+let galeData = null;
+const galeOnce = () => (galeData ||= loadGale().catch((e) => { galeData = null; throw e; }));
+
+/** Resolves true when `img` has loaded and decoded `url`, false if it failed. */
+function loadImage(img, url) {
+  return new Promise((resolve) => {
+    img.onload = () => (img.decode ? img.decode().catch(() => {}) : Promise.resolve()).then(() => resolve(true));
+    img.onerror = () => resolve(false);
+    img.src = url;
+  });
+}
+const SKY_FIRST_MS = 4000; // the planet model waits for the star sky at most this long (UI only)
 
 async function loadCredits() {
   try {
@@ -52,6 +65,9 @@ export default {
     const disposers = [];
     cleanup = () => { alive = false; disposers.forEach((f) => f()); };
 
+    let viewReadyRes, viewSettled = false;
+    // true once the crater view is built, false on failure
+    const viewReady = new Promise((res) => { viewReadyRes = (v) => { viewSettled = true; res(v); }; });
     const viewWrap = h('div.m1-view');
     const overlay = h('div.m1-overlay');
     const credit = h('div.m1-credit.mono');
@@ -60,9 +76,16 @@ export default {
       lede('Three sites in Gale crater that Curiosity explored. Select one.'));
     const panel = h('aside.m1-panel', { 'aria-hidden': 'true' });
     el.append(viewWrap, overlay, hero, credit, panel);
+    // crater view, its markers and the headline stay hidden until the view is built, then fade and ease in
+    // (a return to step 1, e.g. New mission from the Debrief; not the zoom from the opening, which has its own)
+    const reveal = () => requestAnimationFrame(() => requestAnimationFrame(() => { if (alive) el.classList.remove('m1--entering'); }));
+    let opening = false;
 
     // --- opening: two sentences before anything else
-    if (!openingSeen && !ctx.state.request) {
+    // the opening shows once per page load, on the first visit of step 1 (not after the dev jump to a later step)
+    if (!openingSeen && !ctx.state.request && !(Number(ctx.params.get('step')) > 1)) {
+      opening = true;
+      el.classList.add('m1--intro'); // before anything measures the layout, so the headline never shows through
       const begin = pillButton({ text: 'Begin', arrow: true, onClick: () => closeOpening() });
       const intro = h('div.m1-intro',
         h('div.m1-intro__text',
@@ -76,30 +99,41 @@ export default {
         labelTag({ label: 'real', text: 'NASA’s 3D model of Mars, with a surface texture from spacecraft imagery. Shown as a backdrop; it turns slowly.', source: { title: 'NASA Science, Planet Mars, 3D Model — NASA/JPL-Caltech', url: 'https://science.nasa.gov/resource/planet-mars-3d-model/' } }),
         h('span', ' · Stars: NASA/Goddard SVS Deep Star Maps 2020 '),
         labelTag({ label: 'real', text: 'The star field is a real sky map built from the Hipparcos-2, Tycho-2 and Gaia DR2 star catalogs, centred on the core of the Milky Way.', source: { title: 'NASA/Goddard Space Flight Center Scientific Visualization Studio, Deep Star Maps 2020 (Gaia DR2: ESA/Gaia/DPAC)', url: 'https://svs.gsfc.nasa.gov/4851' } }));
-      intro.style.backgroundImage = `url(${import.meta.env.BASE_URL || './'}sky/milky-way.jpg)`;
-      intro.prepend(globe);
+      // star sky first (fades in once decoded), then the planet (fades in once its model is on the GPU)
+      const sky = h('img.m1-sky', { alt: '', 'aria-hidden': 'true', decoding: 'async' });
+      const skyLoaded = loadImage(sky, `${import.meta.env.BASE_URL || './'}sky/milky-way.jpg`).then((ok) => {
+        if (ok && alive) sky.classList.add('is-ready');
+      });
+      const skyFirst = Promise.race([skyLoaded, new Promise((r) => setTimeout(r, SKY_FIRST_MS))]);
+      intro.prepend(sky, globe);
       intro.append(skyCredit);
       el.append(intro);
-      const planet = planetView(globe);
+      const planet = planetView(globe, { after: skyFirst });
       let planetGone = false;
       const dropPlanet = () => { if (!planetGone) { planetGone = true; planet.dispose(); } };
       disposers.push(dropPlanet);
-      el.classList.add('m1--intro');
       let leaving = false;
       const closeOpening = async () => {
         if (leaving) return;
         leaving = true;
         openingSeen = true;
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (reduced || !view) { // plain fade
+        // Begin pressed before the crater is built: the opening stays (Begin dimmed) until it is
+        if (!viewSettled) { intro.classList.add('is-waiting'); await viewReady; }
+        if (!alive) return;
+        // the globe is not shown yet, reduced motion, or no crater: no zoom; the opening fades out while
+        // the crater (just built) fades and eases in underneath
+        if (reduced || !planet.isReady() || !view) {
+          el.classList.add('m1--entering');
           intro.classList.add('is-leaving');
           el.classList.remove('m1--intro');
-          setTimeout(() => { dropPlanet(); intro.remove(); }, 260);
+          setTimeout(() => { dropPlanet(); intro.remove(); }, 500);
+          reveal();
           return;
         }
+        intro.classList.add('is-zooming');
         // globe turns Gale to the centre and zooms in; then the 3D crater appears over it in the same place
         // and scale, the globe follows the crater camera down, and fades while the camera tilts
-        intro.classList.add('is-zooming');
         el.classList.add('m1--flying');
         await planet.zoomToGale(ZOOM_MS, HANDOFF_FILL);
         if (!alive) return;
@@ -119,6 +153,7 @@ export default {
       };
       setTimeout(() => begin.focus(), 50);
     }
+    if (!opening) el.classList.add('m1--entering');
 
     let view = null;
     let siteSelected = false;
@@ -232,14 +267,16 @@ export default {
       murrayBtn.setAttribute('aria-pressed', 'true');
       el.classList.add('m1--site');
       panel.setAttribute('aria-hidden', 'false');
-      if (instant) panel.classList.add('no-anim');
+      if (instant) panel.classList.add('is-fading'); // returning to step 1 with a request: fades in with the crater
       requestAnimationFrame(() => panel.classList.add('is-open'));
       view.setShift(panel.offsetWidth / 2);
     }
 
     // --- crater view
     try {
-      const [gale, credits] = await Promise.all([loadGale(), loadCredits()]);
+      const [gale, credits] = await Promise.all([galeOnce(), loadCredits()]);
+      // the previous screen goes first (one painted frame), then the view is built
+      if (!opening) await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
       if (!alive) return;
       view = craterView(viewWrap, gale);
       disposers.push(() => view.dispose());
@@ -247,10 +284,14 @@ export default {
       buildCredit(gale.meta);
       buildPanel(credits);
       if (ctx.state.request) selectSite(true);
+      viewReadyRes(true);
+      if (!opening) reveal();
     } catch (e) {
       console.error(e);
+      viewReadyRes(false);
       if (!alive) return;
       credit.replaceChildren('Gale crater elevation data could not be loaded.');
+      el.classList.remove('m1--entering');
     }
   },
 

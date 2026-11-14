@@ -60,10 +60,11 @@
 /* opening */
 .step--mission .m1-intro {
   position: absolute; inset: 0; z-index: 30; background: rgba(0, 0, 0, 0.92); display: flex; flex-direction: column;
-  justify-content: center; padding: var(--header-h) var(--gutter) var(--gutter); animation: fade-in 400ms both;
+  justify-content: center; padding: var(--header-h) var(--gutter) var(--gutter); animation: fade-in 400ms backwards; /* not 'both': a held animation would override the fades out */
   transition: opacity 240ms ease-out;
 }
-.step--mission .m1-intro.is-leaving { opacity: 0; pointer-events: none; }
+.step--mission .m1-intro.is-waiting .m1-intro__action { opacity: 0.45; pointer-events: none; transition: opacity 300ms ease-out; }
+.step--mission .m1-intro.is-leaving { opacity: 0; pointer-events: none; transition: opacity 450ms ease-out; }
 .step--mission .m1-intro__text { max-width: 34em; }
 .step--mission .m1-intro__line { font-family: var(--font-display); font-weight: 500; font-size: clamp(22px, 3.6vh, 40px); line-height: 1.25; margin: 0 0 0.7em; letter-spacing: -0.01em; }
 .step--mission .m1-intro__line .vlabel { vertical-align: middle; }
@@ -78,7 +79,7 @@
   width: clamp(380px, 34vw, 600px); display: flex; flex-direction: column; gap: var(--gap);
   opacity: 0; transform: translateX(24px); pointer-events: none; transition: opacity var(--slide), transform var(--slide);
 }
-.step--mission .m1-panel.no-anim { transition: none; }
+.step--mission .m1-panel.is-fading { transition: opacity 600ms ease-out; transform: none; }
 .step--mission .m1-panel.is-open { opacity: 1; transform: none; pointer-events: auto; }
 .step--mission .m1-panel__kicker { font-size: var(--fs-tag); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
 .step--mission .m1-panel__lede { margin: 0.4em 0 0; color: #d0d0d4; font-size: var(--fs-small); text-shadow: 0 1px 8px #000; }
@@ -114,10 +115,15 @@
 .step--mission .m1-req.is-done:not(.is-selected) { opacity: 0.75; }
 
 /* opening: star sky (NASA SVS Deep Star Maps) and a huge Mars rising from the bottom */
-.step--mission .m1-intro { background-color: #000; background-position: center 30%; background-size: cover; background-repeat: no-repeat; }
+.step--mission .m1-intro { background-color: #000; }
+.step--mission .m1-sky {
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 900ms ease-out;
+  object-fit: cover; object-position: center 30%;
+}
+.step--mission .m1-sky.is-ready { opacity: 1; }
 .step--mission .m1-intro__text, .step--mission .m1-intro__action { z-index: 1; }
 .step--mission .m1-intro__text { position: relative; }
-.step--mission .m1-globe { position: absolute; inset: 0; opacity: 0; transition: opacity 1200ms ease-out; pointer-events: none; }
+.step--mission .m1-globe { position: absolute; inset: 0; opacity: 0; transition: opacity 1600ms cubic-bezier(0.3, 0, 0.2, 1); pointer-events: none; }
 .step--mission .m1-globe.is-ready { opacity: 1; }
 .step--mission .m1-globe canvas { display: block; width: 100%; height: 100%; }
 .step--mission .m1-intro__credit {
@@ -137,3 +143,16 @@
 .step--mission.m1--flying .m1-overlay, .step--mission.m1--flying .m1-hero, .step--mission.m1--flying .m1-credit { opacity: 0; }
 .step--mission .m1-overlay { transition: opacity 600ms ease-out; }
 .step--mission .m1-hero, .step--mission .m1-credit { transition: opacity 600ms ease-out; }
+
+/* entering step 1 without the opening (New mission, top menu) or after a faded opening: the crater, its
+   markers and the headline are hidden until the view is built, then fade in while the view eases back */
+.step--mission .m1-view, .step--mission .m1-overlay { transform-origin: 50% 55%; }
+.step--mission:not(.m1--handoff) .m1-view { transition: opacity 650ms ease-out, transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+.step--mission:not(.m1--flying) .m1-overlay { transition: opacity 650ms ease-out, transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+.step--mission.m1--entering .m1-view, .step--mission.m1--entering .m1-overlay { opacity: 0; transform: scale(1.06); transition: none; }
+.step--mission.m1--entering .m1-hero, .step--mission.m1--entering .m1-credit { opacity: 0; transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .step--mission.m1--entering .m1-view, .step--mission.m1--entering .m1-overlay { transform: none; }
+}
+/* a dark ground tone under the crater view: what shows until the terrain has faded in (never plain black) */
+.step--mission { background: radial-gradient(ellipse 80% 70% at 55% 60%, #2b1a11 0%, #140c08 55%, #050302 100%); }
