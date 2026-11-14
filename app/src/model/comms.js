@@ -6,6 +6,10 @@
 // Coordinates x,y are in metres from the grid's top-left corner (cell i = floor(x/cellSize)).
 // Visibility codes: 0 hidden, 1 visible, 2 unknown (no-data; never treated as blocking).
 
+// The one name for the comms source, used on the map, in Walk toasts and on the Sources page.
+// Geometric line of sight to a relay rover parked on high ground; the lander is not the source.
+export const COMMS_SOURCE_NAME = 'Relay rover';
+
 export const HIDDEN = 0, VISIBLE = 1, UNKNOWN = 2;
 export const MARS_RADIUS_M = 3389500;
 // ASSUMPTION: a comms shadow longer than this is flagged (configurable).

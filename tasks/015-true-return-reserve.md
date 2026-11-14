@@ -1,6 +1,6 @@
 # 015 True return reserve and a scenario that shows it
 owner: builder
-state: open
+state: in-progress
 area: app/src/map/, app/src/model/reserve.js, app/src/state.js
 
 ## Goal
