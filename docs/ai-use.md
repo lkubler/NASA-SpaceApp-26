@@ -9,3 +9,4 @@ For the submission's "Use of Super Intelligence" field and for labeling. One lin
 - Data checks (Claude Code agent data-scout): Access Mars scene inspection, DTM coverage via HTTP Range reads. File: `research/data-sites.md`.
 - Design system and dust/Quela sources (Claude Code agents designer/data-scout). Files: `docs/design.md`, `research/sources-validity.md`.
 - 3D feasibility spike (Claude Code agent builder): Three.js walk on Access Mars terrain, branch `spike-3d`. File: `research/spike-3d.md`.
+- Science backing (Claude Code agent scout): papers, why-it-matters facts, model upgrades, science-backed feature list. File: `research/science.md`.
