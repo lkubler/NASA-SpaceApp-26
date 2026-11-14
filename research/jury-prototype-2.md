@@ -1,6 +1,6 @@
 # Jury simulation: prototype checkpoint 2
 
-Jury, Sat 14.11. 15:55, BUILD phase. Feature freeze Sun 10:30 (18.5 h), submission Sun 15:45.
+Jury, Sat 14.11. 15:40, BUILD phase. Feature freeze Sun 10:30 (19 h), submission Sun 15:45.
 Judged: `main` at 73d0eef, from source (`app/src/`), task results 012-027, `research/ux-1.md`, `research/ux-2.md`, and screenshots (`research/map-025-*`, `walk-026-*`, `polish-027-*`, `ux-2/*`). 55 tests pass (run by me). Numbers marked (C) are my own runs of the app's model code on the default scenario. I could not run a browser: the deployed link, real-GPU frame rate, free walking, and anything in motion are not verified.
 The idea is the humans' (`notes.md`). Everything below is a fix, a cut, or a check on it.
 Scores are judgement, not measurement.
@@ -80,7 +80,7 @@ Small fixes, all S, bundle with 2 or 3:
 - Notes claim NASA names "max time without line of sight" as a planning limit (ASCEND deck). `research/sources-validity.md` still marks it unverified. Open the deck and quote the slide, or keep saying "assumed mission rule" and do not say NASA in the pitch.
 
 ## Cut or do not build
-- **AI assistant (task 009): do not build.** 18 h left, no Presentation artefact, and free-text or pre-written AI answers add unsourced text to a product whose strength is sourcing. The humans decided the product gets an AI part; my recommendation is to reverse that as a scope cut (humans decide, record in `DECISIONS.md`). AI use is disclosed either way; an AI feature earns no criterion.
+- **AI assistant (task 009): do not build.** 19 h left, no Presentation artefact, and free-text or pre-written AI answers add unsourced text to a product whose strength is sourcing. The humans decided the product gets an AI part; my recommendation is to reverse that as a scope cut (humans decide, record in `DECISIONS.md`). AI use is disclosed either way; an AI feature earns no criterion.
 - **Other sites (task 011): cut.** Mention on the page as next steps.
 - **Minimap (task 010 remainder): cut.** The walk area is 128 m of a 5.9 km plan; a minimap does not fix that, and the HUD line from task 026 already says where you are.
 - **No planner rewrite on the 1 m grid.** The check in change 3 is enough.
