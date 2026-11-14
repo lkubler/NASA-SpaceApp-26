@@ -27,6 +27,20 @@ export const DISPLAY = {
   roverHalfWidthM: 1.54,
   roverTopM: 3.02,
   roverMarginM: 0.4,
+  // day sky (specs/x-sky.md, sky.js): a dome in the butterscotch of Curiosity's daytime sky photos (PIA21041, a raw-colour
+  // Mastcam frame from Murray Buttes, sol 1454: sky and far haze about rgb 200 / 180 / 135 to 225 / 200 / 150; NASA
+  // describes the sky as butterscotch to the eye, mars.nasa.gov / PIA16768). All colours below are our own picks
+  // from those photos (model: a display choice, no measured sky spectrum).
+  skyHorizonColor: 0xdcc299,  // the horizon colour; the haze (fog) of the terrain, skyline and every cue fades into exactly this
+  skyZenithColor: 0xb89763,   // overhead: a little darker and deeper (butterscotch)
+  skyGradientDeg: 75,         // elevation at which the zenith colour is reached; the change eases in, so the skyline's first degrees match the horizon
+  skyGlowColor: 0xf5e1b4,     // brightening around the sun
+  skyGlowWidthDeg: 38,        // the wide glow around the sun: this angle from the disc it has faded to nothing (soft, no ring)
+  skyGlowStrength: 0.6,       // ... and how far it moves the sky colour towards skyGlowColor next to the sun
+  sunDiscRadiusDeg: 0.55,     // the sun disc: small. Real Sun from Mars: about 0.35 deg across (about 21 arcmin); drawn a bit larger to stay a visible point (assumption)
+  sunDiscSoftDeg: 0.7,        // soft edge and close glow of the disc, in degrees beyond its radius (assumption)
+  sunDiscColor: 0xfff6e0,     // the disc itself, a warm white
+  skyRadiusM: 5200,           // the dome follows the eye; larger than the skyline mesh (about 4 km) and inside the camera's far plane (6 km)
   lockDriftEvents: 2,     // the cursor moved this many times under the pointer lock: the lock does not hold it, free look instead
   lockOffsetPx: 150,      // ... or this many movementX events in a row, all the same way and each at least lockOffsetPx:
   lockOffsetEvents: 8,    //     offsets from the lock point, not steps (assumption: no real hand moves 1200 px in 8 events)

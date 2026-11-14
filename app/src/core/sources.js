@@ -144,6 +144,27 @@ export const DATA = [
     url: 'https://science.nasa.gov/3d-resources/space-exploration-vehicle/',
   },
   {
+    name: 'Sky reference: “Farewell to Murray Buttes (Image 1)” (PIA21041, Mastcam, sol 1454)',
+    by: 'NASA/JPL-Caltech/MSSS',
+    use: 'Reference only, not copied into the app: the raw-colour daytime sky and haze over Gale crater at Murray Buttes, from which the day sky colours in the walk were picked by eye (model)',
+    licence: 'JPL Image Use Policy',
+    url: 'https://science.nasa.gov/photojournal/farewell-to-murray-buttes-image-1/',
+  },
+  {
+    name: 'Sky reference: “Mount Sharp Panorama in Raw Colors” (PIA16769, Mastcam, sol 45)',
+    by: 'NASA/JPL-Caltech/MSSS',
+    use: 'Reference only, not copied into the app: the butterscotch sky of Gale crater in raw colour, brighter towards the sun; the sky there is filled out from the terrain frames, as the caption says (model)',
+    licence: 'JPL Image Use Policy',
+    url: 'https://www.jpl.nasa.gov/images/pia16769-mount-sharp-panorama-in-raw-colors/',
+  },
+  {
+    name: 'Sky reference: “Rover’s Panorama of Entrance to ‘Murray Buttes’ on Mars” (PIA20765, Mastcam, sol 1421)',
+    by: 'NASA/JPL-Caltech/MSSS',
+    use: 'Reference only, not copied into the app: the same place in white-balanced colour (the sky looks grey-blue there, as NASA notes for white-balanced frames); kept to show why the walk uses the raw-colour butterscotch sky (model)',
+    licence: 'JPL Image Use Policy',
+    url: 'https://science.nasa.gov/photojournal/rovers-panorama-of-entrance-to-murray-buttes-on-mars/',
+  },
+  {
     name: 'Deep Star Maps 2020 (8K, galactic coordinates)',
     by: 'NASA/Goddard Space Flight Center Scientific Visualization Studio; Hipparcos-2, Tycho-2 and Gaia DR2 catalogs (Gaia DR2: ESA/Gaia/DPAC)',
     use: 'The star sky on the opening screen: a 2560 x 1440 crop around the core of the Milky Way (public/sky/milky-way.jpg)',
