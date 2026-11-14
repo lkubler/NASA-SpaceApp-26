@@ -104,8 +104,17 @@ export function mountMap(el) {
     }
     if (commsToo) computeComms();
     attachShadows();
-    app.set({ route, rover: { ...rover } });
+    publish();
     panelUpdate(); draw();
+  }
+  // Route results for the Walk view. `reserve`/`comms` use the shapes walk/hud.js reads.
+  function publish() {
+    const rs = route && route.reserve, last = rs && rs.points[rs.points.length - 1];
+    app.set({
+      route, rover: { ...rover },
+      reserve: last ? { fraction: Math.max(0, Math.min(1, last.remainingKJ / rs.capacityKJ)) } : undefined,
+      comms: route && route.shadows ? { status: route.shadows.length ? 'shadow' : 'ok' } : undefined,
+    });
   }
   let commsTimer = 0, commsKey = '';
   function computeComms() {
@@ -115,7 +124,7 @@ export function mountMap(el) {
     vis = viewshed(L.hm, { x: rover.x, y: rover.y, antennaHeight_m: 2 }, 1.8);
     const { width: W, height: H } = L.hm, c = document.createElement('canvas'); c.width = W; c.height = H;
     const g = c.getContext('2d'), img = g.createImageData(W, H), m = hex(css('--comms-shadow'));
-    for (let i = 0; i < vis.length; i++) if (vis[i] === HIDDEN) { const p = i * 4; img.data[p] = m[0]; img.data[p + 1] = m[1]; img.data[p + 2] = m[2]; img.data[p + 3] = 120; }
+    for (let i = 0; i < vis.length; i++) if (vis[i] === HIDDEN) { const p = i * 4; img.data[p] = m[0]; img.data[p + 1] = m[1]; img.data[p + 2] = m[2]; img.data[p + 3] = 85; }
     g.putImageData(img, 0, 0); comms = c;
     api.stats.viewshedMs = performance.now() - t0;
   }
@@ -127,7 +136,7 @@ export function mountMap(el) {
   function scheduleReplan(commsToo) {
     if (commsToo) { // viewshed is the slow part: debounce while dragging
       clearTimeout(commsTimer);
-      commsTimer = setTimeout(() => { computeComms(); attachShadows(); app.set({ route }); panelUpdate(); draw(); }, 160);
+      commsTimer = setTimeout(() => { computeComms(); attachShadows(); publish(); panelUpdate(); draw(); }, 160);
     }
     replan(false);
   }
