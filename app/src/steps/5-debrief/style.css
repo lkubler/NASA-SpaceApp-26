@@ -13,7 +13,10 @@
 }
 .step--debrief .dbf__main { grid-area: main; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
 .step--debrief .dbf__side { grid-area: side; min-height: 0; display: flex; flex-direction: column; }
-.step--debrief .dbf__side .map { width: 100%; flex: none; }
+.step--debrief .dbf__side { align-items: flex-start; }
+/* the map is as large as the column allows, and gives way to the warnings list below it */
+.step--debrief .dbf__side .map { flex: 1 1 0; min-height: 10em; width: auto; max-width: 100%; aspect-ratio: 1 / 1; }
+.step--debrief .dbf__side .legend, .step--debrief .dbf__side .dbf__warn { align-self: stretch; }
 .step--debrief .dbf__side .legend { margin-top: 0.6em; gap: 0.3em 1.1em; font-size: var(--fs-tag); }
 .step--debrief .lede { max-width: none; }
 .step--debrief .map-path--walked { stroke-width: 1.3; }
@@ -38,9 +41,9 @@
 .step--debrief .dbf__lower { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: calc(var(--gap) * 1.4); margin-top: calc(var(--gap) * 1.2); align-items: stretch; }
 .step--debrief .dbf__tablewrap { min-height: 0; overflow: auto; display: flex; flex-direction: column; }
 /* beside a tall report the table rows open up a little, so the column does not end in a gap */
-.step--debrief .dbf__table { flex: 0 1 auto; height: 100%; max-height: 17em; }
+.step--debrief .dbf__table { flex: 1 1 auto; height: 100%; max-height: 32em; }
 .step--debrief .dbf--short .dbf__table { height: auto; }
-.step--debrief .dbf__why { margin-top: 0.7em; font-size: var(--fs-small); color: var(--text); max-width: 46ch; }
+.step--debrief .dbf__why { margin-top: auto; padding-top: 0.7em; font-size: var(--fs-small); color: var(--text); max-width: 46ch; }
 .step--debrief .dbf__table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
 .step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.32em 0.6em 0.32em 0; text-align: left; white-space: nowrap; }
 .step--debrief .dbf__th { font-weight: 400; color: var(--text); }
@@ -71,7 +74,7 @@
 .step--debrief .dbf__sent:empty { display: none; }
 
 /* warnings list under the map */
-.step--debrief .dbf__warn { margin-top: calc(var(--gap) * 0.9); min-height: 0; flex: 1; display: flex; flex-direction: column; }
+.step--debrief .dbf__warn { margin-top: calc(var(--gap) * 0.9); min-height: 0; flex: 0 1 auto; max-height: 48%; display: flex; flex-direction: column; }
 .step--debrief .dbf__wl { list-style: none; margin: 0; padding: 0; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 0.45em; }
 .step--debrief .dbf__wi { display: flex; gap: 0.6em; align-items: flex-start; font-size: var(--fs-small); }
 .step--debrief .dbf__wi .marker { font-size: var(--fs-tag); width: 2em; height: 2em; }
