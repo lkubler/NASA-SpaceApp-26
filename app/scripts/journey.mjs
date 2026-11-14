@@ -120,6 +120,17 @@ for (const run of runs) {
     // ---------- 4 Walk ----------
     await page.waitForFunction(() => window.__state.step === 4 && window.__walk);
     await page.waitForSelector('.walk-loading.is-off', { state: 'attached', timeout: 60000 });
+    // specs/x-intro.md: the first walk of the session opens with the intro. Bundled Chromium has no H.264
+    // decoder, so the film (part A) is left out here and only the stepping out (part B) plays; wait for the
+    // handover, then check that the suit clock and the walk log did not run during it
+    const logNow = () => page.evaluate(() => { const w = window.__state.walk; return JSON.stringify({ tS: w.tS, m: w.distanceM, track: w.track.length, warnings: w.warnings.length, started: window.__walk.info().started }); });
+    const introSeen = await page.evaluate(() => !!document.querySelector('.walk-intro'));
+    if (!introSeen) fail(run, 'first walk of the session started without the intro');
+    const atIntro = await logNow();
+    await page.waitForFunction(() => !document.querySelector('.walk-intro'), null, { timeout: 30000 });
+    const atHandover = await logNow();
+    if (atHandover !== atIntro || JSON.parse(atHandover).started) fail(run, `the walk ran during the intro: ${atIntro} -> ${atHandover}`);
+    console.log('  walk log at handover', atHandover);
     await page.waitForTimeout(1500);
     await shot('walk-start');
     const hudTarget = await text('.walk-target__name');
@@ -223,6 +234,7 @@ for (const run of runs) {
     await page.click('.go__action .pill');
     await page.waitForFunction(() => window.__state.step === 4 && window.__walk);
     await page.waitForSelector('.walk-loading.is-off', { state: 'attached', timeout: 60000 });
+    if (await page.evaluate(() => !!document.querySelector('.walk-intro'))) fail(run, 'second walk of the session shows the intro again');
     await page.evaluate(() => window.__walk.hold(true));
     const w2 = await S();
     if (w2.walk.sample || w2.walk.distanceM > 6 || w2.walk.warnings.length) fail(run, 'second walk did not start fresh');
