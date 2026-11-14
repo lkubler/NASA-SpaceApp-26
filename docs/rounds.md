@@ -24,3 +24,8 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Did: scout sourced jury's Validity gaps; intel checked 2026 submission guide (human TODO).
 - Result: `research/sources-validity.md`: no NASA suited slope limit (20° xEMU / Apollo <15° typical); Pandolf/Santee + NASA BTU/hr numbers for reserve model ("simplified model" label); SEXTANT has no load term, comms/reserve unverified; boxwork refuted at Murray Buttes; 10 km walkback is a test distance, NASA sizes 1.8–3.5 km. `research/submission-guide.md`: deadline conflict (guide/schedule 23:59 vs CLAUDE.md 15:45, keep 15:45 until Local Lead confirms); SI form field not seen by judges.
 - Next: data-scout on Access Mars sites/DTM coverage (running), then wait for 14:00 decision.
+
+## Round 5 — Sat 14.11. 12:49–12:57 (EXPLORE)
+- Did: data-scout on the humans' site TODOs (Access Mars scenes, targets in detail area, DTM coverage).
+- Result: `research/data-sites.md`. All 4 sites in Access Mars (128×128 m tiles, ~82k verts; SIMPLE collision node only ~4.5 m spacing → sample tile meshes for 0.5 m grid). No georeferencing (±30 m origin estimate, rotation unknown). Inside: Buckskin (high), Pahrump targets, Goulburn; doubtful: Quela, Link, Hottah. No single DTM covers all 4: DTEEC_040770 (Murray/Marias/Pahrump) + DTEEC_018854 (Bradbury); Murray 72% valid → no-data mask.
+- Next: pause until the humans' 14:00 idea/stack decision; then record in DECISIONS.md and start BUILD (designer themes, 3D spike).
