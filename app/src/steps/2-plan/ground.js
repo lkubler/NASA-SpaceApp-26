@@ -2,7 +2,7 @@
 // (the same terrain the visitor walks), plus the too-steep hatching and the radio-shadow dots.
 // Masks come from the core (closedMask, radioShadowMask); nothing is computed here.
 import * as THREE from 'three';
-import { getTerrainScene } from '../../core/terrainScene.js';
+import { getTerrainScene, setGreyTint } from '../../core/terrainScene.js';
 
 let _ground = null;
 
@@ -31,7 +31,10 @@ export function paintGround(terrain, size) {
     cam.up.set(0, 0, -1);           // screen up = three.js -z = north
     cam.position.set(0, 500, 0);
     cam.lookAt(0, 0, 0);
+    // raw textures: composeGround finds the grey (no colour imagery) ground itself and shows the relief there
+    setGreyTint(false);
     renderer.render(scene, cam);
+    setGreyTint(true);
     const out = document.createElement('canvas');
     out.width = out.height = size;
     out.getContext('2d').drawImage(renderer.domElement, 0, 0);

@@ -19,6 +19,11 @@
 .step--debrief .map-path--walked { stroke-width: 1.3; }
 .step--debrief .map-path--foot { stroke-dasharray: 0.1 7; }
 
+.step--debrief .dbf--short .dbf__main { justify-content: space-between; }
+.step--debrief .dbf--short .dbf__lower { flex: 0 0 auto; }
+/* the planned spot carries its number and name */
+.step--debrief .dbf__table tbody tr:first-child td:nth-child(2) { white-space: normal; }
+
 /* big numbers */
 .step--debrief .dbf__nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 var(--gap); margin-top: calc(var(--gap) * 1.2); }
 .step--debrief .bignum { padding-top: 0.7em; }
@@ -31,22 +36,28 @@
 
 /* planned next to actual, and the report */
 .step--debrief .dbf__lower { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: calc(var(--gap) * 1.4); margin-top: calc(var(--gap) * 1.2); align-items: stretch; }
-.step--debrief .dbf__tablewrap { min-height: 0; overflow: auto; }
+.step--debrief .dbf__tablewrap { min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+/* beside a tall report the table rows open up a little, so the column does not end in a gap */
+.step--debrief .dbf__table { flex: 0 1 auto; height: 100%; max-height: 17em; }
+.step--debrief .dbf--short .dbf__table { height: auto; }
 .step--debrief .dbf__why { margin-top: 0.7em; font-size: var(--fs-small); color: var(--text); max-width: 46ch; }
 .step--debrief .dbf__table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
 .step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.32em 0.6em 0.32em 0; text-align: left; white-space: nowrap; }
 .step--debrief .dbf__th { font-weight: 400; color: var(--text); }
 .step--debrief .dbf__col { color: var(--text-2); font-weight: 500; font-size: var(--fs-tag); text-transform: uppercase; letter-spacing: 0.06em; }
-.step--debrief .dbf__td .mono { font-size: var(--fs-mono); }
+.step--debrief .dbf__td .mono { font-size: var(--fs-mono); white-space: nowrap; }
+/* "not returned" and its tag wrap onto two lines where the column is narrow, never clipped */
+.step--debrief .dbf__table td.dbf__td--wrap { white-space: normal; }
+.step--debrief .dbf__table tbody tr:first-child td .mono { white-space: normal; }
 .step--debrief .dbf__demo { margin-top: 0.5em; font-size: var(--fs-tag); color: var(--text-2); }
 
 .step--debrief .dbf__sec { color: var(--text-2); font-size: var(--fs-small); display: flex; align-items: center; gap: 0.4em; margin-bottom: 0.5em; }
 .step--debrief .dbf__report { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 0.8em 1em; min-height: 0; display: flex; flex-direction: column; }
 .step--debrief .dbf__rbody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 0.7em; }
 .step--debrief .dbf__report--empty { align-self: start; }
-.step--debrief .dbf__photo { flex: 1 1 auto; min-height: 0; }
+.step--debrief .dbf__photo { flex: 1 1 auto; min-height: 4.5em; }
 .step--debrief .dbf__photo:empty { display: none; }
-.step--debrief .dbf__photo img { width: 100%; height: 100%; min-height: 8em; object-fit: cover; border-radius: 8px; display: block; }
+.step--debrief .dbf__photo img { width: 100%; height: 100%; min-height: 0; object-fit: cover; border-radius: 8px; display: block; }
 .step--debrief .dbf__cap { font-size: var(--fs-tag); line-height: 1.4; }
 .step--debrief .dbf__rtext { flex: none; min-width: 0; font-size: var(--fs-small); display: flex; flex-direction: column; gap: 0.4em; }
 .step--debrief .dbf__ract { margin-top: 0.7em; display: flex; flex-direction: column; gap: 0.45em; align-items: flex-start; }

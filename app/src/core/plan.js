@@ -70,9 +70,18 @@ export function planNumbers(terrain, route) {
     if (d > maxDist.m) maxDist = { m: d, sM, x: p.x, z: p.z };
     if (st && st.closed && !firstClosed) firstClosed = { sM, x: p.x, z: p.z };
     profile.push({ sM, tS, x: p.x, y: p.y, z: p.z, leg: legName, shadow: inShadow, closed: slope > RULES.slopeMaxDeg.value, slopeDeg: slope });
-    if (inShadow && !open) open = { startM: sM, startS: tS, x: p.x, z: p.z };
-    if (!inShadow && open) { stretches.push({ ...open, endM: sM, endS: tS, seconds: tS - open.startS }); open = null; }
   };
+  // Radio shadow time, counted as the Walk counts it (walklog.js logMove): a step counts when it ends in
+  // a shadow cell, the work at the spot counts when the spot is in shadow. Stretches are runs of such
+  // steps, so the total is the sum of the stretches and no stretch is longer than the total.
+  const shadowTime = (inShadow, seconds, fromCell) => {
+    if (inShadow) {
+      if (!open) { const p = terrain.pointOf(fromCell); open = { startM: sM, startS: tS, x: p.x, z: p.z, seconds: 0 }; }
+      open.seconds += seconds;
+      shadowS += seconds;
+    } else if (open) closeShadow();
+  };
+  const closeShadow = () => { stretches.push({ ...open, endM: sM, endS: tS }); open = null; };
 
   const walk = (cells, legName, isFirst) => {
     if (isFirst) visit(cells[0], legName, null);
@@ -81,11 +90,11 @@ export function planNumbers(terrain, route) {
       const w = st.energyJ / st.seconds;
       // the way home is drawn at the walk-back rate only for the reserve, not for the plan's own levels
       levels = consume(levels, w, st.seconds);
+      shadowTime(shadow[cells[k]] === 1, st.seconds, cells[k - 1]);
       sM += st.m; tS += st.seconds;
       leg[legName].m += st.m; leg[legName].s += st.seconds; leg[legName].e += st.energyJ;
       if (st.slopeDeg > 0) climbM += Math.sin((st.slopeDeg * Math.PI) / 180) * st.m; else descentM -= Math.sin((st.slopeDeg * Math.PI) / 180) * st.m;
       if (st.closed) closedM += st.m;
-      if (shadow[cells[k]] === 1 || shadow[cells[k - 1]] === 1) shadowS += st.seconds;
       visit(cells[k], legName, st);
     }
   };
@@ -95,10 +104,12 @@ export function planNumbers(terrain, route) {
   const spotS = spotSeconds();
   const spotE = WORK.spotW.value * spotS;
   levels = consume(levels, WORK.spotW.value, spotS);
+  const spotCell = route.out.cells[route.out.cells.length - 1];
+  shadowTime(shadow[spotCell] === 1, spotS, spotCell);
   tS += spotS;
   profile.push({ ...profile[spotIndex], tS, leg: 'spot' });
   walk(route.back.cells, 'back', false);
-  if (open) stretches.push({ ...open, endM: sM, endS: tS, seconds: tS - open.startS });
+  if (open) closeShadow();
 
   const totalS = tS;
   const reserve = reserveOnReturn(fullLevels(), {

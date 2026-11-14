@@ -3,7 +3,7 @@
 import { h, labelTag, fmtDuration, fmtClock, fmtDistance, fmtMSv } from '../../ui/index.js';
 import {
   RULES, DEMO, ENVIRONMENT, SUIT, ROVER, ACCESS_MARS_POINTS,
-  bodyReadings, outsideTempC, fractions, fullLevels, timeLeft, spotSeconds,
+  bodyReadings, outsideTempC, fractions, fullLevels, timeLeft, spotSeconds, spotLabel,
 } from '../../core/index.js';
 import { ALERTS } from './sim.js';
 import { DISPLAY as D } from './display.js';
@@ -15,6 +15,11 @@ const MODEL_TAG = (text) => ({ label: 'model', text, source: { title: 'Our calcu
 const AM_TAG = { label: 'real', text: 'Card text from Access Mars (Google Creative Lab with NASA/JPL), a 2016 web experience built from Curiosity’s images of Murray Buttes.', source: { title: 'Access Mars, public/index.html', url: 'https://github.com/googlecreativelab/access-mars', where: 'murray_buttes_markers' } };
 const fullTime = timeLeft(fullLevels()).seconds;
 
+// distances and times shown with markers and the target: straight distance on the walk grid; time to get
+// there from the suit model (walking rate on the slope, way home at the higher work rate)
+const DIST_TAG = MODEL_TAG('Straight distance measured on the 0.5 m walk grid.');
+const ROUTE_TAG = MODEL_TAG('Distance on the walk grid and walking time from the suit model (work rate on the slope).');
+const TIME_TAG = { label: 'model', text: 'Suit time since you left the rover: walking and work times from the suit model, shown at demo speed.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
 export function createHud(el) {
@@ -30,7 +35,8 @@ export function createHud(el) {
   // minimap + target
   const miniCv = h('canvas.walk-mini__cv');
   const tgtName = h('div.walk-target__name');
-  const tgtLine = h('div.walk-target__line.mono');
+  const tgtLineTxt = h('span');
+  const tgtLine = h('div.walk-target__line.mono', tgtLineTxt, ' ', tag(ROUTE_TAG));
   const tgtBar = h('div.walk-target__bar', h('span'));
   const mini = h('div.walk-mini', h('div.walk-mini__disc', miniCv, h('span.walk-mini__n.mono', 'N')), h('div.walk-target', tgtName, tgtLine, tgtBar));
 
@@ -45,12 +51,16 @@ export function createHud(el) {
   const mVals = {};
   const mRow = (k, name, t) => h('div.walk-row', h('span.walk-row__l', name, t ? [' ', t] : null), mVals[k] = h('span.walk-row__v.mono'));
   const missionCard = h('div.walk-card.walk-card--mission',
-    mRow('time', 'Time outside', null),
+    mRow('time', 'Time outside', tag(TIME_TAG)),
     mRow('dose', 'Radiation', tag({ ...ENVIRONMENT.doseMSvPerDay, label: 'model', text: 'Dose so far: Curiosity’s measured dose rate at Gale crater times your time outside. ' + ENVIRONMENT.doseMSvPerDay.text })),
     mRow('temp', 'Outside', tag(ENVIRONMENT.airTempK)),
     mRow('power', 'Power', tag(SUIT.consumables.battery)),
     mRow('radio', 'Radio to rover', tag({ label: 'model', text: 'Line of sight from your eye to the rover antenna over the terrain grid. Geometric only, no radio physics.', source: { title: 'Our calculation from the walk grid', url: '', where: '' } })),
-    mRow('demo', 'Demo time', tag(DEMO.timeFactor)));
+    mRow('demo', 'Demo time', tag(DEMO.timeFactor)),
+    mRow('plan', 'Plan breaks', null));
+  // a rule the plan already broke is carried into the walk (specs/3-go.md): named from the start
+  const planRow = mVals.plan.parentElement;
+  planRow.hidden = true;
 
   // reserve chip
   const resVal = h('div.walk-reserve__val');
@@ -58,7 +68,7 @@ export function createHud(el) {
   const resLeft = h('div.walk-reserve__left.mono');
   const resBar = h('div.walk-reserve__bar', h('span'));
   const reserve = h('div.walk-reserve',
-    h('div.walk-reserve__head', h('span', 'Reserve on return'), tag({ label: 'model', text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } })),
+    h('div.walk-reserve__head', h('span', 'Reserve on return'), tag({ label: 'model', moon: true, text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } })),
     h('div.walk-reserve__main', resVal, resLeft), resSub, resBar);
 
   // centre: alert, reticle, look card, prompt
@@ -72,7 +82,9 @@ export function createHud(el) {
   // markers projected from 3D
   const tgtMark = h('div.walk-mark.walk-mark--target', h('span.walk-mark__label'), h('span.walk-mark__dia'));
   const roverDist = h('b.mono');
-  const roverMark = h('div.walk-mark.walk-mark--rover', h('span.walk-mark__label', 'Rover', roverDist, ' ', tag(SIM_TAG)), h('span.walk-mark__dia'));
+  const roverDistTag = h('span', ' ', tag(DIST_TAG));
+  roverDistTag.hidden = true;
+  const roverMark = h('div.walk-mark.walk-mark--rover', h('span.walk-mark__label', 'Rover ', tag(SIM_TAG), roverDist, roverDistTag), h('span.walk-mark__dia'));
   const pointMarks = ACCESS_MARS_POINTS.map(() => h('div.walk-mark.walk-mark--point', h('span.walk-mark__dot')));
   const marks = h('div.walk-marks', tgtMark, roverMark, ...pointMarks);
 
@@ -194,8 +206,8 @@ export function createHud(el) {
     drawCompass(headingDeg);
     drawMini(sim, headingDeg);
     const tg = sim.target();
-    tgtName.textContent = tg.kind === 'spot' ? `${tg.id ? tg.id + ' ' : ''}${tg.name}` : 'Rover';
-    tgtLine.textContent = `${fmtDistance(tg.metres)} · ${fmtDuration(tg.seconds)}`;
+    tgtName.textContent = tg.kind === 'spot' ? (spotLabel(tg.id) || tg.name) : 'Rover';
+    tgtLineTxt.textContent = `${fmtDistance(tg.metres)} · ${fmtDuration(tg.seconds)}`;
     tgtBar.firstChild.style.width = `${(tg.done * 100).toFixed(1)}%`;
 
     // reserve chip
@@ -295,21 +307,36 @@ export function createHud(el) {
     const r = m.querySelector('.walk-mark__label').getBoundingClientRect();
     m.classList.toggle('is-quiet', blocks.some((b) => overlaps(r, b)));
   }
-  let lastRoverTxt = '';
+  function sideAwayFrom(m, block) {
+    if (!m.classList.contains('is-on')) return;
+    m.classList.remove('is-right');
+    const r = m.querySelector('.walk-mark__label').getBoundingClientRect();
+    const pad = 12;
+    if (overlaps(r, { left: block.left - pad, right: block.right + pad, top: block.top - pad, bottom: block.bottom + pad })) m.classList.add('is-right');
+  }
+  let lastRoverTxt = '', lastTgtTxt = '';
   function setMarks(target, roverP, roverOn, points) {
     const box = alertEl.firstChild && alertEl.firstChild.getBoundingClientRect();
     minY = Math.max(window.innerHeight * 0.27, box ? box.bottom + 40 : 0);
     const toRover = target.kind === 'rover';
     place(tgtMark, target.p, !toRover);
-    if (!toRover) tgtMark.firstChild.replaceChildren(h('span', target.name + ' '), h('b.mono', fmtDistance(target.metres)));
+    if (!toRover) {
+      const t = `${spotLabel(target.id) || target.name}|${fmtDistance(target.metres)}`;
+      if (t !== lastTgtTxt) { lastTgtTxt = t; tgtMark.firstChild.replaceChildren(h('span', (spotLabel(target.id) || target.name) + ' '), h('b.mono', fmtDistance(target.metres)), ' ', tag(DIST_TAG)); }
+    }
     // the rover carries its own label (simulated); as the target it also shows the distance
     const txt = toRover ? fmtDistance(target.metres) : '';
-    if (txt !== lastRoverTxt) { lastRoverTxt = txt; roverDist.textContent = txt ? ' ' + txt : ''; }
+    if (txt !== lastRoverTxt) { lastRoverTxt = txt; roverDist.textContent = txt ? ' ' + txt : ''; roverDistTag.hidden = !txt; }
     roverMark.classList.toggle('is-target', toRover);
     place(roverMark, roverP, roverOn);
     points.forEach((q, i) => place(pointMarks[i], q.p, q.on));
     const blocks = [box, lookCard.classList.contains('is-on') && lookCard.firstChild && lookCard.firstChild.getBoundingClientRect(),
-      prompt.classList.contains('is-on') && prompt.getBoundingClientRect()].filter(Boolean);
+      prompt.classList.contains('is-on') && prompt.getBoundingClientRect(),
+      !hint.classList.contains('is-off') && hint.getBoundingClientRect()].filter(Boolean);
+    // the target label sits left of its diamond; where that would run into the minimap and its text, it
+    // goes to the right of the diamond instead
+    const mr = mini.getBoundingClientRect(), tr = mini.lastChild.getBoundingClientRect(); // disc and the target text below it
+    sideAwayFrom(tgtMark, { left: Math.min(mr.left, tr.left), right: Math.max(mr.right, tr.right), top: Math.min(mr.top, tr.top), bottom: Math.max(mr.bottom, tr.bottom) });
     quietIfCovering(tgtMark, blocks);
     quietIfCovering(roverMark, blocks);
   }
@@ -323,7 +350,7 @@ export function createHud(el) {
         h('img', { src: log.sample.photo, alt: log.sample.photoTitle || 'Curiosity photo' }),
         h('figcaption.mono', `${log.sample.photoTitle || ''}. ${log.sample.photoMeta || 'Curiosity'}, ${log.sample.photoCredit || 'NASA/JPL-Caltech'} `,
           tag({ label: 'real', text: 'Real Curiosity photo of this rock, the sandstone of the Murray Buttes. Curiosity never stopped at this exact spot.', source: { title: `${log.sample.photoMeta || 'Curiosity'}, ${log.sample.photoCredit || 'NASA/JPL-Caltech'}`, url: log.sample.photoUrl || '', where: '' } }))) : null,
-      h('p.walk-modal__text', `${route.spot.name}: sandstone of the butte (Stimson formation), bagged ${fmtDistance(Math.hypot(log.sample.x - ROVER.x, log.sample.z - ROVER.z))} from the rover. The photo shows this rock in the Murray Buttes as Curiosity saw it, not this exact spot.`),
+      h('p.walk-modal__text', `${route.spot.name}: sandstone of the butte (Stimson formation), bagged ${fmtDistance(Math.hypot(log.sample.x - ROVER.x, log.sample.z - ROVER.z))} from the rover `, tag(DIST_TAG), `. The photo shows this rock in the Murray Buttes as Curiosity saw it, not this exact spot.`),
       h('div.walk-modal__next', 'Next target: the rover. ', h('kbd', 'E'), ' continue')));
     modal.classList.add('is-on');
   }
@@ -343,6 +370,13 @@ export function createHud(el) {
   }
   function setLoading(text) { loading.textContent = text || ''; loading.classList.toggle('is-off', !text); }
 
-  return { setTerrain, update, setLook, setMarks, showSample, showEmpty, hideModal, setEscArmed, setLoading, hud };
+  /** Name the rules the plan broke (plan.brokenRules); none: the row stays hidden. */
+  function setPlanBroken(rules) {
+    const names = [...new Set((rules || []).map((b) => b.name))];
+    planRow.hidden = !names.length;
+    mVals.plan.textContent = names.join(', ');
+    mVals.plan.className = 'walk-row__v mono tone-warning';
+  }
+  return { setPlanBroken, setTerrain, update, setLook, setMarks, showSample, showEmpty, hideModal, setEscArmed, setLoading, hud };
 }
 

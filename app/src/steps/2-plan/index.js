@@ -5,7 +5,7 @@ import './style.css';
 import { h, s, splitLayout, headline, card, pillButton, mapPanel, legend, marker, row, bigNumber, alertBox, labelTag,
   fmtDuration, fmtDistance, fmtDeg } from '../../ui/index.js';
 import { planAllCandidates, ROVER, ACCESS_MARS_POINTS, RULES, DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA,
-  closedMask, radioShadowMask, sourceOf } from '../../core/index.js';
+  closedMask, radioShadowMask, sourceOf, spotNumber } from '../../core/index.js';
 import { paintGround, composeGround, paintOverlays } from './ground.js';
 
 let root = null;
@@ -20,8 +20,8 @@ const L = {
   spot: { label: 'model', text: 'Position derived from the terrain: a reachable spot at the foot of a butte wall. No Curiosity target lies in this square.', source: { title: DOCS.WALK_TARGETS.title, url: DOCS.WALK_TARGETS.url } },
   point: { label: 'real', text: 'A point of interest of the Access Mars app, with its original text. Not a sample spot.', source: { title: ACCESS_MARS.name, url: ACCESS_MARS.url } },
   distance: { label: 'model', text: 'Length of the route calculated in your browser on the terrain grid: the fastest way that keeps every rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
-  time: { label: 'model', text: 'Route length at NASA\'s planning pace, plus the fixed work at the spot; in demo time.', source: sourceOf(ASTRONAUT.paceMS) },
-  reserve: { label: 'model', text: `Time left in the suit when back at the rover, if the crew walks the plan. The way home counts at a ${Math.round((RULES.walkBackRateFactor.value - 1) * 100)} % higher work rate. Set by the consumable that runs out first.`, source: sourceOf(SUIT.designW) },
+  time: { label: 'model', text: 'Route length at NASA\'s planning pace, plus the fixed work at the spot; in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
+  reserve: { label: 'model', moon: true, text: `Time left in the suit when back at the rover, if the crew walks the plan. The way home counts at a ${Math.round((RULES.walkBackRateFactor.value - 1) * 100)} % higher work rate. Set by the consumable that runs out first.`, source: sourceOf(SUIT.designW) },
   slope: { label: 'model', text: 'Steepest ground on the route, from the slope grid of the terrain.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
 };
 
@@ -169,7 +169,8 @@ export default {
       if (sel) {
         const rs = runs(sel.plan.profile);
         for (const r of rs) if (r.kind === 'shadow') map.path(r.points, { style: 'radio' });
-        for (const r of rs) map.path(r.points, { style: r.kind === 'closed' ? 'broken' : 'foot' });
+        // the stretch that breaks a rule is drawn above the spot markers, so it stays visible
+        for (const r of rs) map.path(r.points, r.kind === 'closed' ? { style: 'broken', layer: 'top' } : { style: 'foot' });
         for (const b of sel.plan.brokenRules) {
           if (!b.where || b.id === 'slope') continue;
           map.addMarker(b.where.x, b.where.z, { kind: 'dot', label: b.name, layer: 'top' }).classList.add('plan-broken');
@@ -182,15 +183,16 @@ export default {
       // candidates
       cands.forEach(({ candidate: c, plan }, k) => {
         const isSel = c.id === ctx.state.spotId;
-        const g = map.addMarker(c.x, c.z, { kind: 'number', text: String(k + 1).padStart(2, '0'), selected: isSel });
+        const g = map.addMarker(c.x, c.z, { kind: 'number', text: spotNumber(c.id), selected: isSel });
         if (c.id === cheapest) g.prepend(s('circle', { class: 'plan-ring', r: 9.5 }));
         g.classList.add('plan-hit');
         if (c.id === cheapest) g.classList.add('plan-cheapest');
         if (!plan.keepsRules) g.classList.add('plan-breaks');
         g.setAttribute('role', 'button');
         g.setAttribute('aria-label', `${c.name}, total ${fmtDuration(plan.timeS)}`);
-        g.addEventListener('mouseenter', () => (pinned = null, showTip(c.x, c.z, [
-          h('div.plan-tip__title', marker(k + 1, { selected: isSel }), ' ', c.name),
+        // the chosen spot is described in the panel: no tip over the map labels for it
+        g.addEventListener('mouseenter', () => c.id !== ctx.state.spotId && (pinned = null, showTip(c.x, c.z, [
+          h('div.plan-tip__title', marker(spotNumber(c.id), { selected: isSel }), ' ', c.name),
           h('div.plan-tip__row', h('span.muted', 'Total time '), h('span.mono', fmtDuration(plan.timeS, { approx: true })), ' ', h('span.vlabel', 'model')),
           c.id === cheapest ? h('div.plan-tip__row.tone-accent', 'Cheapest of the spots') : null,
           !plan.keepsRules ? h('div.plan-tip__row.tone-warning', 'No route keeps every rule') : null,
@@ -235,7 +237,7 @@ export default {
       } else {
         const { candidate: c, plan } = sel;
         cards.append(card({
-          lead: marker(k + 1, { selected: true }),
+          lead: marker(spotNumber(c.id), { selected: true }),
           title: [c.name, ' ', labelTag(L.spot)],
           sub: [spotPlace(c), ' · ', taskOf(ctx.state.request), ', ', SPOT_WORK(), ' ', labelTag(DEMO.spotWorkMin),
             c.id === cheapest ? h('span.tone-accent', ' · cheapest') : null],

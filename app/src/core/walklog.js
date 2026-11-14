@@ -82,6 +82,7 @@ export function simulateWalk(terrain, route) {
       log.tS += s;
       log.levels = consume(log.levels, WORK.spotW.value, s);
       log.doseMSv = doseMSv(log.tS);
+      if (shadow[cells[cells.length - 1]] === 1) log.radioShadowS += s; // work at a spot in shadow, as in the Walk
       log.sample = { spotId: route.spotId, x: route.spot.x, z: route.spot.z, tS: log.tS };
       log.phase = 'back';
     }

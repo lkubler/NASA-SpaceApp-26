@@ -161,6 +161,20 @@ describe('plan numbers', () => {
     expect(far.plan.radioShadowS).toBeGreaterThan(0);
     expect(far.plan.checks.find((c) => c.id === 'radio').status).toBe('caution');
   });
+  it('radio shadow: total is the sum of the stretches, the longest never exceeds it, the Walk counts the same', () => {
+    for (const { candidate, route, plan } of all) {
+      const sum = plan.radioStretches.reduce((a, r) => a + r.seconds, 0);
+      expect(plan.radioShadowS, candidate.id).toBeCloseTo(sum, 6);
+      expect(plan.longestShadowS, candidate.id).toBeLessThanOrEqual(plan.radioShadowS + 1e-9);
+      expect(plan.checks.find((c) => c.id === 'radio').planned).toBe(plan.longestShadowS);
+      for (const r of plan.radioStretches) expect(r.endS - r.startS, candidate.id).toBeCloseTo(r.seconds, 6);
+      expect(simulateWalk(t, route).radioShadowS, candidate.id).toBeCloseTo(plan.radioShadowS, 3);
+    }
+    // F7: the spot lies in shadow, so its 20 min of work count in the total as in the longest stretch
+    const f7 = all.find((x) => x.candidate.id === 'F7').plan;
+    expect(f7.radioShadowS).toBeGreaterThan(f7.spotS);
+    expect(f7.longestShadowS).toBeGreaterThan(f7.spotS);
+  });
   it('legs and totals are consistent', () => {
     const p = all[0].plan;
     expect(p.legs.map((l) => l.kind)).toEqual(['rover', 'foot', 'spot', 'foot', 'rover']);

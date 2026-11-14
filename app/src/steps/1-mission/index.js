@@ -2,7 +2,7 @@
 // from Earth, choosing one. Writes state.request (app/README.md).
 import './style.css';
 import { h, headline, lede, pillButton, labelTag, fmtTimeOfDay, LOCK_SVG } from '../../ui/index.js';
-import { ENVIRONMENT } from '../../core/values.js';
+import { ENVIRONMENT, DEMO } from '../../core/values.js';
 import { REQUESTS } from './requests.js';
 import { loadGale, craterView, VERTICAL_EXAGGERATION } from './crater.js';
 
@@ -91,7 +91,7 @@ export default {
         h('span', 'Gale crater · MOLA elevation, ', `${Math.round(meta.km_per_pixel * 1000)} m per pixel `),
         labelTag({ label: 'real', text: `Elevation of Gale crater from the Mars Orbiter Laser Altimeter on Mars Global Surveyor (MOLA MEGDR, 128 pixels per degree), a ${Math.round(meta.width_km)} km square. Site positions from Curiosity's drive path; Mount Sharp is the highest point of the central mound in this grid.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
         h('span', ` · height ×${VERTICAL_EXAGGERATION} `),
-        labelTag({ label: 'assumption', text: 'Heights are drawn this many times taller than they are, so the crater rim and Mount Sharp are easy to see. Distances across the ground are true to scale.', source: { title: 'Display choice of the team', url: '' } }),
+        labelTag(DEMO.craterHeightFactor),
       );
     }
 
