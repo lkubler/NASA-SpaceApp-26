@@ -2,6 +2,7 @@ import './ui/fonts.js';
 import './styles/tokens.css';
 import './styles/components.css';
 import './styles/app.css';
+import './styles/map.css';
 import { mountNav } from './ui/nav.js';
 import { mountMap } from './map/mapView.js';
 import './walk/walkView.js'; // attaches its own canvas to #walk-view and loads the terrain

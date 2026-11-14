@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OldDracoLoader } from './oldDraco.js';
 import { app } from '../state.js';
+import { buildHeightmap as buildHm, provideHeightmap } from '../terrain/heightmap.js';
 import { mountHud } from './hud.js';
 
 const BASE = import.meta.env.BASE_URL + 'murray/';
@@ -72,42 +73,13 @@ loader.load(BASE + 'terrain.glb', (gltf) => {
   window.__spike = api; window.__app = api; app.set({ walkReady: true });
 }, undefined, (e) => { console.error(e); msg.textContent = 'Load failed: ' + e.message; });
 
-// ---- heightmap: rasterise world-space triangles into a 0.5 m grid (top-most surface wins) ----
-const H = new Float32Array(N * N).fill(NaN);
+// ---- heightmap: shared builder (terrain/heightmap.js), published for the Map view ----
+let H = new Float32Array(N * N);
 function buildHeightmap() {
-  const v = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-  for (const m of state.tiles) {
-    const pos = m.geometry.attributes.position, idx = m.geometry.index;
-    const cnt = idx ? idx.count : pos.count;
-    for (let t = 0; t < cnt; t += 3) {
-      for (let k = 0; k < 3; k++) v[k].fromBufferAttribute(pos, idx ? idx.getX(t + k) : t + k).applyMatrix4(m.matrixWorld);
-      const minx = Math.min(v[0].x, v[1].x, v[2].x), maxx = Math.max(v[0].x, v[1].x, v[2].x);
-      const minz = Math.min(v[0].z, v[1].z, v[2].z), maxz = Math.max(v[0].z, v[1].z, v[2].z);
-      const i0 = Math.max(0, Math.ceil((minx + HALF) / CELL - 0.5)), i1 = Math.min(N - 1, Math.floor((maxx + HALF) / CELL - 0.5));
-      const j0 = Math.max(0, Math.ceil((minz + HALF) / CELL - 0.5)), j1 = Math.min(N - 1, Math.floor((maxz + HALF) / CELL - 0.5));
-      const d = (v[1].z - v[2].z) * (v[0].x - v[2].x) + (v[2].x - v[1].x) * (v[0].z - v[2].z);
-      if (Math.abs(d) < 1e-9) continue;
-      for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-        const x = -HALF + (i + 0.5) * CELL, z = -HALF + (j + 0.5) * CELL;
-        const a = ((v[1].z - v[2].z) * (x - v[2].x) + (v[2].x - v[1].x) * (z - v[2].z)) / d;
-        const b = ((v[2].z - v[0].z) * (x - v[2].x) + (v[0].x - v[2].x) * (z - v[2].z)) / d;
-        const c = 1 - a - b;
-        if (a < -1e-6 || b < -1e-6 || c < -1e-6) continue;
-        const y = a * v[0].y + b * v[1].y + c * v[2].y;
-        const o = j * N + i; if (!(y <= H[o])) H[o] = y;
-      }
-    }
-  }
-  let holes = 0; for (let o = 0; o < H.length; o++) if (isNaN(H[o])) { holes++; H[o] = nearest(o); }
-  stats.holes = holes;
-}
-function nearest(o) {
-  const i = o % N, j = (o / N) | 0;
-  for (let r = 1; r < 6; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) {
-    const ii = i + di, jj = j + dj; if (ii < 0 || jj < 0 || ii >= N || jj >= N) continue;
-    const y = H[jj * N + ii]; if (!isNaN(y)) return y;
-  }
-  return 0;
+  const hm = buildHm(state.tiles, { half_m: HALF, cell_m: CELL });
+  stats.holes = hm.holes;
+  H = hm.data.map((y) => (Number.isNaN(y) ? 0 : y)); // walking wants a number everywhere; Map keeps no-data
+  provideHeightmap(hm, { name: 'Access Mars 0.5 m' });
 }
 function hAt(x, z) { // bilinear
   const fx = (x + HALF) / CELL - 0.5, fz = (z + HALF) / CELL - 0.5;
@@ -190,7 +162,7 @@ requestAnimationFrame(frame);
 
 // ---- test API (used by the headless check) ----
 const api = {
-  state, stats, H, hAt, gradient, groundRaycast, N, CELL, maxDiff: () => maxDiff, fps: () => stat.fps,
+  state, stats, get H() { return H; }, hAt, gradient, groundRaycast, N, CELL, maxDiff: () => maxDiff, fps: () => stat.fps,
   tp(x, z, yaw = 0, pitch = 0) { state.pos.set(x, groundRaycast(x, z) ?? 0, z); state.eyeY = state.pos.y + EYE; state.yaw = yaw; state.pitch = pitch; },
   key(c, v) { state.keys[c] = v; },
   gridVsRay() { let s = 0, mx = 0, n = 0; for (let i = 0; i < 2000; i++) { const x = (Math.random() - 0.5) * 120, z = (Math.random() - 0.5) * 120; const r = groundRaycast(x, z); if (r === null) continue; const d = Math.abs(r - hAt(x, z)); s += d; mx = Math.max(mx, d); n++; } return { meanAbs: s / n, max: mx, n }; },
