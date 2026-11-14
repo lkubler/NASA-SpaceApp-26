@@ -69,3 +69,8 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Result: 55 tests, build OK, all 4 views 0 console errors headless. Default map: 22 % green, 115 min shadow with hint → relay move → 0 min.
 - Open: free walking on a real GPU untested; 3 source links need a manual browser check (doi.org, JPL image policy, Mars24); humans: pitch owner, AI 009 scope, cut 011.
 - Next: jury re-check of the prototype; minimap (010) if still worth it.
+
+## Round 13 — Sat 14.11. 15:40–15:55 (BUILD)
+- Did: jury checkpoint 2 (`research/jury-prototype-2.md`: 19/25, 21 reachable). Merged 028 (EVA timeline strip: suit left vs needed-to-get-home, out-of-contact bands, leave-by marker; walk HUD reserve interpolated by time) and 029 (live "what moves the reserve" sensitivity, metabolic-proxy line, 1 m slope check, out-of-contact total + lander-only figure, "relay unit" + walk-back framing, SEXTANT on Sources). data-scout 030: Quela blocked sky not reproduced (ours 10.6 % vs published 19 %).
+- Result: 60 tests, build OK, all 4 views 0 console errors. Sensitivity 9–35 % (suit offset dominates); 1 m max slope 29° vs planner 16° (0.3 % of in-crop samples > 20°, flagged); out of contact 175 of 293 min (115 longest), lander-only 281 of 293.
+- Next: humans: pitch/video owner (Presentation stuck at 3), real-laptop test tonight, AI 009/011/010 cut. Agents: small polish only until humans decide.
