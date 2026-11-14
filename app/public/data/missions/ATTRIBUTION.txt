@@ -1,0 +1,4 @@
+marias_PIA20174.jpg: NASA/JPL-Caltech/MSSS, PIA20174 "Marias Pass, Contact Zone of Two Martian Rock Units" (Curiosity Mastcam),
+https://images.nasa.gov/details/PIA20174 . Resized to 800 px wide, JPEG quality 78.
+pahrump_PIA18476.jpg: NASA/JPL-Caltech/MSSS, PIA18476 "Martian Layers Thicker on Top" (Curiosity Mastcam, Pahrump Hills),
+https://images.nasa.gov/details/PIA18476 . Resized to 800 px wide, JPEG quality 78.

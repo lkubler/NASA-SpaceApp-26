@@ -362,7 +362,7 @@ function reportCard(ctx, { sample, walk, outcome }) {
     sendBtn.disabled = true;
     sendBtn.textContent = 'Report sent';
     const at = walk && num(walk.tS) ? `Sent ${lmst(walk.tS)} local Mars time. ` : '';
-    status.replaceChildren(h('span', `${at}It reaches Earth in ${delay.value} ${delay.unit} (one-way signal delay). `), labelTag(delay));
+    status.replaceChildren(h('span', `${at || 'Sent. '}On its way: ${delay.value} ${delay.unit} one-way signal delay `), labelTag(delay));
     status.classList.add('fade-in');
   });
 
@@ -392,8 +392,18 @@ function reportCard(ctx, { sample, walk, outcome }) {
     });
   }
 
+  // close the loop with the request from step 1
+  const req = ctx.state.request;
+  const doneWord = req && req.kind === 'measurement' ? 'Measurement taken' : 'Sample collected';
+  const loop = req ? h('div.dbf__loop',
+    h('div.dbf__loopreq', h('span.muted', 'Request '), req.title),
+    h('p.dbf__looptext', sample
+      ? `${doneWord}. Your report reaches Earth in ${delay.value} min.`
+      : `Not done this time. Earth will hear it in ${delay.value} min.`)) : null;
+
   return h(sample ? 'div.dbf__report' : 'div.dbf__report.dbf__report--empty',
     h('div.dbf__sec', 'Report to Earth'),
+    loop,
     h('div.dbf__rbody', photoBox, textBox),
     h('div.dbf__ract', sendBtn, status),
   );

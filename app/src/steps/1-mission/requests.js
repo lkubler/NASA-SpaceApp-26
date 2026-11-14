@@ -1,7 +1,9 @@
-// The two requests from Earth (specs/1-mission.md "Requests"). Texts and reasons from
-// research/research-requests.md (sections 1, 2, 5); photos from public/data/murray/photos/credits.json.
-// Each request maps to the sample candidates in the core: every candidate is a reachable spot at the
-// foot of a butte, at most 3 m from the butte wall (research/walk-targets.md §3).
+// The missions from Earth, one per site (team decision, Sat 14.11.). Texts and reasons from
+// research/research-requests.md (§1, §4, §5). Only Murray Buttes has walkable terrain in this demo; the
+// other two are shown, linked to their site, and locked ('soon').
+// The Murray request maps to the sample candidates in the core: every candidate is a reachable spot at
+// the foot of a butte, at most 3 m from the butte wall (research/walk-targets.md §3). spotId is the spot
+// the Plan map preselects; the crew may still pick another.
 
 import { CANDIDATES } from '../../core/index.js';
 
@@ -10,10 +12,10 @@ const SPOTS = CANDIDATES.map((c) => c.id);
 export const REQUESTS = [
   {
     id: 'crossbeds',
+    site: 'murray',
     kind: 'sample',
-    from: 'Sedimentology team, Earth',
-    title: 'A sample from the sandstone at the foot of a butte',
-    what: 'One sample of the cross-bedded sandstone of the buttes.',
+    title: 'Sample the cross-bedded sandstone',
+    titleLong: 'A sample from the sandstone at the foot of a butte',
     rock: 'Cross-bedded sandstone (Stimson formation)',
     why: 'The cross-beds were laid down by wind-blown dunes after the lakes had gone, and so far their pattern has only been read from rover camera images.',
     whySource: {
@@ -23,23 +25,35 @@ export const REQUESTS = [
     },
     photoId: 'crossbedding_PIA21042',
     candidateIds: SPOTS,
+    spotId: 'F1', // preselected on the Plan map: 01 Butte foot, east butte
     place: 'foot of a butte',
   },
   {
-    id: 'radiation',
-    kind: 'measurement',
-    from: 'Radiation team, Earth',
-    title: 'A radiation measurement beside a butte wall',
-    what: 'One radiation measurement, standing right next to the wall of a butte.',
-    rock: 'Butte wall of sandstone (Stimson formation) as a shield',
-    why: 'Curiosity measured a lower radiation dose while parked beside a butte in September 2016, and the team is looking for other places to repeat it.',
+    id: 'silica',
+    site: 'marias',
+    locked: true,
+    kind: 'sample',
+    title: 'Sample the high-silica rock',
+    why: 'Buckskin, drilled here in 2015, held 74 % silica and tridymite, a mineral that forms at high temperature, inside lake mudstone; where it came from is still debated.',
     whySource: {
-      title: 'NASA JPL, "How NASA’s Curiosity Rover Is Making Mars Safer for Astronauts" (15 Nov 2021; Ehresmann et al. 2021)',
-      url: 'https://www.jpl.nasa.gov/news/how-nasas-curiosity-rover-is-making-mars-safer-for-astronauts/',
-      where: 'research/research-requests.md §2 (Butte shielding) and §5.4',
+      title: 'NASA JPL, "NASA Mars Rover Moves Onward After Marias Pass Studies" (19 Aug 2015); "NASA Scientists Discover Unexpected Mineral on Mars" (2016)',
+      url: 'https://www.jpl.nasa.gov/news/nasa-scientists-discover-unexpected-mineral-on-mars/',
+      where: 'research/research-requests.md §4',
     },
-    photoId: 'quela_navcam',
-    candidateIds: SPOTS,
-    place: 'beside a butte wall',
+    photo: { src: 'data/missions/marias_PIA20174.jpg', caption: 'Marias Pass, contact of pale mudstone and darker sandstone', meta: 'Curiosity Mastcam, PIA20174', credit: 'NASA/JPL-Caltech/MSSS', url: 'https://images.nasa.gov/details/PIA20174' },
+  },
+  {
+    id: 'lake',
+    site: 'pahrump',
+    locked: true,
+    kind: 'sample',
+    title: 'Sample the lake mudstone',
+    why: 'Curiosity’s first drill into Mount Sharp, at Confidence Hills, showed that the mountain’s base is finely layered mudstone from long-lived lakes.',
+    whySource: {
+      title: 'NASA JPL, "NASA’s Curiosity Rover Team Confirms Ancient Lakes on Mars" (8 Oct 2015); PIA19039 Pahrump Hills walkabout',
+      url: 'https://www.jpl.nasa.gov/news/nasas-curiosity-rover-team-confirms-ancient-lakes-on-mars/',
+      where: 'research/research-requests.md §4',
+    },
+    photo: { src: 'data/missions/pahrump_PIA18476.jpg', caption: 'Layered rock at Pahrump Hills, the base of Mount Sharp', meta: 'Curiosity Mastcam, PIA18476', credit: 'NASA/JPL-Caltech/MSSS', url: 'https://images.nasa.gov/details/PIA18476' },
   },
 ];

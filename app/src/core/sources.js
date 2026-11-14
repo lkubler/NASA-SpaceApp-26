@@ -97,7 +97,7 @@ export const DATA = [
   {
     name: 'Curiosity waypoints (MSL_waypoints.json)',
     by: 'NASA/JPL-Caltech',
-    use: 'Curiosity’s drive path near Murray Buttes',
+    use: 'Curiosity’s drive path near Murray Buttes; in step 1 the landing site (Bradbury Landing, where we place the base: assumption) and the drive from there to Murray Buttes',
     licence: 'NASA public data',
     url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json',
   },
@@ -114,6 +114,13 @@ export const DATA = [
     use: 'The 3D view of Gale crater in step 1 (208 x 276 km, 387 m per pixel), with the heights of Murray Buttes, Marias Pass, Pahrump Hills and Mount Sharp; the opening zooms from the globe into it',
     licence: 'NASA 3D Resources, credit as given',
     url: 'https://science.nasa.gov/3d-resources/gale-crater/',
+  },
+  {
+    name: 'Curiosity Mastcam images of Marias Pass and Pahrump Hills (PIA20174, PIA18476)',
+    by: 'NASA/JPL-Caltech/MSSS',
+    use: 'Photos on the two missions marked "soon" in step 1 (public/data/missions/)',
+    licence: 'JPL Image Use Policy',
+    url: 'https://images.nasa.gov/details/PIA20174',
   },
   {
     name: 'MOLA elevation of Gale crater (MEGDR, 128 pixels per degree, MEGT00N090HB)',

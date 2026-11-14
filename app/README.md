@@ -1,4 +1,4 @@
-# Martian Map app
+# MHUD app
 
 Static web app (Vite + Three.js). Builds to `app/dist`, deployed by `.github/workflows/pages.yml`.
 
@@ -69,7 +69,7 @@ Test hook: `window.__walk` (`advance`, `hold`, `info`).
 ## Shared state (`src/frame/state.js`, one object; steps read and write only this)
 ```
 { step: 1..5,
-  request: null | { id, title, ... },   // chosen request (step 1)
+  request: null | { id, title, spotId, ... }, // chosen request (step 1); title = the task in 2, 4, 5; spotId = spot preselected in 2
   requestsDone: string[],               // finished request ids (step 5 adds one)
   candidates: [{ candidate, route, plan }],   // planAllCandidates (step 2)
   stops: string[],                      // chosen stop ids in visiting order, 0..3 (step 2), e.g. ['F3','F7','F1']

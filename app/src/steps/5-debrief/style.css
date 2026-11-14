@@ -48,7 +48,7 @@
 .step--debrief .dbf__table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
 .step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.32em 0.6em 0.32em 0; text-align: left; white-space: nowrap; }
 .step--debrief .dbf__th { font-weight: 400; color: var(--text); padding-right: 1.4em; }
-.step--debrief .dbf__col { color: var(--text-2); font-weight: 500; font-size: var(--fs-tag); text-transform: uppercase; letter-spacing: 0.06em; }
+.step--debrief .dbf__col { color: var(--text-2); font-weight: 500; font-size: var(--fs-tag); }
 .step--debrief .dbf__td .mono { font-size: var(--fs-mono); white-space: nowrap; }
 /* "not returned" and its tag wrap onto two lines where the column is narrow, never clipped */
 .step--debrief .dbf__table td.dbf__td--wrap { white-space: normal; }
@@ -115,3 +115,8 @@
 .step--debrief .dbf__wi.is-link:hover, .step--debrief .dbf__wi.is-link:focus-visible { background: var(--surface-2); outline: none; }
 .step--debrief .dbf__wi.is-focus { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .step--debrief .map-marker.dbf-wm.is-focus circle { stroke: #fff; stroke-width: 1.4; filter: drop-shadow(0 0 3px #fff); }
+
+/* the request from step 1, closed */
+.step--debrief .dbf__loop { margin: 0.2em 0 0.6em; }
+.step--debrief .dbf__loopreq { font-size: var(--fs-small); color: var(--text); }
+.step--debrief .dbf__looptext { margin: 0.25em 0 0; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); color: #fff; }
