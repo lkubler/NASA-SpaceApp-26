@@ -29,9 +29,11 @@ const NICE_M = [1, 2, 5, 10, 20, 50, 100];
  *   fade: the map content waits hidden for api.reveal() and then fades in (about 0.3 s).
  *   patterns: factories (ctx) => CanvasPattern for the hatching / dots (default: the shared ones);
  *   patternPx: CSS pixels per pattern pixel.
+ *   movable: false = no drag, wheel, click or key zoom; only the + / − buttons zoom about the centre.
+ *   resetButton: false = no reset-view button.
  * @returns {{ el, svg, canvas, project, unproject, layer, path, addMarker, setLayers, clearLayer, ... }}
  */
-export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, patterns = {}, patternPx = PATTERN_PX, fade = false } = {}) {
+export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, patterns = {}, patternPx = PATTERN_PX, fade = false, movable = true, resetButton = true } = {}) {
   const n = terrain.n;
   // source raster (relief or a step's own ground), one pixel per RES-th of a grid cell; not in the page
   const canvas = document.createElement('canvas');
@@ -56,8 +58,8 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
   const controls = h('div.map__zoom',
     btn('in', 'Zoom in (+)', '+', () => zoomBy(ZOOM_STEP)),
     btn('out', 'Zoom out (−)', '−', () => zoomBy(1 / ZOOM_STEP)),
-    btn('reset', 'Reset view (0)', '<svg viewBox="0 0 16 16" width="1em" height="1em" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>', () => reset()));
-  const el = h('div.map', screen, svg, scale, north, controls);
+    resetButton && btn('reset', 'Reset view (0)', '<svg viewBox="0 0 16 16" width="1em" height="1em" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>', () => reset()));
+  const el = h(`div.map${movable ? '' : '.map--fixed'}`, screen, svg, scale, north, controls);
   // fade: ground, hatching, routes and markers stay hidden (the frame shows the dark ground tone) until
   // reveal(), then fade in together; revealed anyway after FADE_CAP_MS so a slow ground never hides the map
   let fadeTimer = 0;
@@ -255,7 +257,7 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
   let down = null, dragging = false, eatClick = false;
   el.addEventListener('pointerdown', (e) => {
     eatClick = false;
-    if (e.button !== 0 || !onMap(e.target)) return;
+    if (!movable || e.button !== 0 || !onMap(e.target)) return;
     down = { x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy, id: e.pointerId };
     dragging = false;
   });
@@ -286,14 +288,16 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
   // a drag never selects or zooms: swallow the click that ends it, before any marker sees it
   el.addEventListener('click', (e) => { if (eatClick) { eatClick = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
   el.addEventListener('click', (e) => {
-    if (e.defaultPrevented || !onMap(e.target)) return;
+    if (!movable || e.defaultPrevented || !onMap(e.target)) return;
     zoomBy(ZOOM_STEP, local(e));
   });
   el.addEventListener('contextmenu', (e) => {
+    if (!movable) return;
     e.preventDefault();
     if (onMap(e.target)) zoomBy(1 / ZOOM_STEP, local(e));
   });
   el.addEventListener('wheel', (e) => {
+    if (!movable) return;
     e.preventDefault();
     const d = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
     if (!d) return;
@@ -316,7 +320,7 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
   document.addEventListener('pointerout', onOut, true);
   const onKey = (e) => {
     if (!el.isConnected) { if (ready) off(); return; } // once shown and then gone: stop listening
-    if (e.ctrlKey || e.metaKey || e.altKey || !isOver()) return;
+    if (!movable || e.ctrlKey || e.metaKey || e.altKey || !isOver()) return;
     if (e.key === '+' || e.key === '=') zoomBy(ZOOM_STEP);
     else if (e.key === '-' || e.key === '_' || e.key === '−') zoomBy(1 / ZOOM_STEP);
     else if (e.key === '0') reset();

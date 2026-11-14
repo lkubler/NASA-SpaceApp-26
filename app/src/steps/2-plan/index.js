@@ -80,7 +80,8 @@ export default {
     // too steep (hatched) and radio shadow (dotted) are drawn by the shared map at screen size, so they
     // stay right at every zoom; the ground under them is this step's own render
     // fade: ground, hatching and markers appear together once the ground is painted and the markers drawn
-    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true });
+    // the map stays where it opens (on the EVA zone): no dragging, no reset; + and − still zoom about its centre
+    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true, movable: false, resetButton: false });
     let groundDone = false, drawnOnce = false;
     const revealWhenReady = () => { if (groundDone && drawnOnce) map.reveal(); };
     const tip = h('div.plan-tip', { hidden: true });
