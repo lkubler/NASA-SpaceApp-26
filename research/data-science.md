@@ -42,7 +42,7 @@ Time window to use for the story: sols 1417 (Marimba) to 1468 (leaving Quela). D
 
 ### Caveats
 - The DTM crop and the Access Mars scene need a lat/lon to metres transform. Task 002 owns that. For lon/lat to metres use R = 3396.19 km (as in `data-sites.md`).
-- `lat` in the file is probably planetocentric. At -4.7 deg the difference to planetographic is ~0.03 deg (about 30 m on 3396 km radius? No: ~0.03 deg ~ 1.8 km? Not computed). Not checked; if exact co-registration matters, check the DTM label's `MAP_PROJECTION` latitude type. Task 002's own alignment against ortho imagery will absorb it.
+- `lat` in the file may be planetocentric or planetographic (not checked). The difference is small at -4.7 deg but should be checked against the DTM label if exact co-registration matters; task 002's alignment against the ortho image absorbs it.
 
 ## 2. REMS: one representative sol (1440) as parseable text
 
