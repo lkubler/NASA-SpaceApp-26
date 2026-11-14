@@ -15,11 +15,12 @@ Start it with: `/loop Read docs/ORCHESTRATOR.md and run the next round.`
 
 ## By phase
 The critic picks improvements. These are the fixed points it must respect:
-- EXPLORE: the first rounds are `intel` (deadlines, rules), `scout`, `data-scout`. Before the idea decision, run `jury` on the top candidates. Humans decide idea and stack.
+- EXPLORE: challenge text, rules, and schedule are already in `docs/` (pasted by humans); run `intel` only for gaps (e.g. the 2026 Judging and Awards Guide). First rounds: `scout`, `data-scout`, `triage`. Before the idea decision, run `jury` on the top candidates. Humans decide idea and stack.
 - BUILD: right after the idea decision, run `designer` to propose themes; humans pick one once (or the recommendation stands after ~1 hour). Reassess scope at the halfway point. Run `jury` on the prototype before freeze.
 - FREEZE: only fixes, polish, demo, `pitch`, `compliance`.
 - SUBMIT: final `compliance` check, leave a buffer, then stop the loop.
 
+Milestones in `docs/timeline.md` (stand-up, mentor round, checkpoint, live pitch) are fixed points: make sure what they need is ready 30 minutes before.
 Requests for new agents go to `agent-smith`.
 If humans can't be reached and time is short, decide, record the reason in `DECISIONS.md`, and tell them later.
 Stop the loop after submission or when the humans tell you to.

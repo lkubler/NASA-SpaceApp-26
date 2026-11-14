@@ -27,7 +27,7 @@ You don't know the current time. Run `python3 scripts/now.py` at the start of ev
 
 ## Submission rules
 Summary of `docs/rules-2026.md` (full text there; it wins if they differ).
-- Deadline: "Submit for Judging" clicked before Sun 15.11. 23:59 local time. Resubmitting is allowed until then.
+- Deadline: "Submit for Judging" clicked before **Sun 15.11. 15:45** (Heilbronn local deadline; global is 23:59). Resubmitting is allowed until then.
 - Demo: video ≤ 30 s (English subtitles if spoken in another language) or ≤ 7 slides including title and intro. Longer is ineligible.
 - Public links, no login, password, or permission. Test in a private window. The project page takes no video or document uploads, only images ≤ 10 MB.
 - Everything in English.
