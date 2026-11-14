@@ -1,6 +1,6 @@
 # 018 Wire science data into the app
 owner: builder
-state: open (start after 015 is merged — both edit app/src/map/)
+state: done
 area: app/src/map/, app/src/walk/, app/src/ui/
 
 ## Goal
@@ -13,3 +13,6 @@ Use the task 016 data (app/public/data/murray/: ortho_1024.jpg / ortho_2048.jpg 
 
 ## Done when
 Build, tests, 0 console errors, screenshots research/planner-018.png and docs/ui-018-station-card.png.
+
+## Done
+Ortho base with layer toggles and slope hazard overlay, Curiosity track with sol labels, station photo cards (dashed rings; reusable app/src/ui/stationCard.js, not wired into Walk because that needs route3d.js), validation fold, Sources entries (X-ray 0.1 mSv verified on radiologyinfo.org; Earth 2.4 mSv/yr links the UNSCEAR 2008 page, figure not re-verified). Test: cd app, npm run build, npx vite preview --port 4318, node check-018.mjs.

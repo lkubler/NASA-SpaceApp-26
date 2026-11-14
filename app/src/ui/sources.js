@@ -5,7 +5,12 @@ function h(tag, cls, html) { const e = document.createElement(tag); if (cls) e.c
 const GROUPS = [
   ['measured', 'MEASURED', 'Real NASA data, used as published or only resampled.', [
     ['HiRISE DTM DTEEC_040770_1755_039280_1755_U01', 'Terrain elevation, 1 m posts: slope, line of sight, route cost, elevation profile. NASA/JPL/University of Arizona/USGS, PDS.', 'https://www.uahirise.org/dtm/'],
-    ['Curiosity waypoints (MSL_waypoints.json)', 'Rover positions at Marimba (sols 1417-1427) and Quela (sols 1455-1468). NASA/JPL MMGIS.', 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json'],
+    ['HiRISE orthoimage ESP_040770_1755_RED_A_01_ORTHO', 'Map base layer, 0.25 m per pixel, on the same grid as the DTM (resampled only). NASA/JPL/University of Arizona, PDS.', 'https://www.uahirise.org/dtm/'],
+    ['Curiosity raw images (Mastcam, MAHLI, Navcam)', 'Six frames from sols 1421-1464 on the station cards, resized only. Credit NASA/JPL-Caltech/MSSS or NASA/JPL-Caltech; JPL image policy.', 'https://www.jpl.nasa.gov/imagepolicy'],
+    ['Butte shielding at Quela, RAD', 'Dose about 4 % lower next to a butte at Murray Buttes, sols 1455-1468. Ehresmann et al. 2021, JGR Planets 126(8). Quoted in the app, not used in our dose numbers.', 'https://doi.org/10.1029/2021JE006851'],
+    ['Reference: chest X-ray, about 0.1 mSv', 'Used to compare the EVA dose with something familiar. RadiologyInfo.org (RSNA/ACR).', 'https://www.radiologyinfo.org/en/info/safety-xray'],
+    ['Reference: Earth background, about 2.4 mSv per year', 'Worldwide average natural radiation exposure (UNSCEAR 2008 report, Annex B; figure from the report, not re-checked on this page).', 'https://www.unscear.org/unscear/en/publications/2008_1.html'],
+    ['Curiosity waypoints (MSL_waypoints.json)', 'Rover drive-end positions and elevations, sols 1414-1475 (dotted line on the map), incl. Marimba and Quela. NASA/JPL MMGIS.', 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json'],
     ['REMS, sol 1440 (MSL-M-REMS-5-MODRDR)', 'Air and ground temperature, pressure at Gale, 24 Aug 2016. REMS, CAB (INTA-CSIC) / NASA, PDS Atmospheres node.', 'https://atmos.nmsu.edu/PDS/data/mslrem_1001/'],
     ['RAD surface dose, 0.67 mSv/day', 'Galactic cosmic ray dose equivalent measured by Curiosity RAD (Hassler et al. 2014). SwRI / NASA release.', 'https://www.swri.org/press-release/swri-scientists-publish-first-radiation-measurements-surface-mars'],
     ['Access Mars scene, Murray Buttes', 'Walk-view terrain mesh and photo textures from Curiosity Mastcam (NASA/JPL-Caltech/MSSS). Google Creative Lab, Apache-2.0.', 'https://github.com/googlecreativelab/access-mars'],
