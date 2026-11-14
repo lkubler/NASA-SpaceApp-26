@@ -63,8 +63,15 @@ Alles andere (Regionalkarte, Rover-Route, Freigabe, Auswertung) ist für das Vid
 
 **Slide 3 – Our answer: M.H.U.D.**
 - A map shows where it's dangerous. We show whether you make it back.
-- M.H.U.D. is an EVA planner and helmet display that continuously answers one question: with this load, at this pace, on this route, do I return with reserve?
+- M.H.U.D. is an EVA planner and helmet display that continuously answers one question: under the current conditions of this EVA, do I return with reserve?
+- No two EVAs are alike. Terrain, mission goal, equipment, pace and suit status all feed into the answer.
 - *Bild:* Screenshot aus dem Helm mit Reserve-Prognose.
+
+> **Reminder für Folie 4 und 5:** Der Inhalt unten ist ein Stand vom Samstagabend und wird sich noch ändern. Vor dem Bau der Präsentation von den Agents eine genaue Liste liefern lassen und diese Folien daraus neu befüllen. Auftrag zum Weitergeben:
+>
+> *„Erstelle eine vollständige Liste aller inhaltlichen Features und Ansätze, die im aktuellen Stand des Prototyps tatsächlich funktionieren. Pro Eintrag: (1) was es tut, in einem Satz, (2) welche Eingangsdaten es nutzt, (3) Herkunft dieser Daten: Echt (mit Quelle), Modell oder Simuliert, (4) wo im UI man es sieht, (5) Status: fertig / teilweise / nur Konzept. Nichts aufführen, was nicht im Code ist. Zum Schluss getrennt auflisten: alle festen Kennwerte mit Quelle, und alle Annahmen.“*
+>
+> Punkte 1–2 und 4 gehen auf Folie 4, Punkt 3 und die Kennwerte auf Folie 5. Was „nur Konzept“ ist, gehört auf Folie 7.
 
 **Slide 4 – How it works**
 - Mars data: slope, radio line of sight, sun and shadow, hazards
@@ -96,19 +103,23 @@ Alles andere (Regionalkarte, Rover-Route, Freigabe, Auswertung) ist für das Vid
 >
 > On Mars, that safety net is gone. A radio signal takes up to twenty minutes each way. Whatever Houston calculates arrives too late.
 >
-> So the calculation has to move into the suit. That is what we built. We call it M.H.U.D., the Martian Head-Up Display. You say it like "mud".
+> So the calculation has to move into the suit. That is what we built. We call it M.H.U.D., the Martian Head-Up Display.
 >
 > M.H.U.D. takes real Mars terrain and the state of the astronaut, and answers one question continuously: do you make it back?
 >
-> In planning, you pick where to take a sample and where to place a radio relay. The tool computes the route, shows where the suit can't climb and where you lose radio contact, and tells you what the trip costs. Place the relay here, and the radio shadow shrinks and a blocked route opens up.
+> It starts at your base. Ground control sends a mission goal. You plan how to reach it, and M.H.U.D. reviews your whole plan: the route, where the suit can't climb, where you lose radio contact, and what the trip costs you in time and consumables. Change one decision, and everything is recalculated.
+>
+> *[Live-Demo, ein Beispiel zeigen:]* Here, placing a radio relay shrinks the radio shadow, and a blocked route opens up.
 >
 > In the helmet, the same rules run live. Walk faster with a heavy load uphill, and the forecast for your reserve drops. The HUD tells you to slow down, or to turn back, before it becomes a problem.
 >
-> Nothing is precomputed, and every number is labeled: real NASA data, our model, or simulated. Give it a different terrain, and it generates the mission map for that site.
+> Nothing is precomputed. *[optional, kurz:]* And we always show what is real NASA data and what is our model. Give it a different terrain, and it generates the mission map for that site.
 >
 > A map shows where it's dangerous. We show whether you make it back.
 
-Dauer bei ruhigem Tempo ca. 1:45–2:00 min. Während „Place the relay here“ die Demo live bedienen.
+Dauer bei ruhigem Tempo ca. 1:45–2:00 min. Den Namen live als „mud“ aussprechen. Beim Relais-Beispiel die Demo live bedienen.
+
+Offen: ob der Satz zur Kennzeichnung (echt / Modell) gesprochen wird. Sichtbar ist sie in jedem Fall auf Folie 5 und im UI.
 
 ## 5. Fragen, die kommen können
 
