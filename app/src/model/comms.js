@@ -159,24 +159,33 @@ export function lineOfSight(hm, a, b, aboveA = 2, aboveB = 1.8) {
  * order; ties go to the earlier one (put the nearest first). Returns {x, y, longest_s, total_s} or null.
  */
 export function bestRelay(hm, samples, candidates, { antennaHeight_m = 2, targetHeight_m = 1.8, mustSee = null, verify = null, top = 6 } = {}) {
-  const scored = [];
+  const scored = [], keep = verify ? top : 1, lows = []; // lows = the `keep` smallest "longest" values so far
+  let thr = Infinity; // a candidate whose longest shadow already exceeds the keep-th best cannot reach the top: stop scoring it (exact, just faster)
   for (const c of candidates) {
     if (mustSee && !lineOfSight(hm, c, mustSee, antennaHeight_m, targetHeight_m)) continue;
-    let longest = 0, total = 0, a = null, last = null;
+    let longest = 0, total = 0, a = null, last = null, dead = false;
     const close = () => { const d = last - a; longest = Math.max(longest, d); total += d; a = null; };
     for (const p of samples) {
-      if (!lineOfSight(hm, c, p, antennaHeight_m, targetHeight_m)) { if (a === null) a = p.from_s; last = p.to_s; }
+      if (!lineOfSight(hm, c, p, antennaHeight_m, targetHeight_m)) { if (a === null) a = p.from_s; last = p.to_s; if (last - a > thr) { dead = true; break; } }
       else if (a !== null) close();
     }
+    if (dead) continue;
     if (a !== null) close();
     scored.push({ x: c.x, y: c.y, longest_s: longest, total_s: total });
+    lows.push(longest); lows.sort((p, q) => p - q); if (lows.length > keep) lows.pop(); if (lows.length === keep) thr = lows[keep - 1];
   }
   const order = (a, b) => a.longest_s - b.longest_s || a.total_s - b.total_s; // stable sort: ties keep candidate order
   scored.sort(order);
   if (!verify || !scored.length) return scored[0] || null;
   // The quick line-of-sight score can differ from the viewshed the map draws (cell quantisation at the edge of a shadow):
   // re-score the best few with `verify(candidate) -> {longest_s, total_s}` and keep the best by that.
-  return scored.slice(0, top).map((c) => ({ ...c, ...verify(c) })).sort(order)[0];
+  // Stop as soon as the best verified one is no worse than the next quick score (a viewshed is the slow part).
+  const done = [], head = scored.slice(0, top);
+  for (let i = 0; i < head.length; i++) {
+    done.push({ ...head[i], ...verify(head[i]) }); done.sort(order);
+    if (i + 1 < head.length && order(done[0], head[i + 1]) <= 0) break;
+  }
+  return done[0];
 }
 
 /**

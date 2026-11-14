@@ -22,6 +22,7 @@ import '../styles/science.css';
 // Geometric line of sight from its 2 m antenna [assumption]. The lander is not the source and must see the relay.
 // Default relay position: parked beside the lander (a plausible first guess; it sees little of the loop).
 // "Move relay to high ground" searches the DTM for the position that keeps the crew in contact best.
+const MINOR_LABEL_ZOOM = 1.6; // map zoom (px per DTM cell) from which photo-station and walk-area labels show
 const EVA_START_H = 8.5; // EVA clock start, local true solar time [assumption]
 const fmtClock = (h) => { const m = Math.round(((h % 24) + 24) % 24 * 60); return String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
 // Default scenario (map/scenario.js): lander at site B ~2.5 km from Quela, five stations, a ~6 km EVA; the walk home is
@@ -38,11 +39,18 @@ export function mountMap(el) {
   el.append(canvas, panel);
   const card = createStationCard(el);
   const ctx = canvas.getContext('2d');
+  const loading = document.createElement('div'); loading.className = 'map-loading'; loading.setAttribute('role', 'status'); loading.textContent = 'Loading terrain imagery...';
+  Object.assign(loading.style, { position: 'absolute', left: '50%', top: '45%', transform: 'translate(-50%,-50%)', padding: '8px 14px', borderRadius: '6px', background: 'rgba(28,15,12,.85)', color: '#fff', font: '600 13px sans-serif', pointerEvents: 'none', zIndex: 2 });
+  el.append(loading);
+  const hideLoading = () => loading.remove();
+  let userView = false; // true once the user zoomed/panned: a resize then keeps their view
 
   // ---- data + derived layers ----
   let L = null; // {hm, slope, meta, name, tf, grid, base, shade}
   let waypoints = []; // local metres [{x,y}]
-  let rover = null, start = null; // rover = comms source (relay), start = lander = EVA start and end (loop)
+  let rover = null, start = null, relay0 = null, relayState = null; // relay0 = first-guess relay spot, relayState = {was_s, m} after a move to high ground
+  let relayBusy = false;
+  // rover = comms source (relay), start = lander = EVA start and end (loop)
   let home = null, homeKey = '', draggingStart = false; // home = best-path-home field (map/home.js)
   let shadowLimit_s = DEFAULT_SHADOW_LIMIT_S; // assumed mission rule, editable in the panel
   let capacityPct = 100, startH = EVA_START_H;
@@ -76,10 +84,11 @@ export function mountMap(el) {
     L.base = renderBase(L);
     L.hazard = renderHazard(L);
     if (L.meta1) { // HiRISE orthoimage (regional 5 m, plus the 1 km detail at 2x resolution) and Curiosity's real traverse; all optional
-      ortho = new Image(); ortho.onload = () => draw(); ortho.src = DTM_BASE_URL + (reg ? 'regional_ortho.jpg' : 'ortho_2048.jpg');
+      ortho = new Image(); ortho.onload = () => { draw(); hideLoading(); }; ortho.onerror = hideLoading; ortho.src = DTM_BASE_URL + (reg ? 'regional_ortho.jpg' : 'ortho_2048.jpg');
       if (reg) { orthoD = new Image(); orthoD.onload = () => draw(); orthoD.src = DTM_BASE_URL + 'ortho_2048.jpg'; }
       loadScience().then((s) => { sci = s; sci.slopes = slopeStats(legGrades(s.track.points, cs1()), SLOPE_HARD_DEG); panelUpdate(); draw(); }).catch((e) => console.warn('science layers unavailable', e));
     }
+    else hideLoading();
     if (L.tf) {
       const sc = buildScenario(L, L.tf, frames);
       start = sc.start; rover = sc.rover; waypoints = sc.waypoints;
@@ -87,6 +96,7 @@ export function mountMap(el) {
       const c0 = { x: L.hm.width * L.hm.cellSize_m / 2, y: L.hm.height * L.hm.cellSize_m / 2 };
       start = { x: c0.x, y: c0.y }; rover = { x: c0.x, y: c0.y - 300 };
     }
+    relay0 = { x: rover.x, y: rover.y };
     fit(); msg = '';
     replan(true); draw(); window.__map = api;
   }
@@ -141,6 +151,8 @@ export function mountMap(el) {
   const inGrid = (p) => p.x >= 0 && p.y >= 0 && p.x < L.hm.width * cs() && p.y < L.hm.height * cs();
   const cellOf = (p) => [Math.min(L.hm.width - 1, Math.max(0, Math.floor(p.x / cs()))), Math.min(L.hm.height - 1, Math.max(0, Math.floor(p.y / cs())))];
   function fit() {
+    if (!el.clientWidth || !el.clientHeight) { needFit = true; return; } // map page hidden (0x0): fit when it is shown
+    needFit = false; userView = false;
     const w = canvas.width = el.clientWidth, h = canvas.height = el.clientHeight;
     // frame the working area (lander, rover, stations) in the space right of the side panel; whole DTM if there is none
     const pts = [start, rover, ...waypoints].filter(Boolean);
@@ -324,7 +336,7 @@ export function mountMap(el) {
       const h2 = L.tf.walkHalf_m, c = [[-h2, -h2], [h2, -h2], [h2, h2], [-h2, h2]].map(([x, z]) => toScreen(L.tf.sceneToLocal(x, z)));
       ctx.beginPath(); c.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath();
       ctx.strokeStyle = css('--hud-text'); ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]); ctx.stroke(); ctx.setLineDash([]);
-      label('3D walk area', c[0][0] + 4, c[0][1] - 5);
+      if (view.s >= MINOR_LABEL_ZOOM) label('3D walk area', c[0][0] + 4, c[0][1] - 5); // minor labels wait for zoom: the station cluster is crowded at the default view
       if (!sci) {
         const q = toScreen(L.tf.lonLatToLocal(QUELA.lon, QUELA.lat));
         ctx.fillStyle = css('--hud-text'); ctx.beginPath(); ctx.arc(q[0], q[1], 4, 0, 7); ctx.fill();
@@ -375,6 +387,10 @@ export function mountMap(el) {
       ctx.beginPath(); ctx.moveTo(x, y - 11); ctx.lineTo(x + 10, y + 8); ctx.lineTo(x - 10, y + 8); ctx.closePath(); ctx.fill(); ctx.stroke();
       label('Lander (EVA start and end)', x + 13, y + 5);
     }
+    if (rover && start) { // thin dotted link: relay rover to lander (the lander must see the relay)
+      const a = toScreen(rover), b = toScreen(start);
+      ctx.save(); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1.2; ctx.setLineDash([2, 4]); ctx.stroke(); ctx.restore();
+    }
     if (rover) {
       const [x, y] = toScreen(rover);
       ctx.fillStyle = css('--comms-shadow'); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
@@ -383,7 +399,7 @@ export function mountMap(el) {
     }
     if (sci && layers.track) drawSolLabels();
   }
-  let hatch = null, tmp = null;
+  let hatch = null, tmp = null, needFit = false;
   function drawComms(W, H) {
     if (!canvas.width || !canvas.height || !comms || !comms.width || !comms.height) return; // hidden map (0×0) would throw in drawImage
     if (!hatch) {
@@ -427,7 +443,7 @@ export function mountMap(el) {
       const [x, y] = toScreen(cropPt(st.col, st.row));
       ctx.beginPath(); ctx.arc(x, y, 14, 0, 7); ctx.strokeStyle = css('--prov-measured'); ctx.lineWidth = 2.5; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = css('--prov-measured'); ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7); ctx.fill();
-      if (!waypoints.some((w) => Math.hypot(toScreen(w)[0] - x, toScreen(w)[1] - y) < 28)) label(st.name + ' (photo)', x + 12, y + 3, { dx: 14 });
+      if (view.s >= MINOR_LABEL_ZOOM && !waypoints.some((w) => Math.hypot(toScreen(w)[0] - x, toScreen(w)[1] - y) < 28)) label(st.name + ' (photo)', x + 12, y + 3, { dx: 14 });
     }
   }
   // Labels sit on a dark pill and dodge each other: try offsets around the anchor, keep the first free one.
@@ -471,8 +487,8 @@ export function mountMap(el) {
   const tilesBox = h('div'), verdictBox = h('div'), stBody = h('div'), valBody = h('div', 'mp-val'), moreDyn = h('div');
   const clear = button('Clear stations', { variant: 'secondary', onClick: () => { waypoints = []; replan(false); } });
   const fixBtn = button('Move relay to high ground', { variant: 'primary', onClick: () => moveRelay() });
+  const syncFixBtn = () => { fixBtn.disabled = relayBusy; fixBtn.textContent = relayBusy ? 'Moving relay...' : relayState ? 'Move relay back' : 'Move relay to high ground'; fixBtn.setAttribute('aria-busy', relayBusy ? 'true' : 'false'); };
   const btnRow = h('div', 'mp-btns'); btnRow.append(fixBtn, clear);
-  let relayNote = '';
   const note = h('p', 'mp-note', 'Model estimates (Pandolf load model, geometric radio line of sight, assumed station times). Not flight data.');
   const auto = autonomyBar(); auto.classList.add('auto-panel');
   const hint = h('p', 'mp-hint'); hint.innerHTML = 'Click the map: add station &middot; drag: move lander, relay or station &middot; right-click: remove &middot; wheel: zoom &middot; shift-drag: pan &middot; click a ring: Curiosity photo.';
@@ -492,24 +508,32 @@ export function mountMap(el) {
     }
   });
   // Search the DTM for the relay position with the least time out of contact (lander must see it) and move it there.
-  function moveRelay() {
-    if (!L || !route) return;
-    const P = route.points, idx = new Set([0, P.length - 1]);
-    for (let i = 0; i < P.length; i += Math.max(1, Math.round(35 / cs()) * 2)) idx.add(i);
-    route.stations.forEach((st) => idx.add(st.idx));
-    const samples = [...idx].sort((p, q) => p - q).map((i) => ({ x: P[i].x, y: P[i].y, from_s: P[i].elapsed_s - (P[i].stationS || 0), to_s: P[i].elapsed_s }));
-    const cands = relayCandidates(L.hm, L.slope, start, SLOPE_HARD_DEG);
-    const was = Math.max(0, ...(route.shadows || []).map((sg) => sg.duration_s));
-    const best = bestRelay(L.hm, samples, cands, { mustSee: start, antennaHeight_m: RELAY_ANTENNA_M, verify: (c) => routeShadowScore(L.hm, viewshed(L.hm, { x: c.x, y: c.y, antennaHeight_m: RELAY_ANTENNA_M }, 1.8), P) });
-    if (!best) { relayNote = 'No position found that sees the lander.'; panelUpdate(); return; }
-    rover = { x: best.x, y: best.y }; commsKey = ''; fit(); replan(true);
-    const now = Math.max(0, ...(route.shadows || []).map((sg) => sg.duration_s));
-    relayNote = `Relay moved ${Math.round(Math.hypot(best.x - start.x, best.y - start.y))} m from the lander: longest time out of contact ${Math.round(was / 60)} min to ${Math.round(now / 60)} min.`;
-    panelUpdate();
+  // bestRelay stops scoring a candidate as soon as it cannot make the top few (exact result, much less line-of-sight work).
+  const nextFrame = () => new Promise((r) => { let done = false; const go = () => { if (!done) { done = true; setTimeout(r, 0); } }; if (typeof requestAnimationFrame === 'function') requestAnimationFrame(go); setTimeout(go, 80); });
+  async function moveRelay() {
+    if (!L || !route || relayBusy) return;
+    if (relayState) { rover = { ...relay0 }; relayState = null; commsKey = ''; fit(); replan(true); syncFixBtn(); panelUpdate(); return; } // "Move relay back"
+    relayBusy = true; syncFixBtn();
+    await nextFrame(); // let the browser paint the busy state before the CPU-heavy search
+    try {
+      const P = route.points, idx = new Set([0, P.length - 1]);
+      for (let i = 0; i < P.length; i += Math.max(1, Math.round(35 / cs()) * 2)) idx.add(i);
+      route.stations.forEach((st) => idx.add(st.idx));
+      const samples = [...idx].sort((p, q) => p - q).map((i) => ({ x: P[i].x, y: P[i].y, from_s: P[i].elapsed_s - (P[i].stationS || 0), to_s: P[i].elapsed_s }));
+      const was = Math.max(0, ...(route.shadows || []).map((sg) => sg.duration_s));
+      const opt = { mustSee: start, antennaHeight_m: RELAY_ANTENNA_M };
+      const cands = relayCandidates(L.hm, L.slope, start, SLOPE_HARD_DEG);
+      const best = bestRelay(L.hm, samples, cands, { ...opt, verify: (c) => routeShadowScore(L.hm, viewshed(L.hm, { x: c.x, y: c.y, antennaHeight_m: RELAY_ANTENNA_M }, 1.8), P) });
+      if (best) {
+        rover = { x: best.x, y: best.y }; commsKey = ''; fit(); replan(true);
+        relayState = { was_s: was, m: Math.round(Math.hypot(best.x - start.x, best.y - start.y)) };
+      }
+    } finally { relayBusy = false; syncFixBtn(); panelUpdate(); }
   }
   function panelUpdate() {
     if (!L) return;
     panel.querySelector('.mp-sub').textContent = `${L.name} · slope limit ${SLOPE_HARD_DEG}°, prefer < ${SLOPE_PREFER_DEG}° · click map to add stations`;
+    syncFixBtn();
     for (const e of [tilesBox, verdictBox, stBody, moreDyn]) e.replaceChildren();
     const t = route && route.total;
     valBody.replaceChildren(); validationPanel(valBody);
@@ -539,7 +563,12 @@ export function mountMap(el) {
       const w = h('p', 'mp-res'); w.innerHTML = `<b class="bad-t">${night.afterSunset ? `Sunset is at ${fmtClock(night.set)}: this EVA ends at ${fmtClock(night.endH)} in the dark.` : `Sunrise is at ${fmtClock(night.rise)}: this EVA starts in the dark.`}</b> <span class="mp-assume">Sun from Mars24, sol 1440 (modelled).</span>`;
       verdictBox.append(w);
     }
-    if (relayNote) verdictBox.append(h('p', 'mp-assume', relayNote));
+    if (relayState) {
+      const now = Math.round(worst / 60), was = Math.round(relayState.was_s / 60);
+      verdictBox.append(h('p', 'mp-res mp-relay', now === 0 ? `Relay on high ground (${relayState.m} m from the lander): contact all the way` + (was ? ` (was ${was} min out of contact with the relay at its start spot).` : '.') : `Relay on high ground (${relayState.m} m from the lander): longest time out of contact ${now} min (was ${was} min with the relay at its start spot).`));
+    } else if (worst > 0) {
+      verdictBox.append(h('p', 'mp-res mp-relay', `Longest time out of contact ${Math.round(worst / 60)} min: the relay rover can't see you there. Try: Move relay to high ground.`));
+    }
     const rs2 = h('div', 'mp-sec'); rs2.append(chip('modelled', `Assumption: relay rover ${Math.round(Math.hypot(rover.x - start.x, rover.y - start.y))} m from the lander, antenna ${RELAY_ANTENNA_M} m above ground, geometric line of sight (no diffraction).`), h('span', 'mp-assume', `relay ${Math.round(Math.hypot(rover.x - start.x, rover.y - start.y))} m from lander, ${RELAY_ANTENNA_M} m antenna (assumed)`));
     verdictBox.append(rs2);
     const sec = h('div', 'mp-sec'); sec.append(chip('modelled', 'Assumption: station durations are ours, plausible analog-EVA scale (research/science.md); editable.'), h('span', 'mp-assume', 'durations assumed, editable'));
@@ -611,10 +640,10 @@ export function mountMap(el) {
   canvas.addEventListener('pointermove', (e) => {
     if (!L) return; const [sx, sy] = pos(e);
     if (!drag) { canvas.style.cursor = hit(sx, sy) ? 'grab' : 'crosshair'; return; }
-    if (drag.kind === 'pan') { view.ox = drag.ox + sx - drag.sx; view.oy = drag.oy + sy - drag.sy; draw(); return; }
+    if (drag.kind === 'pan') { userView = true; view.ox = drag.ox + sx - drag.sx; view.oy = drag.oy + sy - drag.sy; draw(); return; }
     if (drag.kind === 'new' || drag.kind === 'poi') return;
     drag.moved = true; const p = toLocal(sx, sy);
-    if (drag.kind === 'rover') { rover = p; scheduleReplan(true); } else if (drag.kind === 'start') { start = p; draggingStart = true; scheduleReplan(false); } else { waypoints[drag.i] = p; scheduleReplan(false); }
+    if (drag.kind === 'rover') { relayState = null; rover = p; scheduleReplan(true); } else if (drag.kind === 'start') { start = p; draggingStart = true; scheduleReplan(false); } else { waypoints[drag.i] = p; scheduleReplan(false); }
   });
   canvas.addEventListener('pointerup', (e) => {
     if (!L || !drag) return; const [sx, sy] = pos(e), d = drag; drag = null;
@@ -626,9 +655,15 @@ export function mountMap(el) {
   });
   canvas.addEventListener('wheel', (e) => {
     if (!L) return; e.preventDefault(); const [sx, sy] = pos(e), f = Math.exp(-e.deltaY * 0.0015), ns = Math.min(12, Math.max(0.3, view.s * f));
-    view.ox = sx - ((sx - view.ox) / view.s) * ns; view.oy = sy - ((sy - view.oy) / view.s) * ns; view.s = ns; draw();
+    view.ox = sx - ((sx - view.ox) / view.s) * ns; view.oy = sy - ((sy - view.oy) / view.s) * ns; view.s = ns; userView = true; draw();
   }, { passive: false });
-  addEventListener('resize', () => { if (L && app.get().view === 'map') draw(); });
+  // Any size change of the map area (window resize, F11, hidden -> shown): resize the canvas, re-fit unless the user moved the view, redraw.
+  const onSize = () => {
+    if (!L || !el.clientWidth || !el.clientHeight) return;
+    if (needFit || !userView) fit();
+    draw();
+  };
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(onSize).observe(el); else addEventListener('resize', onSize);
   app.on((st, prev) => { if (st.view === 'map' && prev.view !== 'map' && L) { fit(); draw(); } });
 
   // ---- test / automation API ----
@@ -638,7 +673,7 @@ export function mountMap(el) {
     setWaypoints(arr) { waypoints = arr.map((p) => ({ task: 'none', minutes: 0, ...p })); replan(false); },
     setStart(p) { start = { ...p }; replan(false); },
     setClock(h) { startH = h; replan(false); },
-    setRover(p) { rover = { ...p }; commsKey = ''; replan(true); },
+    setRover(p) { relayState = null; rover = { ...p }; commsKey = ''; replan(true); },
     setBudget(pct) { capacityPct = pct; replan(false); },
     moveRelay,
     setShadowLimitMin(m) { shadowLimit_s = m * 60; replan(false); },
