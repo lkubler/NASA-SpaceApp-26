@@ -139,3 +139,10 @@ Nichts soll einfach reingeworfen wirken. Jeder Platzhalter bekommt im UI ein Lab
 - für die Erde gibt es hier und da simulationen/Modelle im sinne von wie verändert sich das environment wenn man z. B. einne baum an position x pflanzt usw. usw... vlt gibt es solche Sachen auch für den Mars? Könnte adapted werden?
 - Es sollte web based sein + deployed + bereits reachable via qr code. 
 - was ebenfalls relevant ist, sind dashboard bestandteile, die Grundlegende Idee ist natürlich der Routen Planer, aber mal sehen was man noch machen könnte...
+
+
+
+
+
+Access mars visualisierung
+https://experiments.withgoogle.com/access-mars
