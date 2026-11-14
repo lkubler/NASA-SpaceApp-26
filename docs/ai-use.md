@@ -13,3 +13,4 @@ For the submission's "Use of Super Intelligence" field and for labeling. One lin
 - Data checks for science extras (Claude Code agent data-scout): Curiosity waypoints, REMS sol 1440, Mars24 constants, RAD dose, gravity factor. File: `research/data-science.md`.
 - Wave 1 code (Claude Code agents builder/designer): app shell, terrain preprocessing, reserve model, comms shadow, UI components. Files: `app/`, `scripts/preprocess/`.
 - Wave 2 code (Claude Code agents builder/designer): planner, route in 3D, sun/dust (Mars24), briefing/sources, autonomy clock, RAD dose. Files: `app/src/`.
+- Review and data (Claude Code agents jury/ux-tester/data-scout): prototype scoring, UX pass, HiRISE ortho, Curiosity track and photos. Files: `research/jury-prototype.md`, `research/ux-1.md`, `app/public/data/murray/`.

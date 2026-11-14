@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OldDracoLoader } from './oldDraco.js';
 import { app } from '../state.js';
+import { speedMult, WALK_SPEED_MS } from '../model/speed.js';
 import { buildHeightmap as buildHm, provideHeightmap } from '../terrain/heightmap.js';
 import { mountHud } from './hud.js';
 import { initSky } from './sky.js';
@@ -9,7 +10,7 @@ import { mountRoute3d } from './route3d.js';
 
 const BASE = import.meta.env.BASE_URL + 'murray/';
 const CELL = 0.5, HALF = 64, N = (HALF * 2) / CELL; // 256 x 256 cells
-const EYE = 1.7, BASE_SPEED = 1.4; // m/s, ~5 km/h
+const EYE = 1.7, BASE_SPEED = WALK_SPEED_MS; // m/s, same speed model as the planner (model/speed.js)
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -147,7 +148,7 @@ function step(dt) {
   if (len > 0) {
     dx /= len; dz /= len;
     const deg = Math.atan(gx * dx + gz * dz) * 180 / Math.PI; // >0 = uphill in travel direction
-    state.mult = deg > 0 ? Math.max(0.25, 1 - 0.0375 * deg) : Math.min(1.15, 1 - 0.01 * deg);
+    state.mult = speedMult(deg);
     const sp = BASE_SPEED * (k.ShiftLeft ? 1.8 : 1) * state.mult;
     state.speed = sp;
     state.pos.x = Math.max(-HALF + 1, Math.min(HALF - 1, state.pos.x + dx * sp * dt));
