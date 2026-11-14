@@ -58,6 +58,7 @@ Alles andere (Regionalkarte, Rover-Route, Freigabe, Auswertung) ist für das Vid
 **Slide 2 – The problem**
 - Apollo 15–17: walk-back limits were recalculated by flight controllers on Earth during each EVA.
 - Earth–Mars signal delay: about 3 to 22 minutes one way.
+- On EVA there is no room for error, because one mistake can cost a life
 - On Mars, nobody can do that math for you in time.
 - *Bild:* Apollo-Mondauto links, Mars rechts, dazwischen die Signallaufzeit.
 
