@@ -239,10 +239,24 @@ Landing Site (Bradbury Landing)
 - TODO: Guide 2026 prüfen (bisher nur Version von 2025 gefunden): https://www.spaceappschallenge.org/resources/project-submission-guide/
 - Folge für uns: 30 s sind sehr kurz → Video-Storyboard früh planen; die Scroll-Animationen bekommen darin höchstens ein paar Sekunden
 
+### Referenzen Walkback & Sichtkontakt
+Walkback
+- 10 km Annahme (Apollo-basiert): Vos, Gernhardt, Lee – The Walkback Test, SAE 2007-01-3133, https://doi.org/10.4271/2007-01-3133
+- Apollo Walkback/Rideback-Grenzen + 20 % Puffer für Notfall-Walkback, Gehen 3,3 km/h: https://www.nasa.gov/wp-content/uploads/static/history/alsj/19790073512_1979073512.pdf
+  → Reserve-Modell: Sicherheitsfaktor 1,5 ersetzen durch 20 % Puffer (belegt)
+- Artemis: ~2 km/h Gehtempo, 2 km Radius zu Fuß, max. 8 h Walk-back mit Druckrover (xEVA ConOps EVA-EXP-0042 Rev. B): https://www.nasa.gov/wp-content/uploads/2017/02/eva-exp-0042_xeva_system_con_ops_rev_b_final_dtd_10192020_ref_doc.pdf
+- LRV Reichweite ca. 9,7 km = Walkback-Distanz (Sekundärquelle, nur ergänzend): http://www.astronautix.com/a/apollolrv.html
 
+Max. Zeit ohne Sichtkontakt
+- Kein öffentlicher Zahlenwert gefunden → einstellbare Missionsregel, Standard z. B. 10 min, als Annahme beschriften
+- NASA nennt den Parameter als operative Grenze (ASCEND, Planning Lunar EVAs): https://ntrs.nasa.gov/api/citations/20250006988/downloads/ASCEND%20presentation%20-%20Planning%20Lunar%20EVAs.pdf
+- Apollo 15: Funkabdeckung entlang der Traversen aus Topografie berechnet (gleicher Ansatz wie unser Viewshed): https://www.nasa.gov/wp-content/uploads/static/history/alsj/19790073210_1979073210.pdf
+- xEVA: Aufzeichnung im Anzug bei Signalverlust + ausbringbare Funk-Repeater (EVA-EXP-0075): https://www.nasa.gov/wp-content/uploads/2020/01/topic_1-_eva_lunar_surface_concept_of_operations.pdf
+  → Idee: HUD/Planung schlägt Repeater-Standort vor
 
 
 ### AI USECASE
 wahrscheinlich erhöht es die win chances wenn wir ki in unser Projekt einbauen. wir haben aber gerade noch keinen guten usecase gefunden. 
 potentielle usecases:
 - RAG in irgendeinem context: im hud kann man etwas angucken, und das rag fragen, welches basierend auf vorher extrahierten informationen antwortet. Beispiel: man guckt einen Fels an, gibt fragt sein hud, ob man mit seinen Anzug diesen schritt schafft. das hud misst nach, und benutzt ein rag, um Anzug Spezifizierungen zu lesen, und antwortet basierend auf den informationen aus beidem. 
+
