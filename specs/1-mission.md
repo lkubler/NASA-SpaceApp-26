@@ -2,7 +2,7 @@
 The visitor should understand: Earth asks for one sample, the answer takes minutes to arrive, so the crew plans this excursion alone.
 Rests on: `research/research-requests.md`, `research/walk-targets.md`, `docs/mockups/01-choose-mission.png`
 
-Opening => two sentences before anything else: a crew on Mars, up to 22 minutes of signal delay each way; one question: can I still get home?
+Opening => two sentences before anything else: a crew on Mars, 4 to 22 minutes of signal delay each way; one question: can I still get home?
 View => Gale crater in 3D from real elevation data (MOLA or HRSC), filling the screen; Mount Sharp labelled; label: real
 No crater-wide elevation data obtainable => the 4 km terrain around Murray Buttes in 3D instead, labelled as such
 Headline => "Choose your mission." at the bottom left, one line of text below it

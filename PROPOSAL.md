@@ -1,7 +1,7 @@
 # Proposal: a map that gets the crew home
 
 ## 1. Why
-A crew on Mars is on its own. A radio signal to Earth takes up to 22 minutes each way.
+A crew on Mars is on its own. A radio signal to Earth takes 4 to 22 minutes each way.
 
 Going outside is the most dangerous thing the crew does routinely. NASA rates injury during excursions as a red risk for a Mars mission and plans up to 24 hours outside per person per week.
 
@@ -13,7 +13,7 @@ During Apollo, flight controllers on Earth tracked by hand how far the astronaut
 | **Not getting back** | A suit, rover, or medical failure far from safety |
 | **Falling** | Steep slopes and loose blocks injure a person in a suit |
 | **A partner down** | The other crew member has to get them home |
-| **Solar storm** | The warning can be short; the crew must reach shelter |
+| **Solar storm** | The warning can be as short as 30 minutes; the crew must reach shelter |
 | **Losing contact** | Terrain blocks the radio |
 | **Exhaustion** | Climbing in a suit with a load costs far more than walking on the flat |
 
@@ -33,13 +33,13 @@ Where NASA documents set a limit, the planner treats it as a rule.
 
 | Rule | Value | Source |
 |---|---|---|
-| Slope on foot | at most 20° | NASA suit operations concept for Artemis |
-| Distance on foot from a safe haven | about 2 km, at most 3.5 km | NASA suit sizing, Artemis concept |
-| Way home | must fit into the time left in the suit | NASA walk-back planning |
-| Secondary oxygen | one hour, never planned with | NASA Mars suit studies |
-| Length of an excursion | 6 ± 2 hours | NASA suit operations concept for Artemis |
+| Slope on foot | at most 20°, what the suit is built for | NASA Artemis EVA concept of operations (EVA-EXP-0042) |
+| Distance on foot from a safe haven | about 2 km, at most 3.5 km (a one-hour walk) | EVA-EXP-0042; NASA suit sizing study |
+| Way home | must fit into the time left in the suit, counted at a 20 % higher work rate | Apollo walk-back planning (Bellcomm, 1970) |
+| Secondary oxygen | one hour, never planned with | EVA-EXP-0042 |
+| Length of an excursion | 6 ± 2 hours | EVA-EXP-0042 |
 
-The values come from NASA's planning for the Moon and for Mars suits. The parked rover is the safe haven.
+The values come from NASA's planning for the Moon and from Apollo; NASA has not yet set them for Mars. The parked rover is the safe haven.
 
 ### Always a way home
 At every point the map compares the way back to the rover with what is left in the suit. It shows the reserve the crew will have on return if it continues like this, and tells it when to turn back.
