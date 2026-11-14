@@ -38,6 +38,10 @@ Several warnings at once => the most important one large, in this order: turn ba
 Steep ground (over 20°) => thin vertical lines rising about 1.5 m from the edge of the closed area, in the colour the maps use for steep ground; not visible beyond about 15 m, fading in when closer; label model
 Radio shadow => a dotted blue line on the ground at the shadow edge, fading in the same way; label model
 
+## Opening
+While the planet and the crater load => the screen looks intended: text and Begin are there at once, the planet fades in when ready, nothing pops or jumps
+New mission after a Debrief => a soft transition into the crater view, no hard cut; the globe opening is not replayed
+
 ## Several stops
 Plan => clicking spots adds them to the route in the order clicked, up to three; a click on a chosen spot removes it; each chosen spot shows its order number
 Plan panel => every leg with distance and time; totals for the whole round; one clear way to reorder or clear
