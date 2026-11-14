@@ -3,7 +3,7 @@
 import { h, labelTag, fmtDuration, fmtClock, fmtDistance, fmtMSv } from '../../ui/index.js';
 import {
   RULES, DEMO, ENVIRONMENT, SUIT, ROVER, ACCESS_MARS_POINTS,
-  bodyReadings, outsideTempC, fractions, fullLevels, timeLeft, spotSeconds,
+  bodyReadings, outsideTempC, fractions, fullLevels, timeLeft, spotSeconds, spotLabel,
 } from '../../core/index.js';
 import { ALERTS } from './sim.js';
 import { DISPLAY as D } from './display.js';
@@ -194,7 +194,7 @@ export function createHud(el) {
     drawCompass(headingDeg);
     drawMini(sim, headingDeg);
     const tg = sim.target();
-    tgtName.textContent = tg.kind === 'spot' ? `${tg.id ? tg.id + ' ' : ''}${tg.name}` : 'Rover';
+    tgtName.textContent = tg.kind === 'spot' ? (spotLabel(tg.id) || tg.name) : 'Rover';
     tgtLine.textContent = `${fmtDistance(tg.metres)} · ${fmtDuration(tg.seconds)}`;
     tgtBar.firstChild.style.width = `${(tg.done * 100).toFixed(1)}%`;
 
@@ -295,13 +295,20 @@ export function createHud(el) {
     const r = m.querySelector('.walk-mark__label').getBoundingClientRect();
     m.classList.toggle('is-quiet', blocks.some((b) => overlaps(r, b)));
   }
+  function sideAwayFrom(m, block) {
+    if (!m.classList.contains('is-on')) return;
+    m.classList.remove('is-right');
+    const r = m.querySelector('.walk-mark__label').getBoundingClientRect();
+    const pad = 12;
+    if (overlaps(r, { left: block.left - pad, right: block.right + pad, top: block.top - pad, bottom: block.bottom + pad })) m.classList.add('is-right');
+  }
   let lastRoverTxt = '';
   function setMarks(target, roverP, roverOn, points) {
     const box = alertEl.firstChild && alertEl.firstChild.getBoundingClientRect();
     minY = Math.max(window.innerHeight * 0.27, box ? box.bottom + 40 : 0);
     const toRover = target.kind === 'rover';
     place(tgtMark, target.p, !toRover);
-    if (!toRover) tgtMark.firstChild.replaceChildren(h('span', target.name + ' '), h('b.mono', fmtDistance(target.metres)));
+    if (!toRover) tgtMark.firstChild.replaceChildren(h('span', (spotLabel(target.id) || target.name) + ' '), h('b.mono', fmtDistance(target.metres)));
     // the rover carries its own label (simulated); as the target it also shows the distance
     const txt = toRover ? fmtDistance(target.metres) : '';
     if (txt !== lastRoverTxt) { lastRoverTxt = txt; roverDist.textContent = txt ? ' ' + txt : ''; }
@@ -309,7 +316,12 @@ export function createHud(el) {
     place(roverMark, roverP, roverOn);
     points.forEach((q, i) => place(pointMarks[i], q.p, q.on));
     const blocks = [box, lookCard.classList.contains('is-on') && lookCard.firstChild && lookCard.firstChild.getBoundingClientRect(),
-      prompt.classList.contains('is-on') && prompt.getBoundingClientRect()].filter(Boolean);
+      prompt.classList.contains('is-on') && prompt.getBoundingClientRect(),
+      !hint.classList.contains('is-off') && hint.getBoundingClientRect()].filter(Boolean);
+    // the target label sits left of its diamond; where that would run into the minimap and its text, it
+    // goes to the right of the diamond instead
+    const mr = mini.getBoundingClientRect(), tr = mini.lastChild.getBoundingClientRect(); // disc and the target text below it
+    sideAwayFrom(tgtMark, { left: Math.min(mr.left, tr.left), right: Math.max(mr.right, tr.right), top: Math.min(mr.top, tr.top), bottom: Math.max(mr.bottom, tr.bottom) });
     quietIfCovering(tgtMark, blocks);
     quietIfCovering(roverMark, blocks);
   }

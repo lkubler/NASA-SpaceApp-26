@@ -6,6 +6,7 @@
 import { h, s } from './dom.js';
 import { closedMask } from '../core/planner.js';
 import { radioShadowMask } from '../core/radio.js';
+import { GROUND_RAMP } from '../core/groundColor.js';
 
 const RES = 4; // canvas pixels per grid cell
 
@@ -119,7 +120,7 @@ function buildRelief(t) {
   // light from the north-west, 40° above the horizon (as the HiRISE hillshade in scripts/preprocess)
   const az = (315 * Math.PI) / 180, alt = (40 * Math.PI) / 180;
   const lx = Math.sin(az) * Math.cos(alt), lz = Math.cos(az) * Math.cos(alt), ly = Math.sin(alt);
-  const dark = [74, 42, 23], light = [214, 142, 94];
+  const { dark, light } = GROUND_RAMP;
   for (let py = 0; py < W; py++) {
     const z = t.max - (py + 0.5) / RES * cell;
     for (let px = 0; px < W; px++) {

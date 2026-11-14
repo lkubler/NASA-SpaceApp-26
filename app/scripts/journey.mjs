@@ -82,6 +82,9 @@ for (const run of runs) {
       steep: await text('.plan-totals .bignum:nth-child(3) .bignum__value'),
       dist: (await text('.plan-cards .card__right')).replace(/\s*model$/, ''),
     };
+    planTxt.number = await text('.plan-cards .marker');
+    planTxt.label = `${planTxt.number} ${(await S()).candidates[k].candidate.name}`;
+    if (planTxt.number !== String(k + 1).padStart(2, '0')) fail(run, `plan card number ${planTxt.number}, map number ${k + 1}`);
     console.log('  plan', JSON.stringify(planTxt));
     await page.click('.step--plan .split__action .pill');
 
@@ -91,8 +94,10 @@ for (const run of runs) {
     await shot('go');
     const goTxt = {};
     for (const b of await page.locator('.go__nums .bignum').all()) {
-      goTxt[(await b.locator('.bignum__label').innerText()).replace(/\s*(model|real|assumption|simulated)( · Moon)?$/, '').trim()] = await b.locator('.bignum__value').innerText();
+      goTxt[(await b.locator('.bignum__label').innerText()).replace(/\s*(model|real|assumption|simulated)( · lunar rule)?$/, '').trim()] = await b.locator('.bignum__value').innerText();
     }
+    const radioLine = await page.locator('.gocheck', { hasText: 'Radio shadow' }).first().innerText();
+    goTxt.radio = (/longest ([^\n]*?)\s*model/.exec(radioLine) || [])[1] || null;
     console.log('  go', JSON.stringify(goTxt));
     if (goTxt.Distance !== planTxt.dist) fail(run, `distance Plan ${planTxt.dist} vs Go ${goTxt.Distance}`);
     if (goTxt.Duration !== planTxt.total) fail(run, `time Plan ${planTxt.total} vs Go ${goTxt.Duration}`);
@@ -115,6 +120,8 @@ for (const run of runs) {
     await page.waitForSelector('.walk-loading.is-off', { state: 'attached', timeout: 60000 });
     await page.waitForTimeout(1500);
     await shot('walk-start');
+    const hudTarget = await text('.walk-target__name');
+    if (hudTarget !== planTxt.label) fail(run, `walk target "${hudTarget}" vs plan "${planTxt.label}"`);
     const backOk = await page.evaluate(() => document.querySelector('.stepbar__item:nth-of-type(1)')?.disabled ?? true);
     if (!backOk) fail(run, 'back to Mission possible after the walk started');
     await page.evaluate(() => window.__walk.hold(true));
@@ -169,13 +176,15 @@ for (const run of runs) {
     await page.waitForSelector('.dbf__table');
     await page.waitForTimeout(500);
     await shot('debrief');
-    const rows = await page.locator('.dbf__table tbody tr').evaluateAll((trs) => trs.map((tr) => [...tr.children].map((c) => c.innerText.replace(/\s*(model|real|assumption|simulated)( · Moon)?\s*$/, '').trim())));
+    const rows = await page.locator('.dbf__table tbody tr').evaluateAll((trs) => trs.map((tr) => [...tr.children].map((c) => c.innerText.replace(/\s*(model|real|assumption|simulated)( · lunar rule)?\s*$/, '').trim())));
     console.log('  debrief', JSON.stringify(rows));
     const row = (n) => rows.find((r) => r[0] === n) || [];
     if (row('Distance')[1] !== planTxt.dist) fail(run, `planned distance Plan ${planTxt.dist} vs Debrief ${row('Distance')[1]}`);
     if (row('Reserve on return')[1] !== planTxt.reserve) fail(run, `planned reserve Plan ${planTxt.reserve} vs Debrief ${row('Reserve on return')[1]}`);
     if (row('Time')[1] !== planTxt.total.replace('≈ ', '')) fail(run, `planned time Plan ${planTxt.total} vs Debrief ${row('Time')[1]}`);
-    if (row('Sample')[1] !== cfg.spot || row('Sample')[2] !== cfg.spot) fail(run, `sample row ${row('Sample')}`);
+    if (row('Sample')[1] !== planTxt.label || row('Sample')[2] !== 'taken') fail(run, `sample row ${row('Sample')} (plan: ${planTxt.label})`);
+    const mins = (d) => { const m = /(?:(\d+) h )?(\d+)(?: min)?/.exec(d || ''); return m ? (+(m[1] || 0)) * 60 + +m[2] : NaN; };
+    if (goTxt.radio && mins(goTxt.radio) > mins(row('Time in radio shadow')[1])) fail(run, `Go longest radio shadow ${goTxt.radio} exceeds the planned total ${row('Time in radio shadow')[1]}`);
     const head = await text('.step--debrief .headline');
     if (head !== 'Back home.') fail(run, `debrief headline "${head}"`);
     const ws = (await S()).walk;
@@ -227,6 +236,8 @@ for (const run of runs) {
     await page.waitForSelector('.dbf__table');
     await page.waitForTimeout(500);
     await shot('second-debrief-ended');
+    const brokenEnded = await page.locator('.dbf__checks .check--broken').allInnerTexts();
+    if (brokenEnded.length) fail(run, `mission ended early with esc shows broken rules: ${brokenEnded.join(' | ')}`);
   } catch (e) {
     fail(run, `${e.message.split('\n')[0]} (at step ${await step().catch(() => '?')})`);
     await page.screenshot({ path: out + 'error.png' }).catch(() => {});

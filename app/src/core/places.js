@@ -53,3 +53,7 @@ export const ACCESS_MARS_POINTS = [
 ].map((p) => ({ ...p, kind: 'access-mars', label: 'real', source: AM_SRC }));
 
 export function candidateById(id) { return CANDIDATES.find((c) => c.id === id) || null; }
+/** The visible number of a spot, as on the Plan map: '01'..'06' (CANDIDATES order). Internal ids stay F1..F7. */
+export function spotNumber(id) { const k = CANDIDATES.findIndex((c) => c.id === id); return k < 0 ? '' : String(k + 1).padStart(2, '0'); }
+/** The one visible label of a spot in every step: number and name, e.g. '06 East side, behind the butte mass'. */
+export function spotLabel(id) { const c = candidateById(id); return c ? `${spotNumber(id)} ${c.name}` : ''; }

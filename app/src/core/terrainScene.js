@@ -10,6 +10,7 @@
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GROUND_RAMP } from './groundColor.js';
 
 const base = () => import.meta.env.BASE_URL || './';
 
@@ -111,10 +112,12 @@ export function getTerrainScene(onProgress) {
         if (n.includes('BACKGROUND')) {
           background = o;
           o.material = new THREE.MeshBasicMaterial({ map: tex(base() + 'murray/background.jpg'), side: THREE.DoubleSide });
+          tintGrey(o.material); // the 4 km skyline is grey (no colour imagery) almost everywhere
           return;
         }
         const id = /ID_(\d+)/.exec(n);
         o.material = new THREE.MeshBasicMaterial({ map: id ? tex(base() + 'murray/tiles/' + id[1] + '.jpg') : null, color: id ? 0xffffff : 0x8a5a3a });
+        if (id) tintGrey(o.material);
         tiles.push(o);
       });
       root.updateMatrixWorld(true);
@@ -122,6 +125,39 @@ export function getTerrainScene(onProgress) {
   });
   return _scene;
 }
+
+// ---------- ground without colour imagery ----------
+// Where Curiosity's cameras never saw the ground, the Access Mars tile textures are grey (no colour; in
+// the walk square: most of the east, behind the butte mass, the south edge and the north-west corner).
+// There the tiles are tinted with the plain ground colour of the maps (GROUND_RAMP), keeping the grey's
+// own light and dark: no rock detail is invented. Coloured texture is left as it is. The test for grey
+// is the one the Plan map uses (2-plan/ground.js composeGround): saturation 0.07 to 0.19 blends.
+const srgb = (c) => new THREE.Color().setRGB(c[0] / 255, c[1] / 255, c[2] / 255, THREE.SRGBColorSpace);
+const GREY_TINT = {
+  uGreyTint: { value: 1 },
+  uGroundDark: { value: srgb(GROUND_RAMP.dark) },
+  uGroundLight: { value: srgb(GROUND_RAMP.light) },
+};
+function tintGrey(material) {
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, GREY_TINT);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('void main() {', 'uniform float uGreyTint; uniform vec3 uGroundDark, uGroundLight;\nvoid main() {')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        {
+          vec3 sc = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(1.0 / 2.2)); // back to sRGB for the grey test
+          float mx = max(sc.r, max(sc.g, sc.b)), mn = min(sc.r, min(sc.g, sc.b));
+          float sat = mx > 0.03 ? (mx - mn) / mx : 0.0;
+          float grey = 1.0 - clamp((sat - 0.07) / 0.12, 0.0, 1.0);
+          float lum = dot(sc, vec3(0.3, 0.59, 0.11));
+          vec3 tint = mix(uGroundDark, uGroundLight, clamp((lum - 0.2) / 0.5, 0.0, 1.0));
+          diffuseColor.rgb = mix(diffuseColor.rgb, tint, grey * uGreyTint);
+        }`);
+  };
+  material.customProgramCacheKey = () => 'grey-tint';
+}
+/** Tint the grey (no colour imagery) ground in the 3D view (on, default) or show the raw textures (off). */
+export function setGreyTint(on) { GREY_TINT.uGreyTint.value = on ? 1 : 0; }
 
 /**
  * Haze of the original Access Mars scene (src/js/core/colors.js FogColorHex, terrain-shader fogDensity):

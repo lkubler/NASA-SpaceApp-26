@@ -7,7 +7,7 @@ import {
   h, headline, lede, bigNumber, pillButton, mapPanel, legend, checkItem, labelTag, marker,
   fmtDistance, fmtDuration,
 } from '../../ui/index.js';
-import { ROVER, candidateById, ENVIRONMENT, DEMO, RULES } from '../../core/index.js';
+import { ROVER, spotLabel, spotNumber, ENVIRONMENT, DEMO, RULES } from '../../core/index.js';
 import { fixtureWalk } from './fixtures.js';
 
 const NO_DATA = 'no data';
@@ -29,7 +29,7 @@ const T = {
   walkDistance: { label: 'model', src: 'WALK_TERRAIN', text: 'Distance you walked, measured on the same terrain grid.' },
   planTime: { label: 'model', src: 'CON', where: '§4.2.1.3.1.1, p.40', text: 'Planned time outside: walking at NASA’s planning pace plus the work at the spot, in suit time.', moon: true },
   walkTime: { label: 'model', src: 'CON', where: '§4.2.1.3.1.1, p.40', text: 'Time outside on your walk, by the suit clock.' },
-  planReserve: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'Reserve on return in the plan: time left in the suit at the rover, with the way home counted at the walk-back work rate.' },
+  planReserve: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'Reserve on return in the plan: time left in the suit at the rover, with the way home counted at the walk-back work rate.', moon: true },
   walkReserve: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'Time left in the suit when you reached the rover, from the suit model and your walk.' },
   closest: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'The lowest reserve on return during the walk: the moment you were closest to not getting home.' },
   planShadow: { label: 'model', src: 'WALK_TERRAIN', text: 'Planned time without line of sight to the rover at eye height, from the terrain grid.' },
@@ -70,10 +70,7 @@ function brokenOf(walk, plan, outcome) {
   if (w.length || outcome !== 'home-broken' || !plan) return w.map((b) => ({ ...b, carried: false }));
   return (plan.brokenRules || []).map((b) => ({ id: b.id, name: b.name, x: b.where && b.where.x, z: b.where && b.where.z, carried: true }));
 }
-function spotName(id) {
-  const c = id && candidateById(id);
-  return c ? `${c.name} (${c.id})` : id || NO_DATA;
-}
+function spotName(id) { return (id && spotLabel(id)) || id || NO_DATA; }
 /**
  * Zoom the map panel onto the walk (same terrain, closer view): scale the relief and the vector
  * layer together, keep markers at a readable size, and size the scale bar for the zoom.
@@ -142,7 +139,7 @@ export default {
     if (walk && walk.track && walk.track.length) map.path(walk.track, { style: 'walked' });
     if (empty && num(empty.x)) map.path([empty, ROVER], { style: 'walked' }).setAttribute('class', 'map-path dbf-gap');
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Rover' });
-    if (route) map.addMarker(route.spot.x, route.spot.z, { kind: 'spot', label: route.spotId || '' });
+    if (route) map.addMarker(route.spot.x, route.spot.z, { kind: 'spot', label: spotNumber(route.spotId) });
     warnings.forEach((w, i) => {
       if (!num(w.x) || !num(w.z)) return;
       map.addMarker(w.x, w.z, { kind: 'number', text: String(i + 1) }).classList.add('dbf-wm', `dbf-wm--${w.level}`);
@@ -199,7 +196,7 @@ export default {
     const table = h('table.dbf__table',
       h('thead', h('tr', h('th'), h('th.dbf__col', 'Planned'), h('th.dbf__col', 'Actual'))),
       h('tbody',
-        tr('Sample', cell(route ? route.spotId || NO_DATA : NO_DATA, route ? 'spot' : null), cell(walk ? (sample ? sample.spotId || 'taken' : 'not taken') : NO_DATA, sample ? 'spot' : null)),
+        tr('Sample', cell(route ? spotName(route.spotId) : NO_DATA, route ? 'spot' : null), cell(walk ? (sample ? 'taken' : 'not taken') : NO_DATA, null)),
         tr('Distance', cell(dist(plan && plan.distanceM), 'planDistance'), cell(dist(walk && walk.distanceM), 'walkDistance')),
         tr('Time', cell(dur(plan && plan.timeS), 'planTime'), cell(dur(walk && walk.tS), 'walkTime')),
         tr('Reserve on return', cell(dur(plan && plan.reserveS), 'planReserve'),
@@ -236,9 +233,12 @@ export default {
       }
       const b = broken.find((x) => x.id === c.id || x.name === c.name);
       if (b) usedBroken.add(b);
-      const lostWay = c.id === 'wayHome' && outcome === 'not-returned';
-      const status = b || lostWay ? 'broken' : 'ok';
-      const where = b ? fromRover(b) : lostWay && stopAt ? fromRover(stopAt) : '';
+      // way home: broken only when the suit ran out before the rover; a mission ended with esc away from
+      // the rover is the "ended early" outcome, not a broken rule; home is home however the walk ended
+      const lostWay = c.id === 'wayHome' && outcome === 'not-returned' && !!empty;
+      const endedEarly = c.id === 'wayHome' && outcome === 'not-returned' && !empty;
+      const status = b || lostWay ? 'broken' : endedEarly ? 'caution' : 'ok';
+      const where = b ? fromRover(b) : lostWay && stopAt ? fromRover(stopAt) : endedEarly ? `ended early, ${stopAt ? fromRover(stopAt) : NO_DATA}` : '';
       checks.append(checkItem({ text: c.name, status, detail: where + (b && b.carried ? ' (planned)' : '') }));
     }
     for (const b of broken) if (!usedBroken.has(b)) checks.append(checkItem({ text: b.name, status: 'broken', detail: fromRover(b) }));
@@ -253,7 +253,8 @@ export default {
       },
     });
 
-    el.append(h('div.dbf',
+    // no sample photo: the lower block is short, so the left column spreads its blocks over the height
+    el.append(h(sample ? 'div.dbf' : 'div.dbf.dbf--short',
       h('section.dbf__main',
         headline(home ? 'Back home.' : 'Not returned.', { size: 'hero' }),
         lede(...sentence),

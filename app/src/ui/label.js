@@ -15,7 +15,7 @@ let pop = null;
 export function labelTag(spec) {
   const kind = KINDS.includes(spec.label) ? spec.label : 'assumption';
   const src = spec.source || (spec.src ? sourceOf(spec) : { title: '', url: '', where: '' });
-  const word = kind + (spec.moon ? ' · Moon' : '');
+  const word = kind + (spec.moon ? ' · lunar rule' : ''); // specs/rules.md "Moon values"
   const btn = h(`button.vlabel.vlabel--${kind}`, { type: 'button', title: 'What does this mean?' }, word);
   btn.addEventListener('click', (e) => {
     e.stopPropagation();

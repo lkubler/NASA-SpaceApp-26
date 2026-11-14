@@ -102,6 +102,7 @@
 .walk-mark.is-on { display: block; }
 .walk-mark--target .walk-mark__dia { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border: 2px solid var(--accent); transform: rotate(45deg); box-shadow: 0 0 10px rgba(79, 203, 255, 0.55); }
 .walk-mark--target .walk-mark__label { position: absolute; right: 16px; bottom: 14px; white-space: nowrap; font-size: var(--fs-small); font-weight: 500; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.walk-mark--target.is-right .walk-mark__label { right: auto; left: 16px; }
 .walk-mark--target .walk-mark__label b { color: var(--accent); font-weight: 600; font-size: var(--fs-mono); }
 .walk-mark--rover .walk-mark__label { position: absolute; left: -2.5em; bottom: 4px; white-space: nowrap; font-size: var(--fs-small); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
 .walk-mark--rover .vlabel { color: #fff; background: rgba(0, 0, 0, 0.35); }
