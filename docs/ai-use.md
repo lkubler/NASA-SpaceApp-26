@@ -10,3 +10,5 @@ For the submission's "Use of Super Intelligence" field and for labeling. One lin
 - Design system and dust/Quela sources (Claude Code agents designer/data-scout). Files: `docs/design.md`, `research/sources-validity.md`.
 - 3D feasibility spike (Claude Code agent builder): Three.js walk on Access Mars terrain, branch `spike-3d`. File: `research/spike-3d.md`.
 - Science backing (Claude Code agent scout): papers, why-it-matters facts, model upgrades, science-backed feature list. File: `research/science.md`.
+- Data checks for science extras (Claude Code agent data-scout): Curiosity waypoints, REMS sol 1440, Mars24 constants, RAD dose, gravity factor. File: `research/data-science.md`.
+- Wave 1 code (Claude Code agents builder/designer): app shell, terrain preprocessing, reserve model, comms shadow, UI components. Files: `app/`, `scripts/preprocess/`.

@@ -1,5 +1,7 @@
 # Science backing and papers (EVA route planner, Murray Buttes)
 
+> **Corrections (data-scout, `research/data-science.md`, Sat 14:00):** use Mars24 epoch step C-2 from data-science.md (the epoch formula here is the old 2000 form); Sept 2017 SPE at Gale = dose rate ×2–3 for ~12 h (not "×3 peak"); the "max load 80 % vs 45 % of body weight" claim has no source — don't use it; gravity factor primary source is Brown et al. 2018 (weak, n=12) → default 0.75, range 0.68–1.0, labelled modelled.
+
 Scout, Sat 14.11. Builds on `research/sources-validity.md` (Pandolf/Santee, walkback 2.2 mph, SEXTANT, dust tau table, wind calc, Quela) and `research/prior-art.md`. Those are NOT repeated here. No new core idea; this only backs and extends the team's idea.
 Marks: **V** = file opened and text read (PDF/page), **S** = search summary only, **L** = link returned HTTP 200 but content not read, **U** = could not verify. HTTP checks done with curl on Sat 14.11. NTRS `/citations/` landing pages timed out from this machine; the `api/citations/<id>/downloads/` PDF links all opened, so they are given as the stable links.
 
