@@ -142,7 +142,9 @@ Nichts soll einfach reingeworfen wirken. Jeder Platzhalter bekommt im UI ein Lab
 
 
 
+Das Rückweg-Feld zeigen. Es ist das Stärkste am System und im UI unsichtbar. Als Karte „Reserve bei Rückkehr von jedem Punkt“ mit der Umkehrlinie als Kontur wäre es der Kernsatz als Bild. Die Daten existieren schon, es fehlt nur die Darstellung.
 
+Route glätten. Die 2 bis 9 % Überlänge stecken in allen Zahlen (Strecke, Zeit, Reserve). Eine Geradenprüfung zwischen Wegpunkten behebt das in etwa 15 Zeilen. Risiko: Planer und Walk müssen sich danach weiter einig sein, eure Tests prüfen das.
 
 Access mars visualisierung
 https://experiments.withgoogle.com/access-mars
