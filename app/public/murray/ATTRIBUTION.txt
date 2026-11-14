@@ -1,0 +1,4 @@
+Terrain geometry (terrain.glb), tile textures, background.jpg: Access Mars, Google Creative Lab,
+https://github.com/googlecreativelab/access-mars (Apache-2.0, see LICENSE-access-mars.txt).
+Underlying imagery: NASA/JPL-Caltech/MSSS, Mars Science Laboratory (Curiosity) Mastcam. Murray Buttes, Sep 2016.
+public/draco-old/: original Draco decoder from the same repo (Apache-2.0, LICENSE alongside).

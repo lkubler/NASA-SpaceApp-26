@@ -1,0 +1,68 @@
+{
+ "name": "Murray Buttes",
+ "crs": "Mars planetocentric lon/lat (deg E), sphere R=3396190 m; local metres east/north",
+ "source_dtm": "DTEEC_040770_1755_039280_1755_U01 (HiRISE, NASA/JPL/University of Arizona/USGS)",
+ "dtm": {
+  "width": 1024,
+  "height": 1024,
+  "cell_m": 1.0117630165416,
+  "origin": "row 0 = north edge, col 0 = west edge; rows increase to the south",
+  "height_file": "dtm_height.u16.bin",
+  "height_dtype": "uint16 little-endian",
+  "height_m": "hmin + value * height_scale",
+  "hmin": -4422.0,
+  "height_scale": 0.005,
+  "height_nodata": 65535,
+  "slope_file": "dtm_slope.u8.bin",
+  "slope_dtype": "uint8",
+  "slope_deg": "value * slope_scale",
+  "slope_scale": 0.5,
+  "slope_nodata": 255,
+  "hillshade_file": "dtm_hillshade.png",
+  "valid_fraction": 0.9673042297363281,
+  "crop_in_dtm_px": {
+   "col0": 700,
+   "row0": 6082
+  },
+  "north_west_corner_lonlat": [
+   137.3471140016689,
+   -4.687119572825407
+  ],
+  "deg_per_px": 1.7069054062128152e-05
+ },
+ "walk": {
+  "width": 256,
+  "height": 256,
+  "cell_m": 0.5,
+  "extent_m": 128,
+  "origin": "scene frame: x = -64 + (col + 0.5) * 0.5, z = -64 + (row + 0.5) * 0.5; Y up",
+  "height_file": "walk_height.i16.bin",
+  "height_dtype": "int16 little-endian",
+  "height_m": "value / 100 (scene height, add z_offset_dtm_m for DTM elevation)",
+  "height_nodata": null,
+  "slope_file": "walk_slope.u8.bin",
+  "slope_scale": 0.5,
+  "slope_note": "central difference over 1 m; mesh is smoother than the DTM in places"
+ },
+ "transform_walk_to_dtm": {
+  "model": "east_m = cos(t)*x + sin(t)*z ; north_m = -sin(t)*x + cos(t)*z ; dtm_col = cx + east_m / cell_m ; dtm_row = cy - north_m / cell_m ; dtm_elev = scene_y + z_offset_dtm_m",
+  "theta_deg": 2.4,
+  "origin_in_dtm_crop_px": {
+   "col": 498.25,
+   "row": 499.75
+  },
+  "origin_lonlat": [
+   137.35561865785533,
+   -4.695649832592955
+  ],
+  "z_offset_dtm_m": -4370.143806435462,
+  "ncc": 0.9339792580308482,
+  "error_1sigma": {
+   "position_m": 2.0,
+   "rotation_deg": 1.5,
+   "edge_position_m": 3.0,
+   "elevation_m": 1.114520990926102
+  },
+  "note": "scene z axis points NORTH (z mirrored vs. a right-handed Y-up map); see README"
+ }
+}

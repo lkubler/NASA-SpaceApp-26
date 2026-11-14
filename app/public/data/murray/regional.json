@@ -1,0 +1,45 @@
+{
+ "source_dtm": "DTEEC_040770_1755_039280_1755_U01 (HiRISE, NASA/JPL/University of Arizona/USGS)",
+ "width": 800,
+ "height": 800,
+ "cell_m": 5.0588150827080005,
+ "block_factor_vs_dtm": 5,
+ "origin": "row 0 = north edge, col 0 = west edge; rows increase to the south",
+ "height_file": "regional_height.u16.bin",
+ "height_dtype": "uint16 little-endian",
+ "height_m": "hmin + value * height_scale",
+ "hmin": -4463.0,
+ "height_scale": 0.005,
+ "height_nodata": 65535,
+ "slope_file": "regional_slope.u8.bin",
+ "slope_dtype": "uint8",
+ "slope_deg": "value * slope_scale",
+ "slope_scale": 0.5,
+ "slope_nodata": 255,
+ "slope_note": "central difference over 2 regional cells (10 m)",
+ "hillshade_file": "regional_hillshade.png",
+ "ortho_file": "regional_ortho.jpg",
+ "valid_fraction": 0.8174171875,
+ "valid_fraction_quadrants": {
+  "NW": 0.6977875,
+  "NE": 1.0,
+  "SW": 0.57188125,
+  "SE": 1.0
+ },
+ "crop_in_dtm_px": {
+  "col0": 0,
+  "row0": 4594
+ },
+ "north_west_corner_lonlat": [
+  137.3351656638254,
+  -4.6617208203809595
+ ],
+ "deg_per_px_dtm": 1.7069054062128152e-05,
+ "relation_to_1km_grid": {
+  "model": "col_1km = col_reg * scale + col_offset ; row_1km = row_reg * scale + row_offset  (cell-corner coordinates; for cell centres use (c+0.5)*scale+offset-0.5)",
+  "scale": 5.0,
+  "col_offset": -700,
+  "row_offset": -1488,
+  "note": "1 km grid px = 1 DTM px, so offsets are exact integers (DTM px); regional cell = block mean of K x K DTM px"
+ }
+}
