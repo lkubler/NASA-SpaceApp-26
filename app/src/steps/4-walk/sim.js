@@ -4,7 +4,7 @@
 import {
   RULES, WORK, ASTRONAUT, ROVER,
   logMove, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, hasRadio,
-  radioShadowMask, roverField, spotField, isClosed,
+  radioShadowMask, roverField, spotField, isClosedAt,
 } from '../../core/index.js';
 import { DISPLAY as D } from './display.js';
 
@@ -30,7 +30,6 @@ export function createSim(t, route, log) {
   const shadow = radioShadowMask(t);
   const home = roverField(t);
   const toSpot = spotField(t, route.spot);
-  const slopeMax = RULES.slopeMaxDeg.value;
   const legs = [route.out.points, route.back.points];
 
   // start beside the rover, on the route, facing along it
@@ -115,7 +114,7 @@ export function createSim(t, route, log) {
     for (let m = t.cell; m <= maxM; m += t.cell / 2) {
       const x = s.x + s.moveDir.x * m, z = s.z + s.moveDir.z * m;
       if (!t.inside(x, z)) return null;
-      if (test(t.indexOf(x, z))) return m;
+      if (test(t.indexOf(x, z), x, z)) return m;
     }
     return null;
   }
@@ -143,10 +142,10 @@ export function createSim(t, route, log) {
   function evaluate() {
     const i = t.indexOf(s.x, s.z);
     const cur = {}, info = {};
-    cur.steepUnder = t.slope[i] > slopeMax;
+    cur.steepUnder = isClosedAt(t, s.x, s.z); // the planner's slope test (core/planner.js)
     if (cur.steepUnder) info.steepUnder = { slopeDeg: t.slope[i] };
     if (!cur.steepUnder) {
-      const m = aheadHit((j) => isClosed(t, j), D.steepAheadM);
+      const m = aheadHit((j, x, z) => isClosedAt(t, x, z), D.steepAheadM);
       if (m != null) { cur.steepAhead = true; info.steepAhead = { m }; }
     }
     if (s.radio) {

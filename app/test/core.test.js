@@ -5,7 +5,7 @@ import {
   workRate, fullLevels, consume, timeLeft, reserveOnReturn, walkSeconds, doseMSv, outsideTempC,
   findRoute, costField, closedMask, lineOfSight, radioShadowMask, hasRadio,
   CANDIDATES, ACCESS_MARS_POINTS, ROVER,
-  planRoute, planNumbers, planAllCandidates, reserveFrom, roverField, simulateWalk,
+  planRoute, planNumbers, planAllCandidates, reserveFrom, roverField, simulateWalk, isClosedAt,
 } from '../src/core/index.js';
 
 const t = nodeTerrain();
@@ -184,5 +184,22 @@ describe('plan numbers', () => {
     expect(log.reserveAtHomeS - plan.reserveS).toBeLessThan(2 * (RULES.walkBackRateFactor.value - 1) * plan.legs[3].seconds);
     expect(log.minReserve.seconds).toBeGreaterThan(0);
     expect(log.distanceM).toBeCloseTo(plan.distanceM, 0);
+  });
+  it('walking every planned route breaks no rule (planner and Walk use one slope test)', () => {
+    for (const { candidate, route } of all) {
+      let broken = 0;
+      for (const leg of [route.out.points, route.back.points]) {
+        for (let k = 1; k < leg.length; k++) {
+          const a = leg[k - 1], b = leg[k];
+          const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.05));
+          for (let s = 0; s <= n; s++) {
+            const f = s / n;
+            if (isClosedAt(t, a.x + (b.x - a.x) * f, a.z + (b.z - a.z) * f)) broken++;
+          }
+        }
+      }
+      expect(broken, candidate.id).toBe(0);
+      expect(simulateWalk(t, route).brokenRules.length, candidate.id).toBe(0);
+    }
   });
 });

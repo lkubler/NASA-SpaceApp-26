@@ -149,6 +149,8 @@ export const PLANNER = {
   // 1e5: one metre of closed ground costs more than any open route in the 128 m square can be long,
   // so the fallback first minimises closed ground, then time.
   steepPenalty: v(1e5, '×', 'model', 'NONE', '', 'Cost multiplier for closed ground in the fallback route.'),
+  edgeToleranceM: v(0.1, 'm', 'assumption', 'NONE', '',
+    'A point counts as standing on a closed cell only once it is this far inside the cell. A planned diagonal step between two open cells touches the corner of the cells beside it; this tolerance lets the planner and the Walk agree that such a step keeps the slope rule.'),
 };
 
 export const ALL = { RULES, ASTRONAUT, WORK, SUIT, RADIO, ENVIRONMENT, DEMO, BODY, HOME, PLANNER };

@@ -13,6 +13,20 @@ const NB = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]
 /** true if the cell is closed to the route (steeper than the slope rule). */
 export function isClosed(terrain, i) { return terrain.slope[i] > RULES.slopeMaxDeg.value; }
 
+/**
+ * The one slope test for a point (scene metres), shared by the planner tests and the Walk
+ * (ground underfoot, steep stretch ahead): true if the point lies in a closed cell and is at least
+ * PLANNER.edgeToleranceM inside it. Every point on a planned step between two open cells passes it,
+ * diagonal steps included (they only touch the corner of the cells beside them).
+ */
+export function isClosedAt(terrain, x, z) {
+  const i = terrain.indexOf(x, z);
+  if (!isClosed(terrain, i)) return false;
+  const c = terrain.centerOf(terrain.colOf(i), terrain.rowOf(i));
+  const half = terrain.cell / 2 - PLANNER.edgeToleranceM.value;
+  return Math.abs(x - c.x) <= half && Math.abs(z - c.z) <= half;
+}
+
 /** Closed-ground mask for the whole grid (Uint8Array, 1 = steeper than the slope rule). */
 export function closedMask(terrain) {
   const m = new Uint8Array(terrain.size);
