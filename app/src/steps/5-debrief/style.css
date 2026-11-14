@@ -1,1 +1,93 @@
-/* Styles of step 5-debrief only. Prefix classes with .step--debrief. */
+/* Styles of step 5-debrief only. Prefix classes with .step--debrief. Layout like Go / no-go
+   (docs/mockups/03-route-overview.png): headline and big numbers left, map top right, checks and
+   main button at the bottom. */
+
+.step--debrief .dbf {
+  position: absolute; inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(44vh, 34vw);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: 'main side' 'foot foot';
+  column-gap: calc(var(--gutter) * 0.9);
+  padding: var(--header-h) var(--gutter) calc(var(--gutter) * 0.6);
+}
+.step--debrief .dbf__main { grid-area: main; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
+.step--debrief .dbf__side { grid-area: side; min-height: 0; display: flex; flex-direction: column; }
+.step--debrief .dbf__side .map { width: 100%; flex: none; }
+.step--debrief .dbf__side .legend { margin-top: 0.6em; gap: 0.3em 1.1em; font-size: var(--fs-tag); }
+.step--debrief .lede { max-width: none; }
+.step--debrief .map-path--walked { stroke-width: 1.3; }
+.step--debrief .map-path--foot { stroke-dasharray: 0.1 7; }
+
+/* big numbers */
+.step--debrief .dbf__nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 var(--gap); margin-top: calc(var(--gap) * 1.2); }
+.step--debrief .bignum { padding-top: 0.7em; }
+.step--debrief .bignum.tone-warning .bignum__value { color: var(--warning); }
+
+/* not returned */
+.step--debrief .dbf__lost { margin-top: var(--gap); border: 1px solid var(--warning); border-radius: var(--radius-card); padding: 0.6em 1em; max-width: 62ch; }
+.step--debrief .dbf__lost-title { color: var(--warning); font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); }
+.step--debrief .dbf__lost-text { font-size: var(--fs-small); margin-top: 0.15em; }
+
+/* planned next to actual, and the report */
+.step--debrief .dbf__lower { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: calc(var(--gap) * 1.4); margin-top: calc(var(--gap) * 1.2); align-items: start; }
+.step--debrief .dbf__table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
+.step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.32em 0.6em 0.32em 0; text-align: left; white-space: nowrap; }
+.step--debrief .dbf__th { font-weight: 400; color: var(--text); }
+.step--debrief .dbf__col { color: var(--text-2); font-weight: 500; font-size: var(--fs-tag); text-transform: uppercase; letter-spacing: 0.06em; }
+.step--debrief .dbf__td .mono { font-size: var(--fs-mono); }
+.step--debrief .dbf__demo { margin-top: 0.5em; font-size: var(--fs-tag); color: var(--text-2); }
+
+.step--debrief .dbf__sec { color: var(--text-2); font-size: var(--fs-small); display: flex; align-items: center; gap: 0.4em; margin-bottom: 0.5em; }
+.step--debrief .dbf__report { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 0.8em 1em; }
+.step--debrief .dbf__rbody { display: flex; gap: 0.9em; align-items: flex-start; }
+.step--debrief .dbf__photo { flex: none; width: 34%; }
+.step--debrief .dbf__photo:empty { display: none; }
+.step--debrief .dbf__photo img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 8px; }
+.step--debrief .dbf__cap { font-size: var(--fs-tag); line-height: 1.4; }
+.step--debrief .dbf__rtext { flex: 1; min-width: 0; font-size: var(--fs-small); display: flex; flex-direction: column; gap: 0.4em; }
+.step--debrief .dbf__ract { margin-top: 0.7em; display: flex; flex-direction: column; gap: 0.45em; align-items: flex-start; }
+.step--debrief .dbf__send {
+  border: 1px solid var(--accent); color: var(--accent); border-radius: var(--radius-pill);
+  padding: 0.35em 1.2em; font-size: var(--fs-small); font-weight: 600; transition: background var(--fade);
+}
+.step--debrief .dbf__send:hover:not(:disabled) { background: rgba(79, 203, 255, 0.1); }
+.step--debrief .dbf__send:disabled { border-color: var(--line-strong); color: var(--text-2); }
+.step--debrief .dbf__sent { font-size: var(--fs-small); }
+.step--debrief .dbf__sent:empty { display: none; }
+
+/* warnings list under the map */
+.step--debrief .dbf__warn { margin-top: calc(var(--gap) * 0.9); min-height: 0; flex: 1; display: flex; flex-direction: column; }
+.step--debrief .dbf__wl { list-style: none; margin: 0; padding: 0; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 0.45em; }
+.step--debrief .dbf__wi { display: flex; gap: 0.6em; align-items: flex-start; font-size: var(--fs-small); }
+.step--debrief .dbf__wi .marker { font-size: var(--fs-tag); width: 2em; height: 2em; }
+.step--debrief .marker.tone-warning { border-color: var(--warning); }
+.step--debrief .marker.tone-caution { border-color: var(--caution); }
+.step--debrief .marker.tone-advisory { border-color: var(--advisory); }
+.step--debrief .dbf__wi--warning .dbf__wtext { color: var(--warning); }
+.step--debrief .dbf__wi--caution .dbf__wtext { color: var(--caution); }
+.step--debrief .dbf__wi--advisory .dbf__wtext { color: var(--advisory); }
+.step--debrief .dbf__wwhere { color: var(--text-2); font-size: var(--fs-tag); }
+.step--debrief .dbf__none { color: var(--text-2); font-size: var(--fs-small); }
+
+/* map marks */
+.step--debrief .map-marker.dbf-wm circle { r: 4.2px; stroke-width: 0.8; }
+.step--debrief .map-marker.dbf-wm text { font-size: 4px; }
+.step--debrief .map-marker.dbf-wm--warning circle { stroke: var(--warning); }
+.step--debrief .map-marker.dbf-wm--caution circle { stroke: var(--caution); }
+.step--debrief .map-marker.dbf-wm--advisory circle { stroke: var(--advisory); }
+.step--debrief .map-marker.dbf-closest circle { r: 3.4px; fill: #fff; stroke: var(--accent); stroke-width: 1.6; }
+.step--debrief .map-marker.dbf-empty circle { r: 3.4px; fill: var(--warning); stroke: #fff; stroke-width: 0.8; }
+.step--debrief .map-path.dbf-gap { fill: none; stroke: #fff; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.8; }
+.step--debrief .sw--closest { width: 0.75em; height: 0.75em; border-radius: 50%; background: #fff; border: 2px solid var(--accent); }
+.step--debrief .sw--empty { width: 0.75em; height: 0.75em; border-radius: 50%; background: var(--warning); }
+
+/* bottom: checks and the main button */
+.step--debrief .dbf__foot {
+  grid-area: foot; display: flex; align-items: center; justify-content: space-between; gap: var(--gutter);
+  border-top: 1px solid var(--line); margin-top: calc(var(--gap) * 0.9); padding-top: calc(var(--gap) * 0.9);
+}
+.step--debrief .dbf__foot-title { font-family: var(--font-display); font-weight: 500; font-size: var(--fs-title); margin-bottom: 0.4em; }
+.step--debrief .dbf__checks { display: flex; flex-wrap: wrap; gap: 0.4em 1.6em; }
+.step--debrief .dbf__checks .check { font-size: var(--fs-small); }
+.step--debrief .dbf__foot .pill { flex: none; }

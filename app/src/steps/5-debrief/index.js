@@ -1,48 +1,323 @@
-// Step 5 Debrief. PLACEHOLDER screen from the frame builder; the step builder replaces it
-// (specs/5-debrief.md). Only files in this directory may change.
+// Step 5 Debrief (specs/5-debrief.md): did I get home, and how close was it.
+// Planned values from state.plan (core planNumbers), actual values from state.walk (core WalkLog).
+// Every number comes from the core; a missing field shows "no data".
+// Dev aid: ?step=5&outcome=home|broken|lost replaces the walk log once with a test log (fixtures.js).
 import './style.css';
-import { h, splitLayout, headline, lede, row, pillButton, mapPanel, legend, fmtDistance, fmtDuration } from '../../ui/index.js';
-import { ROVER } from '../../core/index.js';
+import {
+  h, headline, lede, bigNumber, pillButton, mapPanel, legend, checkItem, labelTag, marker,
+  fmtDistance, fmtDuration,
+} from '../../ui/index.js';
+import { ROVER, candidateById, ENVIRONMENT, DEMO } from '../../core/index.js';
+import { fixtureWalk } from './fixtures.js';
+
+const NO_DATA = 'no data';
+const PHOTOS_URL = 'data/murray/photos/';
+// Photo for the report when the walk log has none: Curiosity's own drill sample at the foot of a
+// butte in Murray Buttes (credits.json). Never mb2.jpg (an archive portrait, not a Mars image).
+const REPORT_PHOTO_ID = 'quela_drill';
 
 let root = null;
+let fixtureUsed = false;
 
+const num = (v) => typeof v === 'number' && isFinite(v);
+const dur = (s) => (num(s) ? fmtDuration(s) : NO_DATA);
+const dist = (m) => (num(m) ? fmtDistance(m) : NO_DATA);
+
+// ---------- labels (text and source for each kind of value) ----------
+const T = {
+  planDistance: { label: 'model', src: 'WALK_TERRAIN', text: 'Length of the planned round trip, measured on the 0.5 m terrain grid built from Curiosity images.' },
+  walkDistance: { label: 'model', src: 'WALK_TERRAIN', text: 'Distance you walked, measured on the same terrain grid.' },
+  planTime: { label: 'model', src: 'CON', where: '§4.2.1.3.1.1, p.40', text: 'Planned time outside: walking at NASA’s planning pace plus the work at the spot, in suit time.', moon: true },
+  walkTime: { label: 'model', src: 'CON', where: '§4.2.1.3.1.1, p.40', text: 'Time outside on your walk, by the suit clock.' },
+  planReserve: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'Reserve on return in the plan: time left in the suit at the rover, with the way home counted at the walk-back work rate.' },
+  walkReserve: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'Time left in the suit when you reached the rover, from the suit model and your walk.' },
+  closest: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'The lowest reserve on return during the walk: the moment you were closest to not getting home.' },
+  planShadow: { label: 'model', src: 'WALK_TERRAIN', text: 'Planned time without line of sight to the rover at eye height, from the terrain grid.' },
+  walkShadow: { label: 'model', src: 'WALK_TERRAIN', text: 'Time you spent without line of sight to the rover at eye height.' },
+  spot: { label: 'model', src: 'WALK_TARGETS', text: 'Sample spot at the foot of a butte; its position is derived from the terrain.' },
+  warnings: { label: 'model', src: 'WALK_TERRAIN', text: 'Warnings the helmet raised during the walk from the NASA rules; where = distance from the rover and time into the excursion.' },
+  suitEmpty: { label: 'simulated', src: 'NONE', text: 'The suit ran out before the rover. The walk ended there; this is a simulation.' },
+};
+const tag = (k) => labelTag(T[k]);
+
+// ---------- helpers ----------
+function lmst(tS) {
+  const start = ENVIRONMENT.evaStartLmstH.value, sol = ENVIRONMENT.solSeconds.value;
+  const hrs = (((start + (tS / sol) * 24) % 24) + 24) % 24;
+  const hh = Math.floor(hrs), mm = Math.floor((hrs - hh) * 60);
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+const DIRS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+/** "14 m south-east of the rover" for a scene point. */
+function fromRover(p) {
+  if (!p || !num(p.x) || !num(p.z)) return NO_DATA;
+  const dx = p.x - ROVER.x, dz = p.z - ROVER.z, d = Math.hypot(dx, dz);
+  if (d < 1) return 'at the rover';
+  const deg = ((Math.atan2(dx, dz) * 180) / Math.PI + 360) % 360;
+  return `${fmtDistance(d)} ${DIRS[Math.round(deg / 45) % 8]} of the rover`;
+}
+function outcomeOf(walk) {
+  if (!walk) return null;
+  if (walk.outcome) return walk.outcome;
+  if (walk.suitEmpty) return 'not-returned';
+  if (walk.ended) return (walk.brokenRules || []).length ? 'home-broken' : 'home';
+  return null;
+}
+/** Broken rules of the walk; a rule broken in the plan is carried in when the walk log names none. */
+function brokenOf(walk, plan, outcome) {
+  const w = (walk && walk.brokenRules) || [];
+  if (w.length || outcome !== 'home-broken' || !plan) return w.map((b) => ({ ...b, carried: false }));
+  return (plan.brokenRules || []).map((b) => ({ id: b.id, name: b.name, x: b.where && b.where.x, z: b.where && b.where.z, carried: true }));
+}
+function spotName(id) {
+  const c = id && candidateById(id);
+  return c ? `${c.name} (${c.id})` : id || NO_DATA;
+}
+/**
+ * Zoom the map panel onto the walk (same terrain, closer view): scale the relief and the vector
+ * layer together, keep markers at a readable size, and size the scale bar for the zoom.
+ * Works on this instance only (the shared mapPanel has no zoom).
+ */
+const ZOOM_MAX = 3, ZOOM_MARGIN = 0.18; // view layout only
+function zoomToWalk(map, terrain, pts) {
+  const ps = pts.filter((p) => p && num(p.x) && num(p.z));
+  const ext = terrain.extent;
+  let k = 1, tx = 0, ty = 0;
+  if (ps.length) {
+    const fx = ps.map((p) => (p.x - terrain.min) / ext), fy = ps.map((p) => (terrain.max - p.z) / ext);
+    const x0 = Math.min(...fx), x1 = Math.max(...fx), y0 = Math.min(...fy), y1 = Math.max(...fy);
+    const span = Math.max(x1 - x0, y1 - y0) * (1 + 2 * ZOOM_MARGIN);
+    k = Math.max(1, Math.min(ZOOM_MAX, 1 / Math.max(span, 1e-6)));
+    const clampT = (t) => Math.min(0, Math.max(1 - k, t));
+    tx = clampT(0.5 - k * (x0 + x1) / 2);
+    ty = clampT(0.5 - k * (y0 + y1) / 2);
+  }
+  const tf = `translate(${(tx * 100).toFixed(3)}%, ${(ty * 100).toFixed(3)}%) scale(${k.toFixed(4)})`;
+  for (const el of [map.canvas, map.svg]) Object.assign(el.style, { transformOrigin: '0 0', transform: tf });
+  map.svg.querySelectorAll('.map-marker').forEach((g) => {
+    g.setAttribute('transform', `${g.getAttribute('transform')} scale(${(1.25 / k).toFixed(4)})`);
+  });
+  // scale bar: the label says how many metres; size the bar for this zoom, in map width
+  const box = map.el.querySelector('.map__scale'), bar = map.el.querySelector('.map__scale-bar');
+  const label = box && box.querySelector('.mono');
+  const metres = label ? parseFloat(label.textContent) : NaN;
+  if (box && bar && num(metres)) {
+    box.style.width = `${((100 * k * metres) / ext).toFixed(2)}%`;
+    bar.style.width = '100%';
+  }
+}
+
+let _photos = null;
+function loadPhotos() {
+  if (!_photos) _photos = fetch(PHOTOS_URL + 'credits.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+  return _photos;
+}
+
+// ---------- the step ----------
 export default {
   n: 5, id: 'debrief', title: 'Debrief',
   isComplete: () => true,
 
   async mount(el, ctx) {
     root = el;
-    const L = splitLayout();
-    el.append(L.el);
     const terrain = await ctx.getTerrain();
     if (root !== el) return;
+
+    const outParam = ctx.params.get('outcome');
+    if (outParam && !fixtureUsed && ctx.state.route) {
+      fixtureUsed = true;
+      const w = fixtureWalk(terrain, ctx.state.route, outParam);
+      if (w) ctx.set({ walk: w });
+    }
+
     const { plan, route, walk } = ctx.state;
-    const home = walk && walk.outcome !== 'not-returned';
+    const outcome = outcomeOf(walk);
+    const home = outcome === 'home' || outcome === 'home-broken';
+    const broken = brokenOf(walk, plan, outcome);
+    const warnings = (walk && walk.warnings) || [];
+    const wCount = walk && Array.isArray(walk.warnings) ? String(warnings.length) : NO_DATA;
+    const min = walk && walk.minReserve;
+    const empty = walk && walk.suitEmpty;
+
+    // ----- map: planned route and walked path together -----
     const map = mapPanel(terrain, { steep: true });
-    L.map.append(map.el, legend([{ kind: 'foot', text: 'Planned' }, { kind: 'walked', text: 'Walked' }, { kind: 'rover', text: 'Rover' }]));
     if (route) map.path([...route.out.points, ...route.back.points], { style: 'foot' });
-    if (walk && walk.track.length) map.path(walk.track, { style: 'walked' });
+    if (walk && walk.track && walk.track.length) map.path(walk.track, { style: 'walked' });
+    if (empty && num(empty.x)) map.path([empty, ROVER], { style: 'walked' }).setAttribute('class', 'map-path dbf-gap');
     map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Rover' });
-    L.panel.append(
-      headline(home ? 'Back home.' : 'Not returned.', { size: 'hero' }),
-      lede(home ? 'Placeholder outcome sentence.' : 'The suit ran out before the rover.'),
-      h('div', row('Distance', `${fmtDistance(plan.distanceM)} · ${fmtDistance(walk ? walk.distanceM : NaN)}`),
-        row('Time', `${fmtDuration(plan.timeS)} · ${fmtDuration(walk ? walk.tS : NaN)}`),
-        row('Reserve on return', `${fmtDuration(plan.reserveS)} · ${fmtDuration(walk ? walk.reserveAtHomeS : NaN)}`),
-        row('Time in radio shadow', `${fmtDuration(plan.radioShadowS)} · ${fmtDuration(walk ? walk.radioShadowS : NaN)}`)),
-      h('div.placeholder-note', 'Frame placeholder: replace with specs/5-debrief.md'),
+    if (route) map.addMarker(route.spot.x, route.spot.z, { kind: 'spot', label: route.spotId || '' });
+    warnings.forEach((w, i) => {
+      if (!num(w.x) || !num(w.z)) return;
+      map.addMarker(w.x, w.z, { kind: 'number', text: String(i + 1) }).classList.add('dbf-wm', `dbf-wm--${w.level}`);
+    });
+    if (min && num(min.x)) {
+      const g = map.addMarker(min.x, min.z, { kind: 'dot', label: 'Closest moment', layer: 'top' });
+      g.classList.add('dbf-closest');
+      const lbl = g.querySelector('.map-marker__label');
+      if (lbl) { lbl.setAttribute('y', '1.6'); lbl.setAttribute('x', '5'); lbl.setAttribute('text-anchor', 'start'); } // label to the right, clear of rover and spot labels
+    }
+    if (empty && num(empty.x)) map.addMarker(empty.x, empty.z, { kind: 'dot', label: 'Suit empty', layer: 'top' }).classList.add('dbf-empty');
+    zoomToWalk(map, terrain, [
+      ...(route ? [...route.out.points, ...route.back.points] : []),
+      ...((walk && walk.track) || []), ...warnings, ROVER, min, empty,
+    ]);
+    const legendItems = [{ kind: 'foot', text: 'Planned' }, { kind: 'walked', text: 'Walked' }, { kind: 'rover', text: 'Rover' },
+      { kind: 'spot', text: 'Spot' }, { kind: 'closest', text: 'Closest moment' }];
+    if (empty) legendItems.push({ kind: 'empty', text: 'Suit empty' });
+
+    // ----- headline and outcome sentence -----
+    const reserveHome = walk && walk.reserveAtHomeS;
+    let sentence;
+    const reached = num(reserveHome) ? `You reached the rover with ${fmtDuration(reserveHome)} left in the suit` : `You reached the rover (reserve: ${NO_DATA})`;
+    if (!walk) sentence = ['No walk log: ', NO_DATA, '.'];
+    else if (outcome === 'home') sentence = [`${reached} and kept every rule. `, tag('walkReserve')];
+    else if (outcome === 'home-broken') sentence = [`${reached}, but broke ${broken.length > 1 ? broken.length + ' rules' : 'a rule'}: ${broken.map((b) => b.name).join(', ') || NO_DATA}. `, tag('walkReserve')];
+    else if (outcome === 'not-returned') sentence = [empty ? `The suit ran out ${fromRover(empty)}. ` : `The suit ran out before the rover (where: ${NO_DATA}). `, tag('suitEmpty')];
+    else sentence = ['The walk has not ended: ', NO_DATA, '.'];
+
+    // ----- big numbers -----
+    const nums = h('div.dbf__nums');
+    if (outcome === 'not-returned') {
+      nums.append(bigNumber({ label: 'Rover was', value: empty ? dist(empty.roverDistanceM) : NO_DATA, unit: empty ? 'away' : '', tone: 'warning', tag: T.suitEmpty }));
+    } else {
+      nums.append(bigNumber({ label: 'Reserve on return', value: dur(reserveHome), tag: T.walkReserve, tone: num(reserveHome) && reserveHome <= 0 ? 'warning' : null }));
+    }
+    nums.append(
+      bigNumber({ label: 'Closest moment', value: min ? dur(min.seconds) : NO_DATA, unit: min && min.name ? min.name.toLowerCase() : '', tag: T.closest, tone: min && min.seconds <= 0 ? 'warning' : null }),
+      bigNumber({ label: 'Warnings', value: wCount, tag: T.warnings, tone: warnings.some((w) => w.level === 'warning') ? 'warning' : null }),
     );
-    L.action.append(pillButton({
-      text: 'New mission',
+
+    // ----- not returned: where and how far -----
+    const lostBox = outcome === 'not-returned' ? h('div.dbf__lost',
+      h('div.dbf__lost-title', 'Suit empty before the rover'),
+      h('div.dbf__lost-text',
+        empty ? `${fromRover(empty)}, ${dur(empty.tS)} into the excursion; the rover was ${dist(empty.roverDistanceM)} away. ` : `Where: ${NO_DATA}. `,
+        tag('suitEmpty'))) : null;
+
+    // ----- planned next to actual -----
+    const sample = walk && walk.sample;
+    const cell = (value, k) => h('td.dbf__td', h('span.mono', value), ' ', k ? tag(k) : null);
+    const tr = (name, a, b) => h('tr', h('th.dbf__th', name), a, b);
+    const table = h('table.dbf__table',
+      h('thead', h('tr', h('th'), h('th.dbf__col', 'Planned'), h('th.dbf__col', 'Actual'))),
+      h('tbody',
+        tr('Sample', cell(route ? route.spotId || NO_DATA : NO_DATA, route ? 'spot' : null), cell(walk ? (sample ? sample.spotId || 'taken' : 'not taken') : NO_DATA, sample ? 'spot' : null)),
+        tr('Distance', cell(dist(plan && plan.distanceM), 'planDistance'), cell(dist(walk && walk.distanceM), 'walkDistance')),
+        tr('Time', cell(dur(plan && plan.timeS), 'planTime'), cell(dur(walk && walk.tS), 'walkTime')),
+        tr('Reserve on return', cell(dur(plan && plan.reserveS), 'planReserve'),
+          cell(outcome === 'not-returned' ? 'not returned' : dur(reserveHome), outcome === 'not-returned' ? 'suitEmpty' : 'walkReserve')),
+        tr('Time in radio shadow', cell(dur(plan && plan.radioShadowS), 'planShadow'), cell(dur(walk && walk.radioShadowS), 'walkShadow')),
+      ));
+    const demo = h('div.dbf__demo', `Demo time ${DEMO.timeFactor.value}${DEMO.timeFactor.unit}: times are suit time. `, labelTag(DEMO.timeFactor));
+
+    // ----- report to Earth -----
+    const report = reportCard(ctx, { sample, walk, outcome });
+
+    // ----- warnings list -----
+    const wlist = h('div.dbf__warn',
+      h('div.dbf__sec', `Warnings · ${wCount}`, ' ', tag('warnings')),
+      warnings.length
+        ? h('ol.dbf__wl', warnings.map((w, i) => h(`li.dbf__wi.dbf__wi--${w.level || 'caution'}`,
+          marker(i + 1, { tone: w.level }),
+          h('div.dbf__wbody',
+            h('div.dbf__wtext', w.text || w.id || NO_DATA),
+            h('div.dbf__wwhere.mono', `${fromRover(w)} · ${dur(w.tS)} in`)))))
+        : h('div.dbf__none', wCount === '0' ? 'No warnings during the walk.' : NO_DATA));
+
+    // ----- checks: each rule kept or broken on the walk -----
+    const checks = h('div.dbf__checks');
+    const rules = plan && plan.checks ? plan.checks : [];
+    const usedBroken = new Set();
+    for (const c of rules) {
+      if (c.id === 'radio') {
+        const s = walk && walk.radioShadowS;
+        checks.append(checkItem({ text: c.name, status: num(s) && s > 0 ? 'caution' : 'ok', detail: dur(s), tag: T.walkShadow }));
+        continue;
+      }
+      const b = broken.find((x) => x.id === c.id || x.name === c.name);
+      if (b) usedBroken.add(b);
+      const lostWay = c.id === 'wayHome' && outcome === 'not-returned';
+      const status = b || lostWay ? 'broken' : 'ok';
+      const where = b ? fromRover(b) : lostWay && empty ? fromRover(empty) : '';
+      checks.append(checkItem({ text: c.name, status, detail: where + (b && b.carried ? ' (planned)' : '') }));
+    }
+    for (const b of broken) if (!usedBroken.has(b)) checks.append(checkItem({ text: b.name, status: 'broken', detail: fromRover(b) }));
+
+    // ----- main button -----
+    const btn = pillButton({
+      text: 'New mission', arrow: true,
       onClick: () => {
         const id = ctx.state.request && ctx.state.request.id;
         if (id && !ctx.state.requestsDone.includes(id)) ctx.set({ requestsDone: [...ctx.state.requestsDone, id] });
         ctx.newMission();
       },
-    }));
+    });
+
+    el.append(h('div.dbf',
+      h('section.dbf__main',
+        headline(home ? 'Back home.' : 'Not returned.', { size: 'hero' }),
+        lede(...sentence),
+        lostBox,
+        nums,
+        h('div.dbf__lower', h('div.dbf__tablewrap', table, demo), report)),
+      h('aside.dbf__side',
+        map.el,
+        legend(legendItems),
+        wlist),
+      h('footer.dbf__foot',
+        h('div.dbf__foot-left', h('div.dbf__foot-title', 'Rules on the walk'), checks),
+        btn),
+    ));
   },
 
   unmount() { root = null; },
 
+  // Step 5 is the last step: its fixture is never needed by a later step.
   devFixture() { return null; },
 };
+
+function reportCard(ctx, { sample, walk, outcome }) {
+  const photoBox = h('div.dbf__photo');
+  const status = h('div.dbf__sent');
+  const sendBtn = h('button.dbf__send', { type: 'button' }, 'Send report');
+  const delay = ENVIRONMENT.signalDelayNowMin;
+  sendBtn.addEventListener('click', () => {
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Report sent';
+    const at = walk && num(walk.tS) ? `Sent ${lmst(walk.tS)} local Mars time. ` : '';
+    status.replaceChildren(h('span', `${at}It reaches Earth in ${delay.value} ${delay.unit} (one-way signal delay). `), labelTag(delay));
+    status.classList.add('fade-in');
+  });
+
+  const lines = sample
+    ? [
+      h('div.dbf__rrow', h('span.muted', 'Spot '), spotName(sample.spotId), ' ', tag('spot')),
+      h('div.dbf__rrow', h('span.muted', 'Time '),
+        num(sample.tS) ? `${lmst(sample.tS)} local Mars time, ${fmtDuration(sample.tS)} into the excursion ` : NO_DATA + ' ',
+        num(sample.tS) ? labelTag(ENVIRONMENT.evaStartLmstH) : null),
+    ]
+    : [h('div.dbf__rrow', h('span.muted', 'Sample '), walk ? 'not taken' : NO_DATA)];
+
+  const textBox = h('div.dbf__rtext', ...lines);
+  if (sample) {
+    const own = sample.photo; // the walk may log the photo it showed at the spot
+    loadPhotos().then((data) => {
+      const p = own ? { file: String(own).replace(/^.*photos\//, 'photos/'), title: sample.photoTitle || '', credit: sample.photoCredit || 'NASA/JPL-Caltech' }
+        : data && data.photos && data.photos.find((x) => x.id === REPORT_PHOTO_ID);
+      if (!p || /mb2\.jpg$/.test(p.file || '')) return; // no fitting photo: none
+      const src = PHOTOS_URL + String(p.file).replace(/^photos\//, '');
+      const caption = own ? p.title : `${p.title}, Murray Buttes, sol ${p.sol}: Curiosity’s own sample nearby, not this exact spot.`;
+      photoBox.append(h('img', { src, alt: p.title || 'Curiosity photo', loading: 'lazy' }));
+      textBox.append(
+        h('div.dbf__cap', h('span.muted', 'Photo '), caption, ' ', h('span.muted', p.credit || ''), ' ',
+          labelTag({ label: 'real', text: `${p.title || ''}${p.camera ? ', ' + p.camera : ''}. Raw image from NASA’s Curiosity rover.`, source: { title: p.credit || 'NASA/JPL-Caltech', url: p.source_url || p.page || '', where: p.file_id || '' } })),
+      );
+    });
+  }
+
+  return h('div.dbf__report',
+    h('div.dbf__sec', 'Report to Earth'),
+    h('div.dbf__rbody', photoBox, textBox),
+    h('div.dbf__ract', sendBtn, status),
+  );
+}
