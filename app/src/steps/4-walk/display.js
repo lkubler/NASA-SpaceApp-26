@@ -16,12 +16,42 @@ export const DISPLAY = {
   atTargetM: 2.5,         // close enough to take the sample
   atRoverM: 4,            // close enough to end the excursion
   leftRoverM: 6,          // the visitor has left the rover (before that, no "end excursion")
-  roverClearM: 2.8,       // look-at cards: the rover model hides points within this distance of its centre (minus 0.8 m)
-  // the visitor cannot walk into the rover model: its footprint (scene3d.js roverModel, arm to power
-  // unit and wheel to wheel) plus a margin for the suit
-  roverHalfLenM: 2.3,
-  roverHalfWidthM: 1.45,
+  // the rover: NASA's Space Exploration Vehicle model (public/models/sev.glb), scaled to the vehicle's length
+  // (4.5 m, 2008 SEV design as given on en.wikipedia.org/wiki/Space_Exploration_Vehicle; no primary NASA
+  // figure found: label assumption). At that scale the model is 3.02 m high (the same source: 3 m).
+  // Measured on the model at that scale (scripts/preprocess/README.md, SEV rover model):
+  roverLengthM: 4.5,
+  // the visitor cannot walk into the rover: its footprint (nose to tail, wheel to wheel) plus a margin for
+  // the suit; the same box hides what lies behind it from the look-at cards (look.js)
+  roverHalfLenM: 2.25,
+  roverHalfWidthM: 1.54,
+  roverTopM: 3.02,
   roverMarginM: 0.4,
+  // wheels on the ground (scene3d.js placeRover): axles along the long axis from the centre (+ = forward),
+  // and the wheels' contact this far out to each side
+  roverFrontAxleM: 0.95,
+  roverMidAxleM: -0.35,
+  roverRearAxleM: -1.65,
+  roverTrackHalfM: 1.3,
+  // side hatches (one on each side, intro.js): centre this far forward of the footprint centre and this high
+  // above the ground; door opening radius
+  roverHatchAlongM: 0.29,
+  roverHatchUpM: 1.71,
+  roverHatchRadiusM: 0.58,
+  // loading and look (display choices, assumption): the walk's first frame waits at most this long for the
+  // model (the simple stand-in shows until then); a model that comes later fades in over this time
+  roverWaitMs: 6000,
+  roverFadeMs: 600,
+  roverRoughness: 0.6,
+  // light on the rover only (the terrain is unlit photo texture with its own light): sun direction from
+  // north, clockwise, and elevation; sun and sky fill strength; contact shadow under the rover
+  sunAzimuthDeg: 250,
+  sunElevationDeg: 45,
+  sunIntensity: 2.4,
+  fillIntensity: 1.5,
+  shadowAlpha: 0.62,
+  shadowWheelAlpha: 0.75,
+  shadowSpreadM: 0.6,
   lockDriftEvents: 2,     // the cursor moved this many times under the pointer lock: the lock does not hold it, drag look instead
   clickMaxPx: 6,         // a press that moves the mouse less than this is a click (aim mode: jump), more is a drag (look)
   tapMaxMs: 250,          // a Shift press shorter than this is a tap (longer: a hold for fast walk)

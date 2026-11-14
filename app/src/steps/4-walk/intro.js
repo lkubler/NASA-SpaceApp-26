@@ -18,8 +18,10 @@ const INTRO = {
   moveFromS: 0.25,     // part B: the camera starts moving here ...
   turnFromS: 0.8,      // ... and turns from facing away from the rover to the route from here
   hudFadeMs: 600,      // the helmet display fades in after part B
-  hatchUpM: 0.55,      // the hatch sill above the ground: the eye starts this much above eye height
-  hatchOutM: 1.25,     // the hatch: this far out from the rover's long axis (body half width 0.95 m, deck 1.05 m)
+  // the start: just outside the SEV's side hatch (display.js roverHatch*: centre, height and opening of the door
+  // on the model); the eye starts near the top of the opening, ducking out of it
+  hatchOutM: 1.62,     // this far out from the rover's long axis (hull and wheels reach 1.54 m)
+  hatchHeadM: 0.15,    // the eye this far below the top of the door opening
   clearM: 0.5,         // the path keeps this much outside the rover's footprint (sim.js: footprint plus suit margin)
   startPitchDeg: -9,   // looking slightly down at the step
   filmSlackS: 3,       // part A ends at the latest this long after the film's own length
@@ -44,7 +46,8 @@ export function introPath(start) {
   const aS = (start.x - rc.x) * fwd.x + (start.z - rc.z) * fwd.z, bS = (start.x - rc.x) * side.x + (start.z - rc.z) * side.z;
   const sgn = bS < 0 ? -1 : 1; // the hatch on the side of the start point
   const halfL = D.roverHalfLenM + D.roverMarginM + INTRO.clearM, halfW = D.roverHalfWidthM + D.roverMarginM + INTRO.clearM;
-  const pts = [at(0, sgn * INTRO.hatchOutM), at(0, sgn * halfW)];
+  const hA = D.roverHatchAlongM;
+  const pts = [at(hA, sgn * INTRO.hatchOutM), at(hA, sgn * halfW)];
   // start ahead of or behind the rover and close to its axis: round the corner, never through the body
   if (Math.abs(aS) > halfL - INTRO.clearM && Math.abs(bS) < halfW) pts.push(at(Math.sign(aS) * halfL, sgn * halfW));
   pts.push({ x: start.x, z: start.z });
@@ -181,7 +184,8 @@ export function createIntro(el, hudRoot, ctx) {
     if (reduce) return { x: start.x, z: start.z, y: t.heightAt(start.x, start.z) + eye, yaw: start.yaw, pitch: start.pitch };
     const m = smooth((u - INTRO.moveFromS) / (INTRO.durationS - INTRO.moveFromS)) * len;
     const p = along(path.points, m);
-    const up = INTRO.hatchUpM * (1 - smooth(m / path.stepM)); // the step down, while leaving the hatch
+    // the step down from the hatch to eye height above the ground, while leaving the hatch
+    const up = (D.roverHatchUpM + D.roverHatchRadiusM - INTRO.hatchHeadM - eye) * (1 - smooth(m / path.stepM));
     const k = smooth((u - INTRO.turnFromS) / (INTRO.durationS - INTRO.turnFromS));
     return {
       x: p.x, z: p.z, y: t.heightAt(p.x, p.z) + eye + up,

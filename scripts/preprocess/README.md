@@ -105,3 +105,57 @@ Model longitude + 88.3 deg = east longitude (Gale's dark floor and wind streak o
 Olympus Mons agree within 2 deg). Writes `app/public/data/gale/gale_color.rgb.bin` (192 x 255 RGB, row 0 = north) and
 adds `color` to `gale_hrsc.json`. The texture holds about 6 pixels per degree, so the colour is coarse; the relief comes
 from the height grid.
+
+# SEV rover model (walk), `app/public/models/sev.glb`
+Source: NASA Science 3D Resources, "Space Exploration Vehicle", credit NASA/LaRC/Advanced Concepts Lab,
+https://science.nasa.gov/3d-resources/space-exploration-vehicle/ (glTF download `Space Exploration Vehicle.glb`,
+22,431,576 bytes, sha256 `09dcfbd45a475440de4ca2405fe3be4f784dee6f12e752bad5faa9f6db6c4a8d`, 413,198 triangles, Draco,
+4096 px webp textures). Result: 1,269,744 bytes, 85,062 triangles, 1024 px webp textures, EXT_meshopt_compression
+(decoded in the app by three.js' `MeshoptDecoder`, no extra files). Geometry and textures are otherwise unedited.
+The tools run outside the app (not app dependencies), in a scratch folder:
+```
+npm i @gltf-transform/cli@4            # also brings @gltf-transform/core, extensions, functions and meshoptimizer
+G=./node_modules/.bin/gltf-transform
+$G prune  sev_orig.glb a_prune.glb    # decodes Draco, drops 3 unused PNG copies of the textures
+$G weld   a_prune.glb b_weld.glb
+$G resize b_weld.glb d_full.glb --width 1024 --height 1024
+node simplify_uv.mjs d_full.glb u_02.glb 0.2 0.002   # 413,198 -> 85,062 triangles (stops at error 0.002)
+$G meshopt u_02.glb sev.glb
+```
+`gltf-transform simplify` was not used: it tore the texture seams (stretched stripes on the rear plate). `simplify_uv.mjs`
+uses meshoptimizer's attribute-aware simplifier so UVs and normals are kept:
+```js
+// node simplify_uv.mjs <in.glb> <out.glb> <ratio> <error>
+import { NodeIO } from '@gltf-transform/core';
+import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
+import { compactPrimitive } from '@gltf-transform/functions';
+import { MeshoptSimplifier } from 'meshoptimizer';
+
+const [, , src, dst, ratioS, errorS] = process.argv;
+const ratio = Number(ratioS), error = Number(errorS);
+await MeshoptSimplifier.ready;
+const io = new NodeIO().registerExtensions(ALL_EXTENSIONS);
+const doc = await io.read(src);
+for (const mesh of doc.getRoot().listMeshes()) for (const prim of mesh.listPrimitives()) {
+  const pos = prim.getAttribute('POSITION').getArray();
+  const uv = prim.getAttribute('TEXCOORD_0').getArray();
+  const nrm = prim.getAttribute('NORMAL').getArray();
+  const n = pos.length / 3;
+  const attr = new Float32Array(n * 5);
+  for (let i = 0; i < n; i++) attr.set([uv[2 * i], uv[2 * i + 1], nrm[3 * i], nrm[3 * i + 1], nrm[3 * i + 2]], i * 5);
+  const idx = new Uint32Array(prim.getIndices().getArray());
+  const target = Math.floor((ratio * idx.length) / 3) * 3;
+  const [out, err] = MeshoptSimplifier.simplifyWithAttributes(idx, pos, 3, attr, 5, [4, 4, 0.5, 0.5, 0.5], null, target, error, []);
+  prim.getIndices().setArray(out);
+  compactPrimitive(prim);
+  console.log(`${mesh.getName()}: ${idx.length / 3} -> ${out.length / 3} triangles, error ${err.toFixed(5)}`);
+}
+await io.write(dst, doc);
+```
+Model frame: Y up, windows toward +Z, docking hatches on both sides (±X). The app scales it to 4.5 m length (2008 SEV
+design, en.wikipedia.org/wiki/Space_Exploration_Vehicle; assumption, no primary NASA figure found) and turns it to face
+the rover heading. Measured on the model at that scale (bounding box and wheel/hatch vertices) and kept in
+`app/src/steps/4-walk/display.js`: 4.50 x 3.08 x 3.02 m; wheel contact axles at +0.95, -0.35, -1.65 m along the axis,
+about 1.3 m out to each side; hatch centre 0.29 m forward of the centre, 1.71 m high, opening radius about 0.58 m.
+Note: at 4.5 m length the model's wheelbase is about 2.6 m and its wheels about 0.81 m, while the same Wikipedia page
+gives 4 m and 0.99 m; the length was kept because it also matches the stated 3 m height.
