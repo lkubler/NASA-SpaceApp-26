@@ -27,3 +27,4 @@
 #map-panel .mp-ctl label { display: block; margin: 8px 0 4px; font-size: 12px; }
 #map-panel .mp-ctl input[type=time] { font: 12px var(--font-mono); margin-left: 6px; }
 #map-panel .legend { margin: 10px 0 4px; font-size: 11px; }
+.auto-panel { color: var(--ink); margin: 6px 0 10px; } .auto-panel .auto-s { opacity: .8; }
