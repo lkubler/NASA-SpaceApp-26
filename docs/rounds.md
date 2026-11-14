@@ -19,3 +19,8 @@ One entry per orchestrator round: time, phase, what was done, result, next.
 - Did: triage of new notes (minimap, dust storms, polish, loading screen, Mars env models, web+QR, dashboard).
 - Result: `research/triage.md` update. Keep minimap, loading screen, dashboard tiles. Hosting: static GitHub Pages, precomputed data, QR tested on phones, mobile fallback (no pointer lock). Dust = labelled simulated warning (MCD/REMS). Three.js shaders instead of WASM. Env-model transfer cut; "place a relay" what-if as stretch (human OK).
 - Next: sourcing the jury's Validity gaps (suit slope limits, reserve model, Murray Buttes POIs, SEXTANT) before 14:00.
+
+## Round 4 — Sat 14.11. 12:48–12:52 (EXPLORE)
+- Did: scout sourced jury's Validity gaps; intel checked 2026 submission guide (human TODO).
+- Result: `research/sources-validity.md`: no NASA suited slope limit (20° xEMU / Apollo <15° typical); Pandolf/Santee + NASA BTU/hr numbers for reserve model ("simplified model" label); SEXTANT has no load term, comms/reserve unverified; boxwork refuted at Murray Buttes; 10 km walkback is a test distance, NASA sizes 1.8–3.5 km. `research/submission-guide.md`: deadline conflict (guide/schedule 23:59 vs CLAUDE.md 15:45, keep 15:45 until Local Lead confirms); SI form field not seen by judges.
+- Next: data-scout on Access Mars sites/DTM coverage (running), then wait for 14:00 decision.
