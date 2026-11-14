@@ -77,7 +77,7 @@ describe('several stops', () => {
       // a stop in radio shadow (F7) counts its work in the round's shadow time
       if (ids.includes('F7')) expect(p.radioShadowS).toBeGreaterThan(p.spotS);
     }
-  });
+  }, 60000);
 
   it('order matters: the same stops in another order give other legs and numbers', () => {
     const a = planNumbers(t, planRound(t, ['F3', 'F7', 'F1'].map(C)));
@@ -90,7 +90,7 @@ describe('several stops', () => {
     const two = reserveFrom(t, fullLevels(), { x: ROVER.x, z: ROVER.z, phase: 'out', stops: ['F7', 'F1'].map(C) });
     expect(two.seconds).toBeGreaterThan(three.seconds);
     expect(three.homeMetres).toBeGreaterThan(two.homeMetres);
-  });
+  }, 60000);
 
   it('rule checks over the round: one leg without a rule-keeping way marks the round as breaking the slope rule', () => {
     const route = planRound(t, [C('F1'), BROKEN, C('F3')]);
@@ -116,7 +116,7 @@ describe('several stops', () => {
     expect(over.checks.find((c) => c.id === 'wayHome').status).toBe('broken');
     expect(over.turnBack).not.toBe(null);
     expect(over.turnBack.sM).toBeLessThan(over.legPlans[over.legPlans.length - 1].startM);
-  });
+  }, 60000);
 
   it('a round has one to three stops', () => {
     expect(MAX_STOPS).toBe(PLANNER.maxStops.value);

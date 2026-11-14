@@ -100,7 +100,7 @@ export function stopOrdinal(n) { return `${n}${n === 1 ? 'st' : n === 2 ? 'nd' :
  * Plan numbers for a route with one or several stops. The single source for Plan, Go / no-go and Debrief.
  * All over the whole round: the fixed work at every stop, the rule checks, the reserve on return (the way
  * home is the last leg), radio shadow, steepest slope, farthest distance from the rover.
- * With one stop every number is the same as before several stops (test/core.test.js).
+ * With one stop every number is the same as before several stops (test/stops.test.js).
  * @returns {PlanNumbers} see app/README.md
  */
 export function planNumbers(terrain, route) {

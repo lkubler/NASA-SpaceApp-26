@@ -19,9 +19,12 @@ const RUNS = {
   'near-1280': { spot: 'F1', w: 1280, h: 720, request: 0 },
   'far-1280': { spot: 'F7', w: 1280, h: 720, request: 0 },
   'far-1920': { spot: 'F7', w: 1920, h: 1080, request: 1 },
+  // several stops (specs/feedback-1.md): 01, 02, 03 clicked in that order. Walk and Debrief still use the
+  // bridge of core planRound (TODO(several-stops walk)): sample at the first stop, then home past the others.
+  'stops-1280': { spot: 'F1', stops: ['F1', 'F2', 'F3'], w: 1280, h: 720, request: 0 },
 };
 const chosen = args.filter((a) => RUNS[a]);
-const runs = chosen.length ? chosen : Object.keys(RUNS);
+const runs = chosen.length ? chosen : Object.keys(RUNS).filter((r) => !RUNS[r].stops); // default: the three one-stop runs
 const outRoot = fileURLToPath(new URL('../../reviews/journey/', import.meta.url));
 
 const failures = [];
@@ -71,20 +74,37 @@ for (const run of runs) {
     // ---------- 2 Plan ----------
     await page.waitForFunction(() => window.__state.step === 2 && window.__state.candidates.length > 0);
     await page.waitForSelector('.step--plan .plan-hit');
-    await page.waitForTimeout(1500); // top-down terrain render
+    // top-down terrain render: the map fades in once ground and markers are ready
+    await page.waitForSelector('.step--plan .map.map--fade:not(.is-pending)', { timeout: 30000 });
+    await page.waitForTimeout(500);
     await shot('plan-open');
     const cands = (await S()).candidates.map((c) => c.candidate.id);
     const k = cands.indexOf(cfg.spot);
     await page.locator('.step--plan .map-marker--number.plan-hit').nth(k).click({ force: true });
     await page.waitForFunction((id) => window.__state.spotId === id, cfg.spot);
     await shot(`plan-${cfg.spot}`);
+    if (cfg.stops) {
+      // further clicks add stops in the order clicked; markers are found by their number (chosen ones move up)
+      for (const id of cfg.stops.slice(1)) {
+        await page.locator('.step--plan .map-marker--number.plan-hit').filter({ hasText: String(cands.indexOf(id) + 1).padStart(2, '0') }).click({ force: true });
+        await page.waitForTimeout(200);
+      }
+      const st = (await S()).stops;
+      if (st.join() !== cfg.stops.join()) fail(run, `stops ${st} after clicking ${cfg.stops}`);
+      const badges = await page.locator('.step--plan .plan-order text').allInnerTexts();
+      if (badges.length !== cfg.stops.length) fail(run, `order badges ${badges}`);
+      const legRows = await page.locator('.step--plan .plan-legs .row').count();
+      if (legRows !== 2 * cfg.stops.length + 3) fail(run, `leg list has ${legRows} rows`);
+      await shot(`plan-${cfg.stops.length}-stops`);
+    }
     const planTxt = {
       total: await text('.plan-totals .bignum:nth-child(1) .bignum__value'),
       reserve: await text('.plan-totals .bignum:nth-child(2) .bignum__value'),
       steep: await text('.plan-totals .bignum:nth-child(3) .bignum__value'),
       dist: (await text('.plan-cards .card__right')).replace(/\s*model$/, ''),
     };
-    planTxt.number = await text('.plan-cards .marker');
+    // the first stop: in a round its number is in the leg list (the walk bridge targets it)
+    planTxt.number = await text(cfg.stops ? '.plan-legs .plan-stop .marker' : '.plan-cards .marker');
     planTxt.label = `${planTxt.number} ${(await S()).candidates[k].candidate.name}`;
     if (planTxt.number !== String(k + 1).padStart(2, '0')) fail(run, `plan card number ${planTxt.number}, map number ${k + 1}`);
     console.log('  plan', JSON.stringify(planTxt));
@@ -105,6 +125,14 @@ for (const run of runs) {
     if (goTxt.Duration !== planTxt.total) fail(run, `time Plan ${planTxt.total} vs Go ${goTxt.Duration}`);
     if (goTxt['Reserve on return'] !== planTxt.reserve) fail(run, `reserve Plan ${planTxt.reserve} vs Go ${goTxt['Reserve on return']}`);
     if (goTxt['Steepest slope'] !== planTxt.steep) fail(run, `slope Plan ${planTxt.steep} vs Go ${goTxt['Steepest slope']}`);
+    if (cfg.stops) {
+      // every stop named on the profile, in order
+      const labs = await page.locator('.goprof__label.is-spot').allInnerTexts();
+      const want = cfg.stops.map((id) => String(cands.indexOf(id) + 1).padStart(2, '0'));
+      if (labs.length !== want.length || labs.some((l, i) => !l.includes(want[i]))) fail(run, `profile stop labels ${JSON.stringify(labs)}`);
+      const lede = await text('.step--go .lede');
+      if (!want.every((n, i) => lede.indexOf(n) >= 0 && (i === 0 || lede.indexOf(n) > lede.indexOf(want[i - 1])))) fail(run, `Go sentence does not name the stops in order: ${lede}`);
+    }
     await page.locator('button.gocheck').nth(2).locator('.gocheck__name').click();
     await shot('go-check-wayhome');
     // back to Plan and forward again: the choice must survive
@@ -113,6 +141,7 @@ for (const run of runs) {
     await page.waitForSelector('.step--plan .plan-totals .bignum__value');
     await page.waitForTimeout(300);
     if ((await S()).spotId !== cfg.spot) fail(run, 'spot lost after Edit route');
+    if (cfg.stops && (await S()).stops.join() !== cfg.stops.join()) fail(run, 'stops lost after Edit route');
     await page.click('.step--plan .split__action .pill');
     await page.waitForSelector('.step--go .go__rulechecks');
     await page.click('.go__action .pill');
