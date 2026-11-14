@@ -100,7 +100,7 @@ export default {
     const show = { steep: true, shadow: true, effort: true };
     const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => later('Comparing with and without the relay comes in a later version.') }, 'Compare without relay');
     const leg = planLegend({
-      route: [['rover-line', 'Rover'], ['foot', 'On foot'], ['base', 'Base'], ['handover', 'Handover to foot']],
+      route: [['rover-line', 'Rover drive'], ['foot', 'On foot'], ['handover', 'Handover to foot']],
       places: [['marker', ['Candidate spot ', labelTag(L.spot)]], ['selected', 'Chosen stop'], ['cheapest', 'Cheapest'],
         ['point', ['Access Mars point ', labelTag(L.point)]], ['relay', ['Radio relay ', labelTag(EXTRA_TAGS.relay)]], ['zone', ['EVA zone ', labelTag(EXTRA_TAGS.zone)]]],
       layers: [
@@ -116,6 +116,8 @@ export default {
     });
     // terrain credit inside the map, bottom left
     map.el.append(h('div.plan-terrain', 'Terrain: Access Mars ', labelTag(L.terrain), ' · ground colour ', labelTag(GROUND_TAG)));
+    // where the rover comes from: the base, far off the map to the north-east
+    map.el.append(h('div.plan-basehint', h('span.plan-basehint__k', 'Base'), ' Bradbury Landing · 8 km ', h('span.plan-basehint__arrow', '↗'), ' ', labelTag(EXTRA_TAGS.drive)));
     Lay.map.append(map.el, leg);
 
     // ----- panel -----
@@ -155,9 +157,11 @@ export default {
     let pinned = null; // Access Mars point whose card is pinned open
     // look-only extras (extras.js): the zone around every place of the plan, a relay on its high ground
     const clampT = (v) => Math.max(terrain.min + 2, Math.min(terrain.max - 2, v));
-    const zz = zoneOf([...cands.map((c) => c.candidate), ROVER], 7);
+    const zz = zoneOf([...cands.map((c) => c.candidate), ROVER], 6);
     const zone = { x0: clampT(zz.x0), x1: clampT(zz.x1), z0: clampT(zz.z0), z1: clampT(zz.z1) };
-    const relayAt = relayPointOf(terrain, zone);
+    const relayAt = relayPointOf(terrain, zone, [...cands.map((c) => c.candidate), ...ACCESS_MARS_POINTS]);
+    // the map opens on the EVA zone, so the zone fills it and the rover drive runs out of the picture
+    map.setHome([{ x: zone.x0, z: zone.z0 }, { x: zone.x1, z: zone.z1 }], { margin: 0.02, maxK: 3, square: false });
 
     // the widest the map may be: north and south of the rover it must still show every marker and route
     const reach = Math.max(...cands.map(({ candidate: c, route }) => Math.max(Math.abs(c.z),
@@ -301,10 +305,8 @@ export default {
       // rover drive from the base (look only): a white line from the map edge towards the base to the rover
       const vb = visibleBox(), p0 = map.unproject(vb.x0, vb.y1), p1 = map.unproject(vb.x1, vb.y0);
       const drive = roverDriveOf(terrain, { x0: p0.x, x1: p1.x, z0: p0.z, z1: p1.z });
-      if (drive) {
-        map.path(drive.points, { style: 'rover' });
-        map.addMarker(drive.from.x, drive.from.z, { kind: 'rover', label: 'Base', layer: 'top' }).classList.add('plan-base');
-      }
+      // the base itself is 8 km away and never drawn: the drive just runs off the map edge towards it
+      if (drive) map.path(drive.points, { style: 'rover' });
       // radio relay (look only)
       if (relayAt) map.addMarker(relayAt.x, relayAt.z, { kind: 'rover', label: 'Relay', layer: 'markers' }).classList.add('plan-relay-mark');
 
@@ -456,7 +458,7 @@ export default {
 
     /** Base and the rover drive (look only: not counted in the totals), above the round. */
     const driveRows = () => [
-      row('Base', 'Bradbury Landing', { lead: h('span.plan-leg-icon.plan-leg-icon--rover') }),
+      row('Base', 'Bradbury Landing · 8 km', { lead: h('span.plan-leg-icon.plan-leg-icon--rover') }),
       row('Rover', h('span.muted', 'drive, not counted'), { lead: h('span.plan-leg-icon.plan-leg-icon--drive'), tag: EXTRA_TAGS.drive }),
     ];
     /** Setting the relay (look only). */

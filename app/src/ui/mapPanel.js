@@ -363,14 +363,17 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
     onView(fn) { viewFns.push(fn); },
     /** fn() once the map has a size and its first view (at once if it has). */
     whenReady(fn) { if (ready) fn(); else readyFns.push(fn); },
-    /** The view "reset" returns to: the box of scene points (with a margin, as a fraction of its size), at most zoom maxK. */
-    setHome(points, { margin = 0.18, maxK = 3 } = {}) {
+    /** The view "reset" returns to: the box of scene points (with a margin, as a fraction of its size), at most zoom maxK; square: false keeps the box's own proportions. */
+    setHome(points, { margin = 0.18, maxK = 3, square = true } = {}) {
       const ps = points.filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.z)).map((p) => api.project(p.x, p.z));
       if (!ps.length) { home = null; } else {
         const xs = ps.map((p) => p.px), ys = ps.map((p) => p.py);
         let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-        const span = Math.max(x1 - x0, y1 - y0), mx = (x0 + x1) / 2, my = (y0 + y1) / 2, half = span * (0.5 + margin);
-        x0 = mx - half; x1 = mx + half; y0 = my - half; y1 = my + half;
+        const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+        // square: the larger side on both axes; else the box as it is (a wide map can then fill its width)
+        const hx = (square ? Math.max(x1 - x0, y1 - y0) : x1 - x0) * (0.5 + margin);
+        const hy = (square ? Math.max(x1 - x0, y1 - y0) : y1 - y0) * (0.5 + margin);
+        x0 = mx - hx; x1 = mx + hx; y0 = my - hy; y1 = my + hy;
         home = { box: [x0, y0, x1, y1], maxK };
       }
       if (W && H) { Object.assign(view, homeView()); homeApplied = true; render(); }

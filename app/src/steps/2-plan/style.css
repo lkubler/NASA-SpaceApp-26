@@ -228,3 +228,14 @@
   .step--plan .plan-totals .bignum__value { font-size: clamp(18px, 3vh, 26px); }
   .step--plan .plan-totals .bignum__label, .step--plan .plan-limiting { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
+
+/* the base is never drawn: a note in the map corner says where the rover comes from */
+.step--plan .plan-basehint {
+  position: absolute; top: 0.8em; right: 2.6em; z-index: 2; font-size: var(--fs-small); color: #e6e6e8;
+  background: rgba(0, 0, 0, 0.55); padding: 0.25em 0.7em; border-radius: var(--radius-pill); backdrop-filter: blur(4px);
+}
+.step--plan .plan-basehint__k { font-weight: 600; color: #fff; }
+.step--plan .plan-basehint__arrow { color: #fff; }
+
+.step--plan .plan-totals .bignum__value { font-size: clamp(20px, 2.7vh, 30px); }
+.step--plan .plan-goal { margin-bottom: -0.55em; }

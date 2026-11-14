@@ -29,12 +29,13 @@ export function zoneOf(points, margin = 8) {
   return { x0: Math.min(...xs) - margin, x1: Math.max(...xs) + margin, z0: Math.min(...zs) - margin, z1: Math.max(...zs) + margin };
 }
 
-/** Highest open ground inside the zone: where a relay would see most of it (a picture, not a calculation). */
-export function relayPointOf(terrain, zone) {
+/** Highest open ground inside the zone, clear of the spots and points: where a relay would see most of it (a picture, not a calculation). */
+export function relayPointOf(terrain, zone, keepClear = []) {
   let best = null;
   for (let z = zone.z0; z <= zone.z1; z += 1) {
     for (let x = zone.x0; x <= zone.x1; x += 1) {
       if (Math.hypot(x - ROVER.x, z - ROVER.z) < 15 || isClosedAt(terrain, x, z)) continue;
+      if (keepClear.some((p) => Math.hypot(x - p.x, z - p.z) < 12)) continue; // not on top of a spot or point
       const y = terrain.heightAt ? terrain.heightAt(x, z) : terrain.height[terrain.indexOf(x, z)];
       if (!best || y > best.y) best = { x, z, y };
     }
