@@ -97,10 +97,17 @@ export const DATA = [
   },
   {
     name: 'Curiosity photos (Mastcam, MAHLI, Navcam)',
-    by: 'NASA/JPL-Caltech/MSSS',
-    use: 'Photos of the rocks in the requests and at the sample spot',
+    by: 'NASA/JPL-Caltech/MSSS (Mastcam, MAHLI); NASA/JPL-Caltech (Navcam)',
+    use: 'Shown in the requests, at the sample spot and in the report: “Sloping buttes and cross-bedded sandstone” (PIA21042, Mastcam, sol 1454, NASA/JPL-Caltech/MSSS); “Layered outcrop at Quela” (Navcam, sol 1455, NASA/JPL-Caltech); “Quela drill hole at the foot of a butte” (MAHLI, sol 1464, NASA/JPL-Caltech/MSSS). Raw frames from the Curiosity raw image archive; list with file ids in public/data/murray/photos/credits.json',
     licence: 'JPL Image Use Policy',
     url: 'https://www.jpl.nasa.gov/imagepolicy',
+  },
+  {
+    name: 'MOLA elevation of Gale crater (MEGDR, 128 pixels per degree, MEGT00N090HB)',
+    by: 'NASA/GSFC MOLA Science Team, Mars Global Surveyor; NASA PDS Geosciences Node',
+    use: 'The 3D view of Gale crater in step 1 (a 215 km square, 463 m per pixel), with the heights of Murray Buttes, Marias Pass, Pahrump Hills and Mount Sharp',
+    licence: 'NASA PDS, public domain',
+    url: 'https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg128/megt00n090hb.img',
   },
   {
     name: 'Curiosity RAD radiation dose rate',
@@ -125,6 +132,8 @@ export const TOOLS = [
   { name: 'Draco decoder (2017 build from Access Mars)', use: 'Decodes the compressed terrain mesh', licence: 'Apache-2.0', url: 'https://github.com/google/draco' },
   { name: 'Space Grotesk, Inter, JetBrains Mono (via Fontsource)', use: 'Typefaces', licence: 'SIL Open Font License 1.1', url: 'https://fontsource.org' },
   { name: 'Python with numpy, Pillow, DracoPy', use: 'Offline data preparation (scripts/preprocess)', licence: 'BSD / HPND / Apache-2.0', url: 'https://numpy.org' },
+  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4; marked “AI-generated image” on screen', licence: 'Generated for this project; no NASA branding', url: '' },
+  { name: 'Claude Code (Anthropic)', use: 'AI coding agent: research notes, app code, data preparation scripts and unit tests, written under the team’s specs', licence: 'AI tool; output noted in the project description', url: 'https://www.anthropic.com/claude-code' },
 ];
 
 export const AI_NOTE = [
