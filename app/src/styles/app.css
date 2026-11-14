@@ -93,3 +93,6 @@ body[data-view="walk"] #attr { color: var(--hud-text); opacity: .7; }
 .rad-cell { min-width: 0; max-width: 260px; flex: 0 0 auto; }
 .rad-cell .hud-s { white-space: normal; }
 .hud-bar .hud-s { font-size: 13px; }
+
+/* P3-1: on the map the key sits bottom-right; keep the attribution to its left */
+body[data-view="map"] #attr { right: 286px; max-width: calc(100vw - 700px); text-align: right; }

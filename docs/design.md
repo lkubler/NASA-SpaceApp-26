@@ -305,3 +305,8 @@ Shot-readiness check for each moment: legible at 1280x720, text 14 px or larger,
 
 ## 16. Tasks derived from this document
 Created in `tasks/` by the designer after this commit (not part of this commit): tokens.css + fonts, panel/tile/chip components, walk HUD overlay, comms-shadow reveal (moment 2), NO SIGNAL cold open (moment 1), sun/day-night + sky shader (moment 3), dust haze (moment 4), loading screen, sources panel.
+
+## UX pass 2 polish choices (task 027)
+- Reserve tile: ok (green ink) above buffer + 5 pts, warn within 5 pts, danger below buffer.
+- Row warning is a 3 px amber bar, not amber text: text colour reads as failing; red text stays for infeasible or after turn-back.
+- Source links show host / file, never a raw URL. Simulated items are called "Illustrative inputs" and always name the planned real source.

@@ -1,6 +1,6 @@
 # 027 Visual and copy polish from UX pass 2
 owner: designer
-state: in progress
+state: done
 area: app/src/styles/, app/src/ui/briefing.js, app/src/ui/sources.js, app/src/ui/components.js
 
 ## Goal (research/ux-2.md)
@@ -14,3 +14,6 @@ area: app/src/styles/, app/src/ui/briefing.js, app/src/ui/sources.js, app/src/ui
 
 ## Done when
 Build passes, 0 console errors, screenshots research/polish-027*.png (sources, briefing, map panel).
+
+## Result (designer)
+Done. Sources: link labels are host plus short file name, overflow-wrap anywhere; third column "Illustrative inputs" naming planned real sources (orbiter dust opacity, REMS). Map: attribution moved left of the key (CSS); reserve tile green above buffer+5, amber within 5 pts, red below (one-line change in mapView); station rows use a 3 px amber bar instead of amber text, footnote explains it; fold headings renamed. Briefing gets a "Your job" row. Hatch fade-out not done (optional). Build OK, 55 tests pass, 0 console errors. Screenshots: research/polish-027-briefing.png, -sources.png, -map.png (map base image did not render in headless in time; panel and attribution visible).

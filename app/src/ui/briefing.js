@@ -12,6 +12,7 @@ const REQUEST = [
   ['Objective', 'Measure cross-bedding in the Stimson sandstone to reconstruct wind direction and the shape of ancient dunes. Collect a sample at the foot of a butte.'],
   ['Why here', 'The buttes are erosional remnants of wind-deposited sandstone sitting on Murray mudstone. Curiosity drilled at the foot of a butte at Quela (drilled sols 1464 to 1468, rover parked nearby from sol 1455).'],
   ['Equipment', 'Camera with scale bar, compass and inclinometer, sample drill.'],
+  ['Your job', 'Plan a loop that gets you home with 20 % suit left and keeps radio contact.'],
   ['Hazard', 'Fallen blocks at the butte base (obstacles, rockfall zone). The buttes also block the radio line of sight.'],
 ];
 const FACTS = [
