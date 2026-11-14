@@ -1,6 +1,6 @@
-# 018 Map panel fits 1280x720; turn-back story consistent
+# 019 Map panel fits 1280x720; turn-back story consistent
 owner: builder
-state: open
+state: open (start after 015 is merged — edits app/src/map/)
 area: app/src/map/mapView.js, app/src/styles/map.css
 
 ## Goal
