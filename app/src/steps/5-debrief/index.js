@@ -221,7 +221,8 @@ export default {
         tr('Time in radio shadow', cell(dur(plan && plan.radioShadowS), 'planShadow'), cell(dur(walk && walk.radioShadowS), 'walkShadow')),
       ));
     const pad = Math.round((RULES.walkBackRateFactor.value - 1) * 100);
-    const why = h('div.dbf__why', `The plan counts the way home at a ${pad} % higher work rate, so you can reach the rover with more reserve than planned. `, labelTag(RULES.walkBackRateFactor));
+    // the way-home pad only explains a reserve at the rover: not shown when the crew did not return
+    const why = !home ? null : h('div.dbf__why', `The plan counts the way home at a ${pad} % higher work rate, so you can reach the rover with more reserve than planned. `, labelTag(RULES.walkBackRateFactor));
     const demo = h('div.dbf__demo', `Demo time ${DEMO.timeFactor.value}${DEMO.timeFactor.unit}: times are suit time. `, labelTag(DEMO.timeFactor));
 
     // ----- report to Earth -----
@@ -266,7 +267,8 @@ export default {
       text: 'New mission', arrow: true,
       onClick: () => {
         const id = ctx.state.request && ctx.state.request.id;
-        if (id && !ctx.state.requestsDone.includes(id)) ctx.set({ requestsDone: [...ctx.state.requestsDone, id] });
+        // only a mission that took the sample and reached the rover finishes the request
+        if (id && home && sample && !ctx.state.requestsDone.includes(id)) ctx.set({ requestsDone: [...ctx.state.requestsDone, id] });
         ctx.newMission();
       },
     });

@@ -6,6 +6,8 @@ export const DISPLAY = {
   steepAheadM: 6,         // "Steep stretch ahead": closed ground within this distance in the walking direction
   radioAheadM: 10,        // "Radio shadow ahead": shadow within this distance in the walking direction
   onRouteM: 1,            // on the band: within this distance of the planned route (steep check follows the route)
+  nearBandM: 2,           // near the band: "Steep stretch ahead" only where the plan marks a steep stretch on the route
+  reenterM: 1,            // a broken rule counts again only after this many metres walked outside it (no count per frame on an edge)
   relogM: 8,              // walk log: the same warning again within this distance counts as the same one
   offPathM: 6,            // "Off the path": farther than this from the planned route
   edgeBandM: 4,           // "Edge of the site": closer than this to the edge of the mapped square

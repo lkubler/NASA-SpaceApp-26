@@ -161,10 +161,32 @@ export function costField(terrain, target) {
   }
   return {
     target: { ...target }, seconds, energyJ, metres, closedM, next,
-    /** Values of the cell under x, z: { seconds, energyJ, metres, closedM, index }. */
+    /**
+     * Way from the point x, z (not only its cell): the shortest of "straight to the centre of a nearby open
+     * cell, then that cell's way". Continuous as the visitor walks, so the reserve on return never jumps
+     * when a step crosses into a cell whose own way is much longer (e.g. a closed cell whose corner the
+     * visitor may cut, or a cell on the other side of closed ground). { seconds, energyJ, metres, closedM, index }
+     */
     at(x, z) {
-      const i = terrain.indexOf(x, z);
-      return { seconds: seconds[i], energyJ: energyJ[i], metres: metres[i], closedM: closedM[i], index: i };
+      const i0 = terrain.indexOf(x, z), c0 = terrain.colOf(i0), r0 = terrain.rowOf(i0);
+      const y = terrain.heightAt(x, z);
+      let best = null, bestKey = Infinity;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        const c = c0 + dc, r = r0 + dr;
+        if (c < 0 || r < 0 || c >= n || r >= n) continue;
+        const i = r * n + c;
+        if (isClosed(terrain, i)) continue;
+        // the target's own cell: straight to the target point itself (0 at the target)
+        const p = i === g ? target : terrain.centerOf(c, r);
+        const flat = Math.hypot(p.x - x, p.z - z), dh = (i === g ? terrain.heightAt(p.x, p.z) : terrain.height[i]) - y;
+        const m = Math.hypot(flat, dh);
+        const k = metres[i] + m;
+        if (k < bestKey) { bestKey = k; best = { i, m, slopeDeg: flat > 1e-6 ? (Math.atan2(dh, flat) * 180) / Math.PI : 0 }; }
+      }
+      if (!best) best = { i: i0, m: 0, slopeDeg: 0 }; // inside closed ground: the cell's own way
+      const { i, m, slopeDeg } = best;
+      const s = walkSeconds(m);
+      return { seconds: seconds[i] + s, energyJ: energyJ[i] + workRate(slopeDeg) * s, metres: metres[i] + m, closedM: closedM[i], index: i };
     },
     /** Cells of the way from x, z to the target. */
     pathFrom(x, z) {
