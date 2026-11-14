@@ -122,7 +122,7 @@ export function initSky({ scene, sun, hemi, container, state }) {
       sub.textContent = (s.elevation >= 0 ? 'Sun ' + s.elevation.toFixed(0) + '° up' : 'Sun below horizon') + ' · az ' + s.azimuth.toFixed(0) + '° · Ls ' + s.Ls.toFixed(0) + '°';
       chipT.textContent = fmt(st.hour) + ' LTST'; chipD.textContent = 'Dust: ' + DUST[st.dustIdx].label + ' \u00b7 tau ' + DUST[st.dustIdx].tau;
       btns.forEach((b, i) => b.classList.toggle('on', i === st.dustIdx)); range.value = st.hour;
-      vis.textContent = 'Visibility ~' + Math.round(s.vis) + ' m · direct sun ' + Math.round(s.direct * 100) + ' %';
+      vis.textContent = 'Visibility ~' + Math.round(s.vis) + ' m · light reaching the ground ~' + Math.round(100 * s.dayK * Math.exp(-0.25 * s.tau)) + ' % of clear-sky (approx., direct + diffuse)';
       dustWarn.hidden = s.tau < 8; dustWarn.textContent = '\u25a0 DUST: visibility ' + Math.round(s.vis) + ' m [SIMULATED]';
       vis.dataset.level = s.tau >= 8 ? 'danger' : s.tau >= 3 ? 'warn' : 'ok';
     } };

@@ -10,15 +10,15 @@ let played = false;
 
 const REQUEST = [
   ['Objective', 'Measure cross-bedding in the Stimson sandstone to reconstruct wind direction and the shape of ancient dunes. Collect a sample at the foot of a butte.'],
-  ['Why here', 'The buttes are erosional remnants of wind-deposited sandstone sitting on Murray mudstone. Curiosity drilled at the foot of a butte at Quela (sols 1464 to 1468).'],
+  ['Why here', 'The buttes are erosional remnants of wind-deposited sandstone sitting on Murray mudstone. Curiosity drilled at the foot of a butte at Quela (drilled sols 1464 to 1468, rover parked nearby from sol 1455).'],
   ['Equipment', 'Camera with scale bar, compass and inclinometer, sample drill.'],
   ['Hazard', 'Fallen blocks at the butte base (obstacles, rockfall zone). The buttes also block the radio line of sight.'],
 ];
 const FACTS = [
-  ['Curiosity at Quela', 'sols 1455-1468', 'measured', 'MSL rover waypoints, NASA/JPL'],
+  ['Curiosity at Quela', 'parked 1455-1468, drilling 1464-1468', 'measured', 'MSL rover waypoints, NASA/JPL'],
   ['Marimba drill site', 'sols 1417-1427', 'measured', 'MSL rover waypoints, NASA/JPL'],
   ['Air temp, sol 1440', '-69 to +5 C', 'measured', 'REMS, NASA / CAB (INTA-CSIC)'],
-  ['One-way light time', '4-22 min', 'measured', 'Earth-Mars distance, NASA NTRS'],
+  ['One-way light time', '4-22 min', 'modelled', 'Computed from Earth-Mars distance over the cycle (NASA NTRS 20150019627)'],
 ];
 
 export function mountBriefing(root) {
