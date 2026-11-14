@@ -84,3 +84,6 @@ Relation: `col_1km = col_reg*5 - 700`, `row_1km = row_reg*5 - 1488` (cell corner
 python3 scripts/preprocess/build_regional.py   # HTTP Range read of 4000 DTM rows (~100 MB, cached in data/raw/regional_window.npy); needs the ortho JP2 from build_ortho.py (~1 min)
 ```
 Block mean: cells with under half valid sub-pixels are no-data. Grid cannot be centred on the crop: the DTM west edge (DTM col 0) cuts it, so it is shifted east.
+
+# Gale crater (step 1 crater view), `build_gale.py`
+`python3 scripts/preprocess/build_gale.py`: HTTP Range read (~11 MB, cached in `data/raw/gale/`) of MOLA MEGDR 128 px/deg topography `megt00n090hb.img` (NASA PDS Geosciences Node, public domain) -> `app/public/data/gale/gale_height.i16.bin` (464 x 464 int16 m above the MOLA areoid, 463 m/px, lon 136.0-139.625 E, lat -3.5625 to -7.1875, row 0 = north) and `gale.json` (grid, bounds, site pixels of Murray Buttes, Marias Pass, Pahrump Hills, Mount Sharp = highest cell of the central mound, credit).
