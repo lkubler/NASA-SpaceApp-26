@@ -41,7 +41,7 @@ for (const run of runs) {
   const shot = async (name) => {
     await page.waitForTimeout(350);
     const f = `${String(++shotN).padStart(2, '0')}-${name}.jpg`;
-    await page.screenshot({ path: out + f, type: 'jpeg', quality: 70 });
+    await page.screenshot({ path: out + f, type: 'jpeg', quality: 70, timeout: 120000 }); // software WebGL on a busy machine: the first capture of a 3D view can take long
     console.log(`  shot ${f}`);
   };
   const text = (sel) => page.locator(sel).first().innerText();
