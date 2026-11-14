@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { viewshed, routeShadows, HIDDEN, VISIBLE, UNKNOWN } from './comms.js';
+import { lineOfSight, bestRelay, viewshed, routeShadows, HIDDEN, VISIBLE, UNKNOWN } from './comms.js';
 
 function flat(w, h, cs = 1, z = 0) {
   return { width: w, height: h, cellSize_m: cs, data: new Float32Array(w * h).fill(z), noData: -9999 };
@@ -83,4 +83,23 @@ test('perf: 512x512 viewshed', () => {
   const ms = performance.now() - t;
   console.log(`viewshed 512x512: ${ms.toFixed(1)} ms`);
   assert.ok(ms < 2000);
+});
+
+test('lineOfSight: blocked by a ridge, clear on flat ground, symmetric', () => {
+  const W = 40, data = new Float32Array(W * 5);
+  for (let r = 0; r < 5; r++) data[r * W + 20] = 30; // 30 m wall
+  const hm = { width: W, height: 5, cellSize_m: 1, data };
+  assert.equal(lineOfSight(hm, { x: 5, y: 2.5 }, { x: 35, y: 2.5 }), false);
+  assert.equal(lineOfSight(hm, { x: 5, y: 2.5 }, { x: 15, y: 2.5 }), true);
+  assert.equal(lineOfSight(hm, { x: 35, y: 2.5 }, { x: 5, y: 2.5 }), false);
+});
+test('bestRelay picks the candidate with the shortest time out of contact and skips ones that cannot see the lander', () => {
+  const W = 40, data = new Float32Array(W * 5);
+  for (let r = 0; r < 5; r++) data[r * W + 20] = 30;
+  const hm = { width: W, height: 5, cellSize_m: 1, data };
+  const route = [{ x: 30, y: 2.5, from_s: 0, to_s: 0 }, { x: 35, y: 2.5, from_s: 10, to_s: 4000 }, { x: 8, y: 2.5, from_s: 4100, to_s: 4100 }];
+  const b = bestRelay(hm, route, [{ x: 3, y: 2.5 }, { x: 25, y: 2.5 }]);
+  assert.equal(b.x, 25); assert.equal(b.longest_s, 0);
+  const c = bestRelay(hm, route, [{ x: 3, y: 2.5 }, { x: 25, y: 2.5 }], { mustSee: { x: 8, y: 2.5 } });
+  assert.equal(c.x, 3); assert.ok(c.longest_s >= 4000); // far side is hidden for the whole station dwell
 });

@@ -19,8 +19,11 @@
 //   W body mass kg, L carried load kg, V m/s, G grade %, eta terrain factor,
 //   gs = g / 9.80665 (our extension, see below). The suit offset is added to P.
 // Sources and sanity numbers: research/sources-validity.md section 2.
-// Return path = same points reversed, so uphill and downhill swap.
+// Return cost: if a point carries returnKJ (best path home, map/home.js) it is used; otherwise the route
+// is assumed to be walked back reversed (uphill and downhill swap).
 // Module is ESM with no dependencies (works in Vite and `node --test`).
+
+import { WALK_SPEED_MS, speedMult } from './speed.js';
 
 export const G_EARTH = 9.80665; // m/s^2 [measured, standard gravity]
 
@@ -30,7 +33,7 @@ export const DEFAULTS = Object.freeze({
   suitMassKg: 0, // used only if suitMassCounts (see below)
   loadKg: 23, // 50 lbm tool/sample mass, NASA Mars sizing, Ogilvie et al. ICES-2026-127 [measured, NASA planning value]
   gravity: 3.71, // m/s^2, Mars surface [measured]
-  speedMs: 3.5 / 3.6, // 2.2 mph planning walkback speed, ICES-2026-127 slide 9 [measured, Apollo-derived]
+  speedMs: WALK_SPEED_MS, // level-ground walking speed (2.2 mph, ICES-2026-127 slide 9); slope changes it via model/speed.js [modelled]
   // Consumable capacity as energy: 8 h x 1200 BTU/hr planetary EVA sizing
   // average (ICES-2026-127) x 1.05506 kJ/BTU = ~10.1 MJ [modelled from NASA sizing figure].
   capacityKJ: 8 * 1200 * 1.05506,
@@ -111,13 +114,19 @@ export function metabolicRateW(gradePct, terrain, params) {
 // kJ of energy -> litres of O2 (via W_PER_ML_MIN).
 export const o2LitresFromKJ = (kJ) => (kJ * 1000) / W_PER_ML_MIN / 60 / 1000;
 
-// Cost of walking from a to b (b.terrain used); dx horizontal metres.
-function segment(dx, dz, terrain, o) {
-  if (!(dx > 0)) return { kJ: 0, P: metabolicRateW(0, terrain, o) };
-  const P = metabolicRateW((dz / dx) * 100, terrain, o);
-  const s = Math.hypot(dx, dz) / Math.max(o.speedMs, o.speedFloorMs);
-  return { kJ: (P * s) / 1000, P };
+// Cost of walking over a segment: dx horizontal metres, dz rise. Speed follows the shared slope model
+// (model/speed.js), so energy, time and the 3D walk agree. Returns {kJ, P (W), s (seconds)}.
+export function legCost(dx, dz, terrain, params) {
+  const o = params && params.gravityScale ? params : resolveParams(params);
+  const base = Math.max(o.speedMs, o.speedFloorMs);
+  if (!(dx > 0)) return { kJ: 0, P: metabolicRateW(0, terrain, o), s: 0 };
+  const deg = (Math.atan2(dz, dx) * 180) / Math.PI;
+  const V = Math.max(o.slopeSpeed === false ? base : base * speedMult(deg), o.speedFloorMs);
+  const P = metabolicRateW((dz / dx) * 100, terrain, { ...o, speedMs: V });
+  const s = Math.hypot(dx, dz) / V;
+  return { kJ: (P * s) / 1000, P, s };
 }
+const segment = legCost;
 
 /**
  * @param {{dist_m:number, elev_m:number, terrain?:string, stationS?:number, time_s?:number}[]} points ordered, dist_m increasing.
@@ -131,7 +140,10 @@ function segment(dx, dz, terrain, o) {
  *              remainingFraction (0..1 of capacity)}
  *  Remaining/margin at a station point already include the work done there, so a turn-back
  *  index on a station means: not enough left to do this station and still walk home.
- *  turnBackIndex: first index where margin < 0, or -1 if never.
+ *  turnBackIndex: the LAST point that is still safe (remaining >= return + buffer), or -1 if the plan
+ *  never breaks. turnBack = {index, kind: 'station'|'walk', workS (station only: seconds of work still
+ *  allowed on arrival), leaveElapsed_s (clock at which to leave), returnKJ, returnS} or null.
+ *  A point may carry returnKJ / returnS = best path home from there (map/home.js).
  */
 export function computeReserve(points, params = {}) {
   const o = resolveParams(params);
@@ -141,23 +153,25 @@ export function computeReserve(points, params = {}) {
   const rate = new Array(n).fill(0);
   const stKJ = points.map((p) => ((p.stationS || 0) * o.stationRateW) / 1000);
   const stT = new Array(n).fill(0);
+  const walkT = new Array(n).fill(0);
   if (n) { rate[0] = metabolicRateW(0, points[0].terrain, o); used[0] = stKJ[0]; stT[0] = points[0].stationS || 0; }
   for (let i = 1; i < n; i++) {
     const a = points[i - 1], b = points[i];
     const dx = b.dist_m - a.dist_m, dz = b.elev_m - a.elev_m;
     const fwd = segment(dx, dz, b.terrain, o);
     used[i] = used[i - 1] + fwd.kJ + stKJ[i];
+    walkT[i] = walkT[i - 1] + fwd.s;
     stT[i] = stT[i - 1] + (b.stationS || 0);
     rate[i] = fwd.P;
     back[i] = back[i - 1] + segment(dx, -dz, b.terrain, o).kJ; // reversed direction
   }
+  points.forEach((p, i) => { if (Number.isFinite(p.returnKJ)) back[i] = p.returnKJ; });
   const bufferKJ = o.bufferFrac * o.capacityKJ;
-  let turnBackIndex = -1;
+  const elapsed = points.map((p, i) => (p.time_s ?? (p.dist_m - points[0].dist_m) / Math.max(o.speedMs, o.speedFloorMs)) + stT[i]);
   const out = points.map((p, i) => {
     const remainingKJ = o.capacityKJ - used[i];
+    const arriveKJ = remainingKJ + stKJ[i];
     const marginKJ = remainingKJ - back[i] - bufferKJ;
-    const mustTurnBack = marginKJ < 0;
-    if (mustTurnBack && turnBackIndex < 0) turnBackIndex = i;
     return {
       dist_m: p.dist_m,
       metabolicW: rate[i],
@@ -166,12 +180,32 @@ export function computeReserve(points, params = {}) {
       remainingKJ,
       remainingO2L: o2LitresFromKJ(remainingKJ),
       returnCostKJ: back[i],
+      returnS: p.returnS,
       marginKJ,
-      mustTurnBack,
+      marginArriveKJ: arriveKJ - back[i] - bufferKJ,
+      mustTurnBack: marginKJ < 0,
       stationKJ: stKJ[i],
-      elapsed_s: (p.time_s ?? (p.dist_m - points[0].dist_m) / Math.max(o.speedMs, o.speedFloorMs)) + stT[i],
+      elapsed_s: elapsed[i],
       remainingFraction: Math.max(0, remainingKJ / o.capacityKJ),
     };
   });
-  return { points: out, turnBackIndex, bufferKJ, capacityKJ: o.capacityKJ, params: o };
+  // Turn-back = the last safe moment. Walking: the last point whose margin is still >= 0. At a station:
+  // you may arrive, but only work until the margin (energy above return + buffer) is used up.
+  let turnBackIndex = -1, turnBack = null;
+  for (let i = 0; i < n; i++) {
+    const q = out[i];
+    if (q.marginArriveKJ < 0) {
+      const j = Math.max(0, i - 1);
+      turnBackIndex = j;
+      turnBack = { index: j, kind: 'walk', workS: 0, leaveElapsed_s: out[j].elapsed_s, returnKJ: out[j].returnCostKJ, returnS: out[j].returnS };
+      break;
+    }
+    if (q.marginKJ < 0) {
+      const workS = Math.max(0, (q.marginArriveKJ * 1000) / o.stationRateW);
+      turnBackIndex = i;
+      turnBack = { index: i, kind: 'station', workS, leaveElapsed_s: q.elapsed_s - (points[i].stationS || 0) + workS, returnKJ: q.returnCostKJ, returnS: q.returnS };
+      break;
+    }
+  }
+  return { points: out, turnBackIndex, turnBack, bufferKJ, capacityKJ: o.capacityKJ, params: o };
 }

@@ -6,6 +6,10 @@
 // Coordinates x,y are in metres from the grid's top-left corner (cell i = floor(x/cellSize)).
 // Visibility codes: 0 hidden, 1 visible, 2 unknown (no-data; never treated as blocking).
 
+// The one name for the comms source, used on the map, in Walk toasts and on the Sources page.
+// Geometric line of sight to a relay rover parked on high ground; the lander is not the source.
+export const COMMS_SOURCE_NAME = 'relay rover';
+
 export const HIDDEN = 0, VISIBLE = 1, UNKNOWN = 2;
 export const MARS_RADIUS_M = 3389500;
 // ASSUMPTION: a comms shadow longer than this is flagged (configurable).
@@ -124,4 +128,48 @@ export function routeShadows(route, visibility, opts) {
   }
   if (start !== null && route.length) close(route[route.length - 1].time_s);
   return segs;
+}
+
+/**
+ * Straight line of sight between two points over the heightmap (same rule as viewshed(): geometric, with
+ * Mars curvature, no-data never blocks). x,y metres; heights are above ground.
+ */
+export function lineOfSight(hm, a, b, aboveA = 2, aboveB = 1.8) {
+  const { width: W, height: H, cellSize_m: cs } = hm;
+  const ax = a.x / cs - 0.5, ay = a.y / cs - 0.5, bx = b.x / cs - 0.5, by = b.y / cs - 0.5;
+  const cl = (v, m) => Math.min(Math.max(v, 0), m - 1);
+  const za = sample(hm, cl(ax, W), cl(ay, H)), zb = sample(hm, cl(bx, W), cl(by, H));
+  if (Number.isNaN(za) || Number.isNaN(zb)) return true;
+  const ea = za + aboveA, eb = zb + aboveB, k = 1 / (2 * MARS_RADIUS_M);
+  const len = Math.hypot(bx - ax, by - ay) * cs, n = Math.max(2, Math.ceil(len / (cs * 0.5)));
+  for (let s = 1; s < n; s++) {
+    const t = s / n, d = t * len, z = sample(hm, cl(ax + (bx - ax) * t, W), cl(ay + (by - ay) * t, H));
+    if (Number.isNaN(z)) continue;
+    const ray = ea + (eb - ea) * t - k * d * (len - d); // straight line, bulged by curvature
+    if (z > ray) return false;
+  }
+  return true;
+}
+
+/**
+ * Pick the relay position that keeps the route in contact best. samples = [{x, y, from_s, to_s}] along the
+ * route in order (from_s/to_s = clock when the crew arrives at / leaves that point; a station has to_s > from_s).
+ * Score: shortest "longest time out of contact", then least total time out of contact. A candidate must see
+ * `mustSee` (the lander) or it is skipped: the lander cannot sit in its own shadow. Candidates are tried in
+ * order; ties go to the earlier one (put the nearest first). Returns {x, y, longest_s, total_s} or null.
+ */
+export function bestRelay(hm, samples, candidates, { antennaHeight_m = 2, targetHeight_m = 1.8, mustSee = null } = {}) {
+  let best = null;
+  for (const c of candidates) {
+    if (mustSee && !lineOfSight(hm, c, mustSee, antennaHeight_m, targetHeight_m)) continue;
+    let longest = 0, total = 0, a = null, last = null;
+    const close = () => { const d = last - a; longest = Math.max(longest, d); total += d; a = null; };
+    for (const p of samples) {
+      if (!lineOfSight(hm, c, p, antennaHeight_m, targetHeight_m)) { if (a === null) a = p.from_s; last = p.to_s; }
+      else if (a !== null) close();
+    }
+    if (a !== null) close();
+    if (!best || longest < best.longest_s || (longest === best.longest_s && total < best.total_s)) best = { x: c.x, y: c.y, longest_s: longest, total_s: total };
+  }
+  return best;
 }
