@@ -85,7 +85,8 @@ export default {
     //   free look  no lock (not clicked yet, refused, released with esc, or the lock check below tripped): the
     //              plain cursor movement over the walk view (clientX/Y differences) turns it, no button held;
     //              while the cursor rests in an edge zone the view keeps turning that way at a steady rate, so
-    //              it turns all the way round both ways although the cursor stops at the screen edge
+    //              it turns all the way round both ways although the cursor stops at the screen edge; it also
+    //              keeps turning after the cursor left the window over its left or right side (onRootLeave)
     //   drag       no lock, button held: the cursor's way turns the view, also beyond the walk view
     const keys = new Set();
     let escArmedUntil = 0, unlockedAt = 0;
@@ -99,9 +100,10 @@ export default {
     const free = { last: null, edgeX: 0, edgeY: 0, armed: false };
     // A real lock holds the cursor still (clientX/Y stay put). Where the cursor keeps moving under the lock, the
     // browser does not hold it (movementX/Y may then come as the offset from the lock point, so the view turns
-    // one way only, and the hidden cursor stops at the screen edge): the lock is released for this walk and the
-    // free look takes over. The offsets are not turned back into steps by differencing: they stop at the
-    // screen edge as well, so only a visible cursor with edge zones turns the view all the way round.
+    // one way only, and the hidden cursor stops at the screen edge): the lock is released and the free look
+    // takes over until the next click on the view, which tries the lock again. The offsets are not turned back
+    // into steps by differencing: they stop at the screen edge as well, so only a visible cursor with edge
+    // zones turns the view all the way round.
     // A second check: movementX/Y that look like offsets, not steps (lockOffsetEvents events in a row, all the
     // same way and each at least lockOffsetPx) also release the lock. Between the lock request and the lock the
     // cursor's own way does not turn the view (the cursor may be moved there by the browser, not the visitor).
@@ -133,6 +135,20 @@ export default {
     };
     const freeOut = () => { free.last = null; free.edgeX = free.edgeY = 0; };
     const onBlur = () => { keys.clear(); shift.reset(); drag.on = false; freeOut(); };
+    // The cursor leaves the window. Over the left or right side in free look, straight from the walk view: the
+    // view keeps turning that way at the edge speed, as if the cursor rested in that edge zone (a window that
+    // does not reach the screen edge, or a second monitor beside it, does not hold the cursor in the zone).
+    // It stops when the cursor comes back (the next move sets the edge state anew) or the window loses focus.
+    // Over the top or bottom, during a drag, or from anything but the walk view: no turning, as before.
+    const onRootLeave = (e) => {
+      const fromView = !!free.last; // the last move was over the walk view
+      freeOut();
+      if (!fromView || isLocked() || drag.on || performance.now() < lk.pendingUntil) return;
+      const side = e.clientX <= 1 ? -1 : e.clientX >= window.innerWidth - 2 ? 1 : 0;
+      if (!side) return;
+      free.edgeX = side;
+      free.armed = true; // the visitor moved the cursor out themselves
+    };
     const onMouseMove = (e) => {
       if (dbg) { dbg.mx = e.movementX; dbg.my = e.movementY; dbg.cx = e.clientX; dbg.cy = e.clientY; dbg.n++; }
       if (isLocked()) {
@@ -196,7 +212,11 @@ export default {
       e.preventDefault();
       drag.on = true; drag.moved = 0;
       if (!isLocked()) free.last = { x: e.clientX, y: e.clientY };
-      if (!mode.aim) requestLock(); // in aim mode the click jumps: no lock request on it
+      if (mode.aim) return; // in aim mode the click jumps: no lock request on it
+      // the lock check tripped earlier: this click tries the lock once more with the check started anew (one
+      // request per click; where the lock really does not hold the cursor the check trips again)
+      if (lk.broken && !isLocked()) { lk.broken = ''; lk.last = null; lk.moved = 0; lk.run = 0; lk.runX = lk.runY = 0; }
+      requestLock();
     };
     const onMouseUp = (e) => {
       if (e.button !== 0 || !drag.on) return;
@@ -217,7 +237,7 @@ export default {
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
     document.addEventListener('mousemove', onMouseMove);
-    root.addEventListener('mouseleave', freeOut);
+    root.addEventListener('mouseleave', onRootLeave);
     window.addEventListener('mouseup', onMouseUp);
     document.addEventListener('pointerlockchange', onLockChange);
     document.addEventListener('pointerlockerror', onLockError);
@@ -227,7 +247,7 @@ export default {
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
       document.removeEventListener('mousemove', onMouseMove);
-      root.removeEventListener('mouseleave', freeOut);
+      root.removeEventListener('mouseleave', onRootLeave);
       window.removeEventListener('mouseup', onMouseUp);
       document.removeEventListener('pointerlockchange', onLockChange);
       document.removeEventListener('pointerlockerror', onLockError);
