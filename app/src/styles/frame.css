@@ -16,24 +16,29 @@
 .header--minimal .header__left { display: none; }
 .header--minimal { justify-content: flex-end; height: auto; top: 10px; padding: 0 16px; }
 
-/* step bar: small, shows done, current, next */
+/* step bar as a route line: waypoints on a line, the walked part cyan, the current one a glowing marker */
 .stepbar { position: relative; isolation: isolate; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-3); white-space: nowrap; transition: opacity 600ms ease-out; }
-.stepbar__list { display: flex; align-items: center; gap: 0.55em; }
-.stepbar__item { display: inline-flex; align-items: center; gap: 0.45em; color: inherit; padding: 0.2em 0; }
-.stepbar__n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; border: 1px solid currentColor; }
-.stepbar__item.is-done { color: var(--text-2); }
-.stepbar__item.is-done .stepbar__n { border-color: var(--accent); color: var(--accent); }
+.stepbar__list { position: relative; z-index: 1; display: flex; align-items: flex-start; gap: 1.6em; }
+.stepbar__item { display: inline-flex; flex-direction: column; align-items: center; gap: 0.55em; color: inherit; padding: 0.2em 0; }
+.stepbar__n { width: 9px; height: 9px; border-radius: 50%; background: #000; border: 1px solid var(--text-3); transition: background var(--fade), border-color var(--fade); }
+.stepbar__item.is-done { color: var(--accent); }
+.stepbar__item.is-done .stepbar__n { background: var(--accent); border-color: var(--accent); }
 .stepbar__item.is-current { color: var(--text); }
 .stepbar__item.is-current .stepbar__n { border-color: var(--text); }
-/* the active step's marker: a white disc over the current number (difference blend: the number shows dark on
-   it), sliding to the new step on every step change */
+.stepbar__item:not(:disabled):not(.is-current):hover .stepbar__t { text-decoration: underline; text-underline-offset: 3px; }
+.stepbar__item:not(:disabled):not(.is-current):hover .stepbar__n { border-color: var(--text-2); }
+.stepbar__item.is-done:not(:disabled):hover .stepbar__n { border-color: var(--accent); }
+/* the line from the first to the last waypoint, and its walked part up to the current step */
+.stepbar__track, .stepbar__fill { position: absolute; z-index: 0; height: 1px; margin-top: -0.5px; pointer-events: none; }
+.stepbar__track { background: var(--text-3); opacity: 0.7; }
+.stepbar__fill { background: var(--accent); transition: width 320ms cubic-bezier(0.3, 0.7, 0.2, 1); }
+/* the current step's marker: a white glowing dot that slides to the new step on every step change */
 .stepbar__marker {
-  position: absolute; left: 0; top: 0; z-index: 1; border-radius: 50%; background: #fff; mix-blend-mode: difference;
+  position: absolute; left: 0; top: 0; z-index: 2; width: 11px; height: 11px; margin: -5.5px 0 0 -5.5px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12), 0 0 10px rgba(79, 203, 255, 0.75);
   pointer-events: none; transition: transform 320ms cubic-bezier(0.3, 0.7, 0.2, 1);
 }
-.stepbar__marker.is-still { transition: none; }
-.stepbar__item:not(:disabled):not(.is-current):hover .stepbar__t { text-decoration: underline; text-underline-offset: 3px; }
-.stepbar__sep { color: var(--text-3); opacity: 0.6; }
+.stepbar__marker.is-still, .stepbar__fill.is-still { transition: none; }
 
 /* split layout for steps 1 to 3: map left, panel right, main button bottom right of the panel */
 .split {
@@ -171,5 +176,5 @@
   .step--in, .step--in.step--back, .step--walk.step--in { animation: fade-in 150ms linear backwards; }
   .step--mission.step--in { animation: none; }
   .step--in [data-enter], .step--in .dbf__table tbody tr { animation: none; }
-  .stepbar__marker { transition: none; }
+  .stepbar__marker, .stepbar__fill { transition: none; }
 }
