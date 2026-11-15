@@ -6,17 +6,14 @@
 // actual for the whole round, the whole round and the stops in order on the map; one stop: as before.
 import './style.css';
 import {
-  h, s, headline, lede, bigNumber, pillButton, mapPanel, legend, checkItem, labelTag, marker,
+  h, s, headline, lede, bigNumber, pillButton, mapPanel, legend, labelTag, marker,
   fmtDistance, fmtDuration,
 } from '../../ui/index.js';
 import { ROVER, spotLabel, spotNumber, ENVIRONMENT, DEMO, RULES, stopsOf, stopOrdinal } from '../../core/index.js';
 import { fixtureWalk } from './fixtures.js';
+import { paintGround, composeGround, hatchPattern } from '../2-plan/ground.js';
 
 const NO_DATA = 'no data';
-const PHOTOS_URL = 'data/murray/photos/';
-// Photo for the report when the walk log has none: Curiosity's own drill sample at the foot of a
-// butte in Murray Buttes (credits.json). Never mb2.jpg (an archive portrait, not a Mars image).
-const REPORT_PHOTO_ID = 'quela_drill';
 
 let root = null;
 let fixtureUsed = false;
@@ -47,12 +44,6 @@ const T = {
 const tag = (k) => labelTag(T[k]);
 
 // ---------- helpers ----------
-function lmst(tS) {
-  const start = ENVIRONMENT.evaStartLmstH.value, sol = ENVIRONMENT.solSeconds.value;
-  const hrs = (((start + (tS / sol) * 24) % 24) + 24) % 24;
-  const hh = Math.floor(hrs), mm = Math.floor((hrs - hh) * 60);
-  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-}
 const DIRS = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
 /** "14 m south-east of the rover" for a scene point. */
 function fromRover(p) {
@@ -92,13 +83,7 @@ function brokenOf(walk, plan) {
 const brokenName = (b) => b.name + (b.count > 1 ? ` (${b.count}×)` : b.carried ? ' (in the plan)' : '');
 function spotName(id) { return (id && spotLabel(id)) || id || NO_DATA; }
 // the map opens framed on the walk (its "reset" view): margin around it, at most this zoom (view layout only)
-const HOME_MAX_ZOOM = 3, HOME_MARGIN = 0.18, MARKER_SIZE = 1.25, FOCUS_ZOOM = 2.5;
-
-let _photos = null;
-function loadPhotos() {
-  if (!_photos) _photos = fetch(PHOTOS_URL + 'credits.json').then((r) => (r.ok ? r.json() : null)).catch(() => null);
-  return _photos;
-}
+const HOME_MAX_ZOOM = 3, HOME_MARGIN = 0.18, FOCUS_ZOOM = 2.5;
 
 // ---------- the step ----------
 export default {
@@ -140,7 +125,16 @@ export default {
     const roundPts = route ? (route.legs ? route.legs.flatMap((l) => l.points) : [...route.out.points, ...route.back.points]) : [];
 
     // ----- map: planned route and walked path together -----
-    const map = mapPanel(terrain, { steep: true });
+    const map = mapPanel(terrain, { steep: true, patterns: { steep: hatchPattern }, patternPx: 0.8, fade: true, movable: false, resetButton: false, zoomButtons: false });
+    // the ground as in Plan and Go / no-go: the top-down render of the walk terrain (shared, rendered once)
+    const cv = map.canvas.getContext('2d');
+    const relief = cv.getImageData(0, 0, map.canvas.width, map.canvas.height);
+    paintGround(terrain, map.canvas.width).then((img) => {
+      if (root !== el || !img) return;
+      composeGround(cv, relief, img);
+      map.redraw();
+    }).catch((e) => console.warn('top-down terrain render failed, keeping the relief', e))
+      .finally(() => map.reveal());
     if (route) map.path(roundPts, { style: 'foot' });
     if (walk && walk.track && walk.track.length) map.path(walk.track, { style: 'walked' });
     if (empty && num(empty.x)) map.path([empty, ROVER], { style: 'walked' }).setAttribute('class', 'map-path dbf-gap');
@@ -177,6 +171,9 @@ export default {
     // after layout: markers drawn fully inside the map and warning markers off the spot marker (a leader line
     // joins a moved marker to its real place), then the labels placed clear of the markers
     map.whenReady(() => {
+      // markers and labels at a readable size on this smaller map (the walk is shown close in)
+      const W = map.el.getBoundingClientRect().width;
+      if (W) map.setMarkerScale(Math.max(1, (0.42 * window.innerWidth) / W));
       if (spotG) keepInside(map, spotG);
       for (const g of stopGs) keepInside(map, g);
       for (const g of wms) { keepInside(map, g); if (spotG) moveOff(map, g, spotG); for (const sg of stopGs) moveOff(map, g, sg); }
@@ -185,7 +182,6 @@ export default {
         if (lbl) placeClear(map.svg, lbl);
       }
     });
-    map.setMarkerScale(MARKER_SIZE);
     map.setHome([
       ...roundPts,
       ...((walk && walk.track) || []), ...warnings, ROVER, min, empty,
@@ -198,14 +194,22 @@ export default {
     // ----- headline and outcome sentence -----
     const reserveHome = walk && walk.reserveAtHomeS;
     let sentence;
-    const reached = num(reserveHome) ? `You reached the rover with ${fmtDuration(reserveHome)} left in the suit` : `You reached the rover (reserve: ${NO_DATA})`;
+    const reached = num(reserveHome) ? ['You reached the rover with ', h('b.dbf__hi', fmtDuration(reserveHome)), ' left in the suit'] : [`You reached the rover (reserve: ${NO_DATA})`];
     if (!walk) sentence = ['No walk log: ', NO_DATA, '.'];
-    else if (outcome === 'home') sentence = [`${reached} and kept every rule. `, tag('walkReserve')];
-    else if (outcome === 'home-broken') sentence = [`${reached}, but broke ${broken.length > 1 ? broken.length + ' rules' : 'a rule'}: ${broken.map(brokenName).join(', ') || NO_DATA}. `, tag('walkReserve')];
+    else if (outcome === 'home') sentence = [...reached, ' and kept every rule. ', tag('walkReserve')];
+    else if (outcome === 'home-broken') sentence = [...reached, `, but broke ${broken.length > 1 ? broken.length + ' rules' : 'a rule'}: `, h('b.dbf__bad', broken.map(brokenName).join(', ') || NO_DATA), '. ', tag('walkReserve')];
     else if (outcome === 'not-returned' && empty) sentence = [`The suit ran out ${fromRover(empty)}. `, tag('suitEmpty')];
     else if (outcome === 'not-returned') sentence = [stopAt ? `You ended the mission ${fromRover(stopAt)}, before reaching it. ` : `You did not reach the rover (where: ${NO_DATA}). `, tag('ended')];
     else sentence = ['The walk has not ended: ', NO_DATA, '.'];
     if (outcome === 'not-returned' && broken.length) sentence.push(` Broke ${broken.length > 1 ? broken.length + ' rules' : 'a rule'}: ${broken.map(brokenName).join(', ')}.`);
+    // the request from step 1: done or not, and when Earth hears it
+    const sample = walk && walk.sample;
+    const delayMin = ENVIRONMENT.signalDelayNowMin;
+    if (walk && route) {
+      const got = several ? taken > 0 : !!sample;
+      const what = several ? [h(got ? 'b.dbf__hi' : 'b.dbf__bad', `${taken} of ${stops.length}`), ' requested samples were taken'] : ['The requested sample was ', h(got ? 'b.dbf__hi' : 'b.dbf__bad', got ? 'taken' : 'not taken')];
+      sentence.push(' ', ...what, got && home ? `. Your report reaches Earth in ${delayMin.value} min. ` : '. ', got && home ? labelTag(delayMin) : tag(several ? 'samples' : 'spot'));
+    }
 
     // ----- big numbers -----
     const nums = h('div.dbf__nums');
@@ -228,14 +232,18 @@ export default {
         stopAt ? `${fromRover(stopAt)}, ${dur(stopAt.tS)} into the excursion; the rover was ${dist(stopAt.roverDistanceM)} away. ` : `Where: ${NO_DATA}. `,
         tag(stopTag))) : null;
 
-    // ----- planned next to actual -----
-    const sample = walk && walk.sample;
-    const sampledStops = several ? stops.filter((st, k) => stopState(st, k) === 'taken') : [];
+    // ----- planned next to actual, with the difference -----
     const cell = (value, k) => h('td.dbf__td', h('span.mono', value), ' ', k ? tag(k) : null);
     const cellWrap = (value, k) => { const c = cell(value, k); c.classList.add('dbf__td--wrap'); return c; };
-    const tr = (name, a, b) => h('tr', h('th.dbf__th', name), a, b);
+    // actual minus planned, as shown (a difference that rounds to zero reads ±0)
+    const diff = (a, b, f) => {
+      if (!num(a) || !num(b)) return h('td.dbf__td.dbf__diff');
+      const txt = f(Math.abs(b - a)), zero = /^0\D/.test(txt);
+      return h('td.dbf__td.dbf__diff', h('span.mono', `${zero ? '±' : b > a ? '+' : '−'}${txt}`));
+    };
+    const tr = (name, a, b, d = h('td.dbf__td.dbf__diff')) => h('tr', h('th.dbf__th', name), a, b, d);
     const table = h('table.dbf__table',
-      h('thead', h('tr', h('th'), h('th.dbf__col', 'Planned'), h('th.dbf__col', 'Actual'))),
+      h('thead', h('tr', h('th'), h('th.dbf__col', 'Planned'), h('th.dbf__col', 'Actual'), h('th'))),
       h('tbody',
         several
           ? tr('Samples',
@@ -243,20 +251,20 @@ export default {
               h('div.dbf__stops.mono', stops.map((st, k) => h('div', { title: spotName(st.id) }, h('b', stopOrdinal(k + 1)), ` spot ${spotNumber(st.id) || '·'}`)))),
             h('td.dbf__td', h('span.mono', walk ? `${taken} of ${stops.length}` : NO_DATA), ' ', tag('samples'),
               walk ? h('div.dbf__stops.mono', stops.map((st, k) => h(`div.is-${stopState(st, k).replace(' ', '-')}`, stopState(st, k)))) : null))
-          : tr('Sample', cell(route ? spotName(route.spotId) : NO_DATA, route ? 'spot' : null), cell(walk ? (sample ? 'taken' : 'not taken') : NO_DATA, null)),
-        tr('Distance', cell(dist(plan && plan.distanceM), 'planDistance'), cell(dist(walk && walk.distanceM), 'walkDistance')),
-        tr('Time', cell(dur(plan && plan.timeS), 'planTime'), cell(dur(walk && walk.tS), 'walkTime')),
-        tr('Reserve on return', cell(dur(plan && plan.reserveS), 'planReserve'),
-          outcome === 'not-returned' ? cellWrap('not returned', stopTag) : cell(dur(reserveHome), 'walkReserve')),
+          : tr('Sample', cell(route ? spotName(route.spotId) : NO_DATA, route ? 'spot' : null),
+            (() => { const c = cell(walk ? (sample ? 'taken' : 'not taken') : NO_DATA, walk ? 'samples' : null); if (walk && !sample) c.classList.add('is-bad'); return c; })()),
+        tr('Distance', cell(dist(plan && plan.distanceM), 'planDistance'), cell(dist(walk && walk.distanceM), 'walkDistance'), diff(plan && plan.distanceM, walk && walk.distanceM, fmtDistance)),
+        tr('Time', cell(dur(plan && plan.timeS), 'planTime'), cell(dur(walk && walk.tS), 'walkTime'), diff(plan && plan.timeS, walk && walk.tS, fmtDuration)),
+        outcome === 'not-returned'
+          ? tr('Reserve on return', cell(dur(plan && plan.reserveS), 'planReserve'), cellWrap('not returned', stopTag))
+          : tr('Reserve on return', cell(dur(plan && plan.reserveS), 'planReserve'), cell(dur(reserveHome), 'walkReserve'), diff(plan && plan.reserveS, reserveHome, fmtDuration)),
         tr('Time in radio shadow', cell(dur(plan && plan.radioShadowS), 'planShadow'), cell(dur(walk && walk.radioShadowS), 'walkShadow')),
       ));
     const pad = Math.round((RULES.walkBackRateFactor.value - 1) * 100);
-    // the way-home pad only explains a reserve at the rover: not shown when the crew did not return
-    const why = !home ? null : h('div.dbf__why', `The plan counts the way home at a ${pad} % higher work rate, so you can reach the rover with more reserve than planned. `, labelTag(RULES.walkBackRateFactor));
-    const demo = h('div.dbf__demo', `Demo time ${DEMO.timeFactor.value}${DEMO.timeFactor.unit}: times are suit time. `, labelTag(DEMO.timeFactor));
-
-    // ----- report to Earth -----
-    const report = reportCard(ctx, { sample, walk, outcome, sampled: several ? sampledStops.map((st) => ({ ...st, w: wStops.find((x) => x.id === st.id) })) : null });
+    // the way-home pad only explains a reserve at the rover: not said when the crew did not return
+    const note = h('div.dbf__note',
+      home ? `The plan counts the way home at a ${pad} % higher work rate, so you return with more reserve than planned. ` : '',
+      `Demo time ${DEMO.timeFactor.value}${DEMO.timeFactor.unit}, times are suit time. `, labelTag(home ? RULES.walkBackRateFactor : DEMO.timeFactor));
 
     // ----- warnings list -----
     const wlist = h('div.dbf__warn',
@@ -283,29 +291,6 @@ export default {
       map.centreOn(w.x, w.z, { minK: FOCUS_ZOOM });
     }
 
-    // ----- checks: each rule kept or broken on the walk -----
-    const checks = h('div.dbf__checks');
-    const rules = plan && plan.checks ? plan.checks : [];
-    const usedBroken = new Set();
-    for (const c of rules) {
-      if (c.id === 'radio') {
-        const s = walk && walk.radioShadowS;
-        checks.append(checkItem({ text: c.name, status: num(s) && s > 0 ? 'caution' : 'ok', detail: dur(s), tag: T.walkShadow }));
-        continue;
-      }
-      const b = broken.find((x) => x.id === c.id || x.name === c.name);
-      if (b) usedBroken.add(b);
-      // way home: broken only when the suit ran out before the rover; a mission ended with esc away from
-      // the rover is the "ended early" outcome, not a broken rule; home is home however the walk ended
-      const lostWay = c.id === 'wayHome' && outcome === 'not-returned' && !!empty;
-      const endedEarly = c.id === 'wayHome' && outcome === 'not-returned' && !empty;
-      const status = b || lostWay ? 'broken' : endedEarly ? 'caution' : 'ok';
-      const where = b ? fromRover(b) : lostWay && stopAt ? fromRover(stopAt) : endedEarly ? `ended early, ${stopAt ? fromRover(stopAt) : NO_DATA}` : '';
-      const times = b && b.count > 1 ? ` · ${b.count}×` : '';
-      checks.append(checkItem({ text: c.name, status, detail: where + times + (b && b.carried ? ' (in the plan)' : ''), tag: where && where !== NO_DATA ? T.where : null }));
-    }
-    for (const b of broken) if (!usedBroken.has(b)) checks.append(checkItem({ text: b.name, status: 'broken', detail: fromRover(b) + (b.count > 1 ? ` · ${b.count}×` : ''), tag: T.where }));
-
     // ----- main button -----
     const btn = pillButton({
       text: 'New mission', arrow: true,
@@ -317,24 +302,19 @@ export default {
       },
     });
 
-    // no sample photo: the lower block is short, so the left column spreads its blocks over the height
-    el.append(h(sample ? 'div.dbf' : 'div.dbf.dbf--short',
+    el.append(h('div.dbf',
       h('section.dbf__main',
-        headline(home ? 'Back home.' : 'Not returned.', { size: 'hero' }),
+        headline(home ? 'Back at base.' : 'Not returned.', { size: 'hero' }),
         lede(...sentence),
         lostBox,
         nums,
-        h('div.dbf__lower', h('div.dbf__tablewrap', table, why, demo), report)),
-      h('aside.dbf__side',
-        map.el,
-        legend(legendItems),
+        h('div.dbf__tablewrap', table),
         wlist),
-      h('footer.dbf__foot',
-        h('div.dbf__foot-left', h('div.dbf__foot-title', 'Rules on the walk'), checks),
-        btn),
+      h('aside.dbf__side', map.el, legend(legendItems)),
+      h('footer.dbf__foot', note, btn),
     ));
     // x-transitions: entry order of the main blocks (styles/frame.css [data-enter])
-    [['.dbf__main > .headline', 1], ['.dbf__nums', 2], ['.dbf__lower', 3], ['.dbf__side', 3], ['.dbf__foot', 4]]
+    [['.dbf__main > .headline', 1], ['.dbf__nums', 2], ['.dbf__tablewrap', 3], ['.dbf__side', 3], ['.dbf__warn', 4], ['.dbf__foot', 4]]
       .forEach(([q, k]) => { const b = el.querySelector(q); if (b) b.dataset.enter = String(k); });
   },
 
@@ -391,69 +371,4 @@ function placeClear(svg, lbl) {
     if (!hits(lbl.getBoundingClientRect())) return;
   }
   lbl.setAttribute('text-anchor', 'start'); lbl.setAttribute('x', '5'); lbl.setAttribute('y', '1.6');
-}
-
-function reportCard(ctx, { sample, walk, outcome, sampled = null }) {
-  const photoBox = h('div.dbf__photo');
-  const status = h('div.dbf__sent');
-  const sendBtn = h('button.dbf__send', { type: 'button' }, 'Send report');
-  const delay = ENVIRONMENT.signalDelayNowMin;
-  sendBtn.addEventListener('click', () => {
-    sendBtn.disabled = true;
-    sendBtn.textContent = 'Report sent';
-    const at = walk && num(walk.tS) ? `Sent ${lmst(walk.tS)} local Mars time. ` : '';
-    status.replaceChildren(h('span', `${at || 'Sent. '}On its way: ${delay.value} ${delay.unit} one-way signal delay `), labelTag(delay));
-    status.classList.add('fade-in');
-  });
-
-  // a round: the stops sampled, in plan order, and when the last sample was taken
-  const last = sampled && sampled.length ? sampled.reduce((a, b) => ((b.w && b.w.tS) > (a.w && a.w.tS) ? b : a)) : null;
-  const lines = sampled
-    ? (sampled.length ? [
-      h('div.dbf__rrow', h('span.muted', sampled.length > 1 ? 'Spots ' : 'Spot '), sampled.map((st) => spotName(st.id)).join(', '), ' ', tag('spot')),
-      h('div.dbf__rrow', h('span.muted', 'Time '),
-        last && num(last.w && last.w.tS) ? `${lmst(last.w.tS)} local Mars time, ${fmtDuration(last.w.tS)} into the excursion${sampled.length > 1 ? ' (last sample)' : ''} ` : NO_DATA + ' ',
-        last && num(last.w && last.w.tS) ? labelTag(ENVIRONMENT.evaStartLmstH) : null),
-    ] : [h('div.dbf__rrow', h('span.muted', 'Samples '), walk ? 'none taken' : NO_DATA)])
-    : sample
-    ? [
-      h('div.dbf__rrow', h('span.muted', 'Spot '), spotName(sample.spotId), ' ', tag('spot')),
-      h('div.dbf__rrow', h('span.muted', 'Time '),
-        num(sample.tS) ? `${lmst(sample.tS)} local Mars time, ${fmtDuration(sample.tS)} into the excursion ` : NO_DATA + ' ',
-        num(sample.tS) ? labelTag(ENVIRONMENT.evaStartLmstH) : null),
-    ]
-    : [h('div.dbf__rrow', h('span.muted', 'Sample '), walk ? 'not taken' : NO_DATA)];
-
-  const textBox = h('div.dbf__rtext', ...lines);
-  if (sample) {
-    const own = sample.photo; // the walk may log the photo it showed at the spot
-    loadPhotos().then((data) => {
-      const p = own ? { file: String(own).replace(/^.*photos\//, 'photos/'), title: sample.photoTitle || '', credit: sample.photoCredit || 'NASA/JPL-Caltech', camera: sample.photoMeta || '', page: sample.photoUrl || '' }
-        : data && data.photos && data.photos.find((x) => x.id === REPORT_PHOTO_ID);
-      if (!p || /mb2\.jpg$/.test(p.file || '')) return; // no fitting photo: none
-      const src = PHOTOS_URL + String(p.file).replace(/^photos\//, '');
-      const caption = own ? `${p.title}: this rock in the Murray Buttes as Curiosity saw it, not this exact spot.` : `${p.title}, Murray Buttes, sol ${p.sol}: Curiosity’s own sample nearby, not this exact spot.`;
-      photoBox.append(h('img', { src, alt: p.title || 'Curiosity photo', loading: 'lazy' }));
-      textBox.append(
-        h('div.dbf__cap', h('span.muted', 'Photo '), caption, ' ', h('span.muted', p.credit || ''), ' ',
-          labelTag({ label: 'real', text: `${p.title || ''}${p.camera ? ', ' + p.camera : ''}. Raw image from NASA’s Curiosity rover.`, source: { title: p.credit || 'NASA/JPL-Caltech', url: p.source_url || p.page || '', where: p.file_id || '' } })),
-      );
-    });
-  }
-
-  // close the loop with the request from step 1
-  const req = ctx.state.request;
-  const doneWord = req && req.kind === 'measurement' ? 'Measurement taken' : 'Sample collected';
-  const loop = req ? h('div.dbf__loop',
-    h('div.dbf__loopreq', h('span.muted', 'Request '), req.title),
-    h('p.dbf__looptext', sample
-      ? `${doneWord}. Your report reaches Earth in ${delay.value} min.`
-      : `Not done this time. Earth will hear it in ${delay.value} min.`)) : null;
-
-  return h(sample ? 'div.dbf__report' : 'div.dbf__report.dbf__report--empty',
-    h('div.dbf__sec', 'Report to Earth'),
-    loop,
-    h('div.dbf__rbody', photoBox, textBox),
-    h('div.dbf__ract', sendBtn, status),
-  );
 }

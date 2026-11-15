@@ -1,35 +1,39 @@
-/* Styles of step 5-debrief only. Prefix classes with .step--debrief. Layout like Go / no-go
-   (docs/mockups/03-route-overview.png): headline and big numbers left, map top right, checks and
-   main button at the bottom. */
+/* Styles of step 5-debrief only. Prefix classes with .step--debrief. Layout from the team's Debrief design
+   (Sun 15.11.): headline, sentence, numbers, planned against actual and warnings left; the map right;
+   a note bottom left and the main button bottom right. */
 
 .step--debrief .dbf {
   position: absolute; inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) min(54vh, 36vw);
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 37vw, 620px);
   grid-template-rows: minmax(0, 1fr) auto;
   grid-template-areas: 'main side' 'foot foot';
-  column-gap: calc(var(--gutter) * 0.9);
-  padding: var(--header-h) var(--gutter) calc(var(--gutter) * 0.6);
+  column-gap: calc(var(--gutter) * 1.1);
+  padding: var(--header-h) var(--gutter) calc(var(--gutter) * 0.75);
 }
 .step--debrief .dbf__main { grid-area: main; min-height: 0; overflow: auto; display: flex; flex-direction: column; }
 .step--debrief .dbf__side { grid-area: side; min-height: 0; display: flex; flex-direction: column; }
-.step--debrief .dbf__side { align-items: flex-start; }
-/* the map is as large as the column allows, and gives way to the warnings list below it */
-.step--debrief .dbf__side .map { flex: 1 1 0; min-height: 10em; width: auto; max-width: 100%; aspect-ratio: 1 / 1; }
-.step--debrief .dbf__side .legend, .step--debrief .dbf__side .dbf__warn { align-self: stretch; }
-.step--debrief .dbf__side .legend { margin-top: 0.6em; gap: 0.3em 1.1em; font-size: var(--fs-tag); }
-.step--debrief .lede { max-width: none; }
-.step--debrief .map-path--walked { stroke-width: 1.3; }
+/* the map: as tall as the column allows; its ground fades out towards the edges (as on Go / no-go) */
+.step--debrief .dbf__side .map { flex: 1 1 0; min-height: 10em; width: 100%; aspect-ratio: auto; border-radius: 0; background: transparent; }
+.step--debrief .dbf__side .map__canvas {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  mask-composite: intersect;
+}
+.step--debrief .dbf__side .map__canvas { filter: brightness(0.86) saturate(0.95); }
+.step--debrief .dbf__side .legend { margin-top: 0.9em; gap: 0.3em 1.4em; font-size: var(--fs-small); }
+.step--debrief .lede { max-width: 54ch; }
+.step--debrief .dbf__hi { color: #fff; font-weight: 600; }
+.step--debrief .dbf__bad { color: var(--caution); font-weight: 600; }
+.step--debrief .map-path--walked { stroke-width: 1.6; }
 .step--debrief .map-path--foot { stroke-dasharray: 0.1 7; }
 
-/* no sample photo: the blocks stay together at the top (no wide empty bands between them) */
-.step--debrief .dbf--short .dbf__main { justify-content: flex-start; }
-.step--debrief .dbf--short .dbf__lower { flex: 0 0 auto; }
-/* the planned spot carries its number and name */
-.step--debrief .dbf__table tbody tr:first-child td:nth-child(2) { white-space: normal; }
-
 /* big numbers */
-.step--debrief .dbf__nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 var(--gap); margin-top: calc(var(--gap) * 1.2); }
+.step--debrief .dbf__nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 calc(var(--gap) * 1.6); margin-top: calc(var(--gap) * 1.4); max-width: 760px; }
+.step--debrief .dbf__nums { grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(0, 0.7fr); }
+.step--debrief .dbf__nums .bignum__value { font-size: clamp(28px, 3vw, 58px); white-space: nowrap; }
+.step--debrief .bignum { border-top: 1px solid var(--line); }
 .step--debrief .bignum { padding-top: 0.7em; }
 .step--debrief .bignum.tone-warning .bignum__value { color: var(--warning); }
 
@@ -38,44 +42,23 @@
 .step--debrief .dbf__lost-title { color: var(--warning); font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); }
 .step--debrief .dbf__lost-text { font-size: var(--fs-small); margin-top: 0.15em; }
 
-/* planned next to actual, and the report */
-.step--debrief .dbf__lower { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: calc(var(--gap) * 1.4); margin-top: calc(var(--gap) * 1.2); align-items: stretch; }
-.step--debrief .dbf__tablewrap { min-height: 0; overflow: auto; display: flex; flex-direction: column; }
-/* beside a tall report the table rows open up a little, so the column does not end in a gap */
-.step--debrief .dbf__table { flex: 1 1 auto; height: 100%; max-height: 32em; }
-.step--debrief .dbf--short .dbf__table { height: auto; }
-.step--debrief .dbf__why { margin-top: auto; padding-top: 0.7em; font-size: var(--fs-small); color: var(--text); max-width: 46ch; }
+/* planned next to actual, and the difference */
+.step--debrief .dbf__tablewrap { margin-top: calc(var(--gap) * 1.6); max-width: 760px; }
 .step--debrief .dbf__table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
-.step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.32em 0.6em 0.32em 0; text-align: left; white-space: nowrap; }
-.step--debrief .dbf__th { font-weight: 400; color: var(--text); padding-right: 1.4em; }
-.step--debrief .dbf__col { color: var(--text-2); font-weight: 500; font-size: var(--fs-tag); }
+.step--debrief .dbf__table th, .step--debrief .dbf__table td { border-bottom: 1px solid var(--line); padding: 0.62em 0.8em 0.62em 0; text-align: left; white-space: nowrap; }
+.step--debrief .dbf__table thead th { border-bottom-color: var(--line); padding-bottom: 0.4em; }
+.step--debrief .dbf__th { font-weight: 500; color: var(--text); padding-right: 1.4em; }
+.step--debrief .dbf__col { color: var(--text-2); font-weight: 400; font-size: var(--fs-tag); }
 .step--debrief .dbf__td .mono { font-size: var(--fs-mono); white-space: nowrap; }
-/* "not returned" and its tag wrap onto two lines where the column is narrow, never clipped */
+.step--debrief .dbf__td.is-bad .mono { color: var(--caution); font-weight: 600; }
+.step--debrief .dbf__diff { text-align: right !important; padding-right: 0 !important; color: var(--text-2); }
 .step--debrief .dbf__table td.dbf__td--wrap { white-space: normal; }
 .step--debrief .dbf__table tbody tr:first-child td .mono { white-space: normal; }
-.step--debrief .dbf__demo { margin-top: 0.5em; font-size: var(--fs-tag); color: var(--text-2); }
-
 .step--debrief .dbf__sec { color: var(--text-2); font-size: var(--fs-small); display: flex; align-items: center; gap: 0.4em; margin-bottom: 0.5em; }
-.step--debrief .dbf__report { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: 0.8em 1em; min-height: 0; display: flex; flex-direction: column; }
-.step--debrief .dbf__rbody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 0.7em; }
-.step--debrief .dbf__report--empty { align-self: start; }
-.step--debrief .dbf__photo { flex: 1 1 auto; min-height: 4.5em; }
-.step--debrief .dbf__photo:empty { display: none; }
-.step--debrief .dbf__photo img { width: 100%; height: 100%; min-height: 0; object-fit: cover; border-radius: 8px; display: block; }
-.step--debrief .dbf__cap { font-size: var(--fs-tag); line-height: 1.4; }
-.step--debrief .dbf__rtext { flex: none; min-width: 0; font-size: var(--fs-small); display: flex; flex-direction: column; gap: 0.4em; }
-.step--debrief .dbf__ract { margin-top: 0.7em; display: flex; flex-direction: column; gap: 0.45em; align-items: flex-start; }
-.step--debrief .dbf__send {
-  border: 1px solid var(--accent); color: var(--accent); border-radius: var(--radius-pill);
-  padding: 0.35em 1.2em; font-size: var(--fs-small); font-weight: 600; transition: background var(--fade);
-}
-.step--debrief .dbf__send:hover:not(:disabled) { background: rgba(79, 203, 255, 0.1); }
-.step--debrief .dbf__send:disabled { border-color: var(--line-strong); color: var(--text-2); }
-.step--debrief .dbf__sent { font-size: var(--fs-small); }
-.step--debrief .dbf__sent:empty { display: none; }
+.step--debrief .dbf__note { font-size: var(--fs-tag); color: var(--text-2); max-width: 70ch; }
 
-/* warnings list under the map */
-.step--debrief .dbf__warn { margin-top: calc(var(--gap) * 0.9); min-height: 0; flex: 0 1 auto; max-height: 48%; display: flex; flex-direction: column; }
+/* warnings list under the table */
+.step--debrief .dbf__warn { margin-top: calc(var(--gap) * 1.4); min-height: 0; flex: 0 1 auto; display: flex; flex-direction: column; max-width: 760px; }
 .step--debrief .dbf__wl { list-style: none; margin: 0; padding: 0; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 0.45em; }
 .step--debrief .dbf__wi { display: flex; gap: 0.6em; align-items: flex-start; font-size: var(--fs-small); }
 .step--debrief .dbf__wi .marker { font-size: var(--fs-tag); width: 2em; height: 2em; }
@@ -94,15 +77,16 @@
 .step--debrief .map-marker.dbf-wm--warning circle { stroke: var(--warning); }
 .step--debrief .map-marker.dbf-wm--caution circle { stroke: var(--caution); }
 .step--debrief .map-marker.dbf-wm--advisory circle { stroke: var(--advisory); }
-.step--debrief .map-marker.dbf-closest circle { r: 3.4px; fill: #fff; stroke: var(--accent); stroke-width: 1.6; }
+.step--debrief .map-marker.dbf-closest circle { r: 3.4px; fill: #000; stroke: var(--caution); stroke-width: 1.6; }
 .step--debrief .map-marker.dbf-empty circle { r: 3.4px; fill: var(--warning); stroke: #fff; stroke-width: 0.8; }
 .step--debrief .dbf-leader { stroke: #fff; stroke-width: 0.6; opacity: 0.85; vector-effect: non-scaling-stroke; }
 .step--debrief .map-path.dbf-gap { fill: none; stroke: #fff; stroke-width: 1.5; stroke-dasharray: 4 4; opacity: 0.8; }
-.step--debrief .sw--closest { width: 0.75em; height: 0.75em; border-radius: 50%; background: #fff; border: 2px solid var(--accent); }
+.step--debrief .sw--closest { width: 0.75em; height: 0.75em; border-radius: 50%; background: #000; border: 2px solid var(--caution); }
 .step--debrief .sw--empty { width: 0.75em; height: 0.75em; border-radius: 50%; background: var(--warning); }
 
 /* a round (feedback-1, Several stops): four big numbers (samples added), the stops in the table, order badges */
-.step--debrief .dbf__nums--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.step--debrief .dbf__nums--4 { grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1.5fr) minmax(0, 0.6fr); }
+.step--debrief .dbf__nums .bignum__unit { font-size: 0.42em; }
 /* one stop per line, the same lines in both columns */
 .step--debrief .dbf__stops { display: flex; flex-direction: column; gap: 0.1em; margin-top: 0.25em; font-size: var(--fs-tag); color: var(--text-2); }
 .step--debrief .dbf__stops > div { white-space: nowrap; }
@@ -113,22 +97,15 @@
 .step--debrief .dbf-order text { fill: var(--accent); font: 700 8.6px var(--font-mono); }
 .step--debrief .sw--dbf-open { width: 0.85em; height: 0.85em; border-radius: 50%; background: #111; border: 1.5px solid #fff; }
 
-/* bottom: checks and the main button */
+/* bottom: the note left, the main button right under the map */
 .step--debrief .dbf__foot {
-  grid-area: foot; display: flex; align-items: center; justify-content: space-between; gap: var(--gutter);
-  border-top: 1px solid var(--line); margin-top: calc(var(--gap) * 0.9); padding-top: calc(var(--gap) * 0.9);
+  grid-column: 1 / -1; grid-row: 2; display: flex; align-items: flex-end; justify-content: space-between; gap: var(--gutter);
+  padding-top: calc(var(--gap) * 0.9);
 }
-.step--debrief .dbf__foot-title { font-family: var(--font-display); font-weight: 500; font-size: var(--fs-title); margin-bottom: 0.4em; }
-.step--debrief .dbf__checks { display: flex; flex-wrap: wrap; gap: 0.4em 1.6em; }
-.step--debrief .dbf__checks .check { font-size: var(--fs-small); }
-.step--debrief .dbf__foot .pill { flex: none; }
+.step--debrief .dbf__foot .pill { flex: none; min-width: clamp(220px, 17vw, 300px); }
+
 /* a warning in the list shows its place on the map (feedback-1, Maps) */
 .step--debrief .dbf__wi.is-link { cursor: pointer; border-radius: 8px; margin: -0.2em -0.35em; padding: 0.2em 0.35em; transition: background var(--fade); }
 .step--debrief .dbf__wi.is-link:hover, .step--debrief .dbf__wi.is-link:focus-visible { background: var(--surface-2); outline: none; }
 .step--debrief .dbf__wi.is-focus { background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .step--debrief .map-marker.dbf-wm.is-focus circle { stroke: #fff; stroke-width: 1.4; filter: drop-shadow(0 0 3px #fff); }
-
-/* the request from step 1, closed */
-.step--debrief .dbf__loop { margin: 0.2em 0 0.6em; }
-.step--debrief .dbf__loopreq { font-size: var(--fs-small); color: var(--text); }
-.step--debrief .dbf__looptext { margin: 0.25em 0 0; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); color: #fff; }
