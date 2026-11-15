@@ -1,0 +1,10 @@
+gale_hrsc.i16.bin, gale_hrsc.json
+Source: NASA Science 3D Resources, "Gale Crater" (STL), https://science.nasa.gov/3d-resources/gale-crater/
+Data credit: K. Gwinner, J. Oberst, R. Jaumann, G. Neukum, ESA/DLR/FU Berlin (HRSC, ESA Mars Express).
+Licence: the NASA page names none. ESA and DLR publish HRSC material under CC BY-SA 3.0 IGO
+(https://creativecommons.org/licenses/by-sa/3.0/igo/); we treat this derived grid as under the same licence.
+Changes: top surface rasterised to a 537 x 713 grid (387 m per pixel), scale and position fitted to
+NASA MOLA altimetry, heights converted to metres (scripts/preprocess/build_gale_hrsc.mjs).
+
+gale_color.rgb.bin: colours sampled from the NASA/JPL-Caltech "Planet Mars, 3D Model" texture.
+Drive line and sites in gale_hrsc.json: NASA/JPL-Caltech, MSL_waypoints.json.

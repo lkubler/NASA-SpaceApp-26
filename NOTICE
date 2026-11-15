@@ -4,17 +4,39 @@ Copyright 2026 The M.H.U.D. team (HelloX3030, lkubler, t-ecker)
 The source code and the texts of this project are licensed under the
 Apache License, Version 2.0 (see LICENSE).
 
-The licence covers the team's own work only. Data, images and 3D models
-from other providers in this repository keep the terms of their providers,
-among them:
+The licence covers the team's own work only. Data, images, 3D models and
+fonts from other providers in this repository keep the terms of their
+providers and are not relicensed:
 
-- Access Mars terrain of Murray Buttes and the Draco decoder:
-  Google, Apache License 2.0.
+- Access Mars terrain of Murray Buttes (app/public/murray) and its four
+  point-of-interest texts: Google Creative Lab with NASA/JPL-Caltech,
+  Apache License 2.0 (app/public/murray/LICENSE-access-mars.txt).
+  Underlying imagery: NASA/JPL-Caltech/MSSS. The height and slope grids in
+  app/public/data/murray (walk_*.bin) are derived from this mesh by our
+  scripts.
+- Draco decoder (app/public/draco-old): Google, Apache License 2.0
+  (LICENSE alongside).
+- three.js: Copyright 2010-2024 Three.js Authors, MIT License.
+  meshoptimizer decoder: Copyright 2016-2022 Arseny Kapoulkine, MIT License.
+- Fonts Inter, Space Grotesk and JetBrains Mono (bundled by the build from
+  Fontsource): SIL Open Font License 1.1, https://openfontlicense.org
 - Images, 3D models and data of NASA and its partners (NASA/JPL-Caltech,
   MSSS, University of Arizona, USGS, GSFC, LaRC): used with credit under
-  the NASA media usage guidelines.
-- Gale crater relief from Mars Express HRSC data: ESA/DLR/FU Berlin.
-- Helmet frame image: generated with ChatGPT.
+  the NASA media usage guidelines and the JPL Image Use Policy. No NASA
+  endorsement is implied.
+- Gale crater relief (app/public/data/gale/gale_hrsc.*): derived from the
+  NASA Science 3D model "Gale Crater", built from Mars Express HRSC data.
+  Credit: K. Gwinner, J. Oberst, R. Jaumann, G. Neukum, ESA/DLR/FU Berlin.
+  The NASA page names no licence. ESA and DLR publish HRSC material under
+  CC BY-SA 3.0 IGO (https://creativecommons.org/licenses/by-sa/3.0/igo/);
+  we treat the derived grid and pictures of it as under that licence, not
+  under Apache-2.0. Changes: rasterised to a grid, fitted to NASA MOLA
+  altimetry.
+- Star map (app/public/sky): NASA/Goddard Space Flight Center Scientific
+  Visualization Studio, Deep Star Maps 2020. Gaia DR2: ESA/Gaia/DPAC;
+  Gaia data are under CC BY-NC 3.0 IGO (non-commercial).
+- Helmet frame image: generated with ChatGPT (OpenAI), marked
+  "AI-generated image" in the picture.
 
 The full list with sources is in docs/data-use.md and on the Sources page
 of the app.
