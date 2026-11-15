@@ -313,3 +313,7 @@
 }
 .step--plan .plan-relay.is-nudge { border-color: #f6c945; animation: plan-nudge 1100ms ease-out; }
 @media (prefers-reduced-motion: reduce) { .step--plan .plan-relay.is-nudge { animation-duration: 1ms; } }
+/* a leg on foot as its calculation: distance, then the small grey calculation, then the suit time */
+.step--plan .plan-dist { display: inline-block; min-width: 4.2em; }
+.step--plan .plan-calc { font-size: var(--fs-tag); margin-right: 0.5em; }
+.step--plan .plan-time { color: var(--text); }
