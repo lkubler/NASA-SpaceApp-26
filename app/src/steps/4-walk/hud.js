@@ -9,7 +9,7 @@ import { ALERTS } from './sim.js';
 import { createHoldSet } from './holdset.js';
 import { DISPLAY as D } from './display.js';
 import frameUrl from './helmet-frame.webp';
-import { GROUND_TAG } from '../../core/groundColor.js';
+import { GROUND_FILL_TAG } from '../../core/groundColor.js';
 
 const tag = (o) => labelTag(o);
 const SIM_TAG = { label: 'simulated', text: 'The rover model is a simple stand-in built for this view; it marks where the crew parked. The real scene has a gap there where Access Mars cut out Curiosity.' };
@@ -39,14 +39,14 @@ const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit
 export function createHud(el) {
   // frame; the "AI-generated image" mark is drawn into the image pixels (bottom left of the frame)
   const frame = h('img.walk-frame', { src: frameUrl, alt: '', draggable: 'false' });
-  // the ground Access Mars has only grey imagery for is tinted in our own colour (core/groundColor.js)
+  // the ground without a clear camera image is filled from the real photo around it (core/groundLook.js)
   // the ground cues near the walker (scene3d.js): steep lines and radio shadow dots, each labelled model
   const groundMark = h('div.walk-groundmark.mono',
     h('div', h('span.walk-cue.walk-cue--steep'), `Over ${RULES.slopeMaxDeg.value}° `, tag(STEEP_CUE_TAG)),
     h('div', h('span.walk-cue.walk-cue--radio'), 'Radio shadow edge ', tag(RADIO_CUE_TAG)),
-      h('div', h('span.walk-cue.walk-cue--beacon'), 'Target beacon ', tag(BEACON_CUE_TAG)),
-      h('div', 'Ground colour ', tag(GROUND_TAG)),
-      h('div', 'Sky ', tag(SKY_TAG)));
+    h('div', h('span.walk-cue.walk-cue--beacon'), 'Target beacon ', tag(BEACON_CUE_TAG)),
+    h('div', 'Ground without a clear camera image: filled ', tag(GROUND_FILL_TAG)),
+    h('div', 'Sky ', tag(SKY_TAG)));
 
   // compass
   const compassCv = h('canvas.walk-compass__cv');
