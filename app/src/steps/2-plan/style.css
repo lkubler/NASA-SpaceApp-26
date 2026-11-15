@@ -97,21 +97,41 @@
 /* round card: number of stops in a cyan circle */
 .step--plan .plan-round-n { display: inline-grid; place-items: center; width: 2.1em; height: 2.1em; border-radius: 50%; border: 1.5px solid var(--accent); color: var(--accent); font-weight: 700; }
 
-/* stop rows of a round: order, number and name, work time, up / down / remove */
+/* stop rows of a round: order, number and name, work time; drag handle and remove on hover */
 .step--plan .plan-legs.is-round .row { padding: 0.2em 0; }
 .step--plan .plan-stop { align-items: center; }
 .step--plan .plan-stop__ord { width: 2.4em; flex: none; color: var(--accent); font-weight: 700; font-size: var(--fs-tag); text-align: center; }
 .step--plan .plan-stop__name { display: flex; align-items: center; gap: 0.45em; min-width: 0; }
 .step--plan .plan-stop__name .marker { font-size: var(--fs-tag); box-shadow: none; }
 .step--plan .plan-stop__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.step--plan .plan-stop__ctl { display: flex; gap: 0.2em; flex: none; }
-.step--plan .plan-ctl {
-  width: 1.75em; height: 1.75em; display: inline-grid; place-items: center; border-radius: 6px; padding: 0;
-  border: 1px solid var(--line-strong); background: transparent; color: var(--text); font: 600 var(--fs-small)/1 var(--font-mono); cursor: pointer;
+/* a stop row at rest: order, number, name, time. On hover or focus a drag handle (left) and × (right) show;
+   their space is kept, so nothing shifts */
+.step--plan .plan-legs { position: relative; }
+.step--plan .plan-legs.is-round .row { position: relative; padding-left: 1.4em; }
+.step--plan .plan-grip, .step--plan .plan-x {
+  display: inline-grid; place-items: center; padding: 0; border: 0; background: none; color: #7d838b;
+  opacity: 0; transition: opacity 120ms ease-out, color 120ms ease-out;
 }
-.step--plan .plan-ctl:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.step--plan .plan-ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.step--plan .plan-ctl:disabled { opacity: 0.25; cursor: default; }
+.step--plan .plan-grip { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1.3em; height: 24px; cursor: grab; touch-action: none; }
+.step--plan .plan-x { width: 24px; height: 24px; flex: none; margin-left: 0.3em; font: 400 calc(var(--fs-text) * 1.25)/1 var(--font-text); cursor: pointer; }
+.step--plan .plan-stop:hover .plan-grip, .step--plan .plan-stop:hover .plan-x,
+.step--plan .plan-stop:focus-within .plan-grip, .step--plan .plan-stop:focus-within .plan-x,
+.step--plan .plan-stop.is-dragging .plan-grip { opacity: 1; }
+.step--plan .plan-x:hover, .step--plan .plan-x:focus-visible { color: #ff5a5a; }
+.step--plan .plan-grip:hover, .step--plan .plan-grip:focus-visible { color: var(--text); }
+.step--plan .plan-grip:focus-visible, .step--plan .plan-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+.step--plan .plan-stop.is-dragging { background: linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06)), #0b0b0c; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5); border-radius: 6px; position: relative; z-index: 2; transition: none; }
+.step--plan .plan-stop.is-dragging .plan-grip { cursor: grabbing; }
+.step--plan .plan-legs.is-sorting, .step--plan .plan-legs.is-sorting * { cursor: grabbing !important; user-select: none; }
+.step--plan .plan-legs .plan-stop { transition: transform 150ms ease-out; }
+.step--plan .plan-dropline { position: absolute; left: 0; right: 0; height: 2px; background: #4fd1ff; border-radius: 1px; opacity: 0; pointer-events: none; transition: top 150ms ease-out, opacity 120ms; }
+.step--plan .plan-dropline.is-on { opacity: 1; }
+.step--plan .plan-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* touch: no hover, so handle and × always show, × with a larger hit area */
+@media (pointer: coarse) {
+  .step--plan .plan-grip, .step--plan .plan-x { opacity: 1; }
+  .step--plan .plan-x { width: 32px; height: 32px; }
+}
 .step--plan .plan-legs.is-round .row:not(.plan-stop) .row__lead { width: 2.4em; }
 .step--plan .plan-clear .textlink { font-size: var(--fs-small); color: var(--text-2); }
 .step--plan .plan-clear .textlink:hover { color: var(--text); }
@@ -120,7 +140,6 @@
 /* a round with several stops on a short screen: list and alerts tighten so the totals stay in view */
 @media (max-height: 800px) {
   .step--plan .plan-legs.is-round .row { padding: 0.08em 0; }
-  .step--plan .plan-legs.is-round .plan-ctl { width: 1.6em; height: 1.6em; }
   .step--plan .plan-round { padding-top: 0.55em; padding-bottom: 0.55em; }
   .step--plan .plan-cards .alert { padding: 0.45em 0.9em; }
   .step--plan .plan-cards .alert__title { font-size: var(--fs-text); }
