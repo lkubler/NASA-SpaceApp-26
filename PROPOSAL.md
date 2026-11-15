@@ -38,6 +38,7 @@ Where NASA documents set a limit, the planner treats it as a rule.
 | Way home | must fit into the time left in the suit, counted at a 20 % higher work rate | Apollo walk-back planning (Bellcomm, 1970) |
 | Secondary oxygen | one hour, never planned with | EVA-EXP-0042 |
 | Length of an excursion | 6 ± 2 hours | EVA-EXP-0042 |
+| Solar storm | back in shelter within 2 hours of a warning | NASA radiation protection brief (OCHMO-TB-020) |
 
 The values come from NASA's planning for the Moon and from Apollo; NASA has not yet set them for Mars. The parked rover is the safe haven.
 
@@ -60,7 +61,7 @@ Every value carries one of three labels with its source: real (NASA data), model
 4. **Walk.** First person on the real terrain, through the helmet.
    - Always: direction and distance to the target, reserve on return, radio status, minimap.
    - Only when needed: steep stretch ahead, radio shadow ahead, turn back now, off the path, edge of the site.
-   - At the target: take the sample; the real rover photo of that spot.
+   - At the target: take the sample; a real rover photo of that rock type.
 5. **Debrief.** Planned against actual: distance, time, reserve on return, time without radio, warnings. A report goes back to Earth.
 
 ### Demo time
@@ -71,25 +72,41 @@ The 3D terrain of a site is a square of 128 by 128 metres. Nobody runs out of su
 |---|---|
 | Access Mars 3D terrain (built from Curiosity images, NASA/JPL) | The plan map and the walk |
 | HiRISE elevation model, 1 m (NASA/JPL/University of Arizona) | Position of the site, slope check |
-| Curiosity photos, targets and drive path | Sample spots and what the crew would see |
+| Curiosity photos and drive path | What the crew would see; the drive line in the crater view |
 | Curiosity radiation and weather instruments | Dose, temperature |
 
 First site: Murray Buttes in Gale crater, where Curiosity worked in 2016. The buttes are wind-blown dune sandstone on top of lake mudstone; the boundary marks the change from a wet to a dry Mars.
 
-## 6. What comes next
+## 6. Built and next
+This proposal was written before the build. Sections 1 to 5 are the idea as planned; this section was brought up to date at submission.
+
+### Built
+**Core features.** The five steps of section 4: mission, plan, go / no-go, walk and debrief, with the rules of section 3.
+
+**Additions.**
+- A radio relay that the visitor places; it shrinks the radio shadow.
+- Rerouting: off the path, the route is planned again from where the crew stands.
+- Up to three stops in one excursion, and waypoints to shape the route.
+- The turn-back line on the small map: the edge of the ground from which the crew still gets home.
+- A second elevation model (HiRISE) that checks the slope of the planned route.
+- The solar storm rule: back in shelter within 2 hours.
+- The zoom in from the globe to Gale crater, with Curiosity's drive line.
+- Fast walk, which uses the suit faster.
+- A map layer that shows the walking effort of the ground.
+- On the helmet display: time outside and the walked track on the small map.
+
+### Next
 In this order:
 
 1. Abort key: the fastest safe way back to the rover.
-2. Pace: normal or fast, with advice before a warning.
-3. Placing a device: a radio relay that shrinks the radio shadow.
-4. The route coloured by effort.
-5. Rerouting when the crew leaves the path.
-6. A sudden event: dust storm warning or a cooling fault.
-7. The rover drive from the base, the regional map, the zoom in from the globe.
-8. More sites: Marias Pass, Pahrump Hills, the landing site.
-9. Astronaut and suit settings.
-10. More on the helmet display: elapsed time, breadcrumb trail, the partner.
-11. An AI helper in the helmet.
+2. Advice on the pace before a warning comes.
+3. The route itself coloured by effort.
+4. A sudden event: dust storm warning or a cooling fault.
+5. The rover drive from the base as part of the plan.
+6. More sites: Marias Pass, Pahrump Hills, the landing site.
+7. Astronaut and suit settings.
+8. The partner on the helmet display.
+9. An AI helper in the helmet.
 
 ## 7. Stack
 Static web app with Three.js, hosted on GitHub Pages. Data prepared offline in Python. Routing runs in the browser; nothing is precomputed.
