@@ -38,7 +38,7 @@ export const RULES = {
   evaLimitH: v(8, 'h', 'real', 'CON', '§4.1.4, p.29',
     'An excursion lasts at most 8 hours (6 ± 2 h).', { moon: true }),
   shelterReturnH: v(2, 'h', 'real', 'OCHMO', 'Radiation Protection, EVA paragraph',
-    'Protection from a solar storm during an excursion: it ends within 2 hours with access to shielding. The check counts the time back to the rover; that the rover is the shelter is an assumption.'),
+    'If a solar storm hits, the crew must reach shielding within 2 hours (NASA radiation guidance). We take the rover as the shelter; that is an assumption.'),
 };
 
 export const ASTRONAUT = {
