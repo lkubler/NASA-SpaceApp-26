@@ -1,9 +1,10 @@
-# Hook state is local
-status/*
-!status/.gitkeep
 # Raw datasets (DTMs, imagery) are too large for git
 data/raw/
 __pycache__/
 .DS_Store
 node_modules/
 dist/
+# Demo clips are rendered locally (app/scripts/record.mjs), not committed
+demo/clips/
+# Journey screenshots and review reports are local
+reviews/
