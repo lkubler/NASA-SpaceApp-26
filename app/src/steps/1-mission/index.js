@@ -11,7 +11,7 @@ const PHOTO_BASE = 'data/murray/photos/';
 // opening -> crater transition: globe zoom (ms), crater fly-in (ms), Gale's share of the screen width at the handoff
 const ZOOM_MS = 2600, FLY_MS = 3400, HANDOFF_FILL = 0.11; // speeds meet at the handoff (planet.js, crater.js)
 const SETTLE_AT = 0.72;       // share of the flight after which the panel and markers start to come in
-const SETTLE_SHIFT_MS = 1500; // the scene's slide to the left after the flight, slow to match the camera
+const SETTLE_SHIFT_MS = 1900; // the scene's slide to the left after the flight, slow to match the camera
 const DELAY = ENVIRONMENT.signalDelayNowMin;
 
 let cleanup = null;
@@ -149,7 +149,7 @@ export default {
           intro.style.pointerEvents = 'none';
           el.classList.add('m1--settling');
           el.classList.remove('m1--flying');
-          setTimeout(() => { el.classList.remove('m1--settling'); panel.classList.remove('is-gliding'); }, 3000);
+          setTimeout(() => { el.classList.remove('m1--settling'); panel.classList.remove('is-gliding'); }, 3600);
           openPanel(false, SETTLE_SHIFT_MS);
         };
         await view.flyIn({

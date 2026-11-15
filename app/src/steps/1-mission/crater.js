@@ -159,11 +159,12 @@ export function craterView(wrap, { meta, heights, color }) {
     shiftTo = px;
     cancelAnimationFrame(anim);
     const from = shift, t0 = performance.now();
-    const slow = dur > 240; // a long slide eases in as well, so it starts as gently as it ends
+    const slow = dur > 240; // a long slide eases in as well (sine), so it starts and ends gently
     const step = (t) => {
-      const k = Math.min(1, (t - t0) / dur), e = slow ? (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2) : 1 - Math.pow(1 - k, 3);
+      const k = Math.min(1, (t - t0) / dur), e = slow ? (1 - Math.cos(Math.PI * k)) / 2 : 1 - Math.pow(1 - k, 3);
       shift = from + (shiftTo - from) * e;
-      applyView(); render();
+      applyView();
+      if (!flying) render(); // during the fly-in its own loop renders: one render per frame, no dropped frames
       if (k < 1) anim = requestAnimationFrame(step);
     };
     anim = requestAnimationFrame(step);
@@ -182,7 +183,7 @@ export function craterView(wrap, { meta, heights, color }) {
    * background stays transparent until the end, so the globe behind shows around the crater.
    * onFrame(kmPerPx, k) gives the ground scale at the screen centre, for the globe to follow.
    */
-  let fly = 0;
+  let fly = 0, flying = false;
   function flyIn({ dur = 3200, fill = 0.16, onFrame = null } = {}) {
     const galeKm = 154, tanH = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     const h0 = galeKm / fill / (2 * tanH * (W / Hh));       // start height: Gale spans `fill` of the width
@@ -193,6 +194,7 @@ export function craterView(wrap, { meta, heights, color }) {
     const c01 = (t) => Math.min(1, Math.max(0, t));
     cancelAnimationFrame(fly);
     renderer.setClearAlpha(0);
+    flying = true;
     return new Promise((resolve) => {
       const t0 = performance.now();
       const step = (now) => {
@@ -212,7 +214,7 @@ export function craterView(wrap, { meta, heights, color }) {
         render();
         if (onFrame) onFrame((2 * d * tanH) / Hh, k);
         if (k < 1) fly = requestAnimationFrame(step);
-        else { terrain.scale.y = 1; setLook(1); renderer.setClearAlpha(1); render(); resolve(); }
+        else { flying = false; terrain.scale.y = 1; setLook(1); renderer.setClearAlpha(1); render(); resolve(); }
       };
       step(t0);
     });
