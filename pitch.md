@@ -154,3 +154,45 @@ Offen: ob der Satz zur Kennzeichnung (echt / Modell) gesprochen wird. Sichtbar i
 - [ ] Bildnachweise für jedes NASA-Foto, kein NASA-Logo.
 - [ ] Links öffentlich und ohne Login erreichbar.
 - [ ] Nur behaupten, was der Prototyp zeigt. Was fehlt, steht als „Next“ auf Folie 7.
+## 8. Update Sunday morning: what the app does now, and data points for the pitch
+
+Added by the main agent session on Sun 15.11. on the team's request. English, because agents write English. Sections 1–7 above are unchanged; where they differ from this section, this section describes the app as built. Sources are in `research/data-decisions.md`, `research/data-effort-route.md`, `research/data-radio-relay.md`, `research/data-minimap.md` and `docs/data-use.md`.
+
+### 8.1 The data story in one chain (for slide 4 or 5)
+Real terrain → slope → effort at Mars gravity → oxygen → reserve on return → turn back.
+- Terrain: Access Mars 3D model of Murray Buttes, built from Curiosity images; we use it as a 0.5 m grid of height and slope.
+- Effort: a published walking-effort equation (Pandolf), scaled to Mars gravity. A 2024 NASA Johnson paper (NTRS 20240001423) uses the same equation for EVA workload.
+- One number to say out loud: about 68 g of oxygen per hour at 273 W (NASA source in `research/data-effort-route.md`); our own calculation gives about 70 g/h.
+
+### 8.2 Three decisions that come from data (for slide 5)
+1. The terrain plans the route: ground steeper than 20° is closed, the route is the shortest way over open ground, and the way home is known from every point.
+2. HiRISE checks the route: Go / no-go shows how many metres of the route are steeper than 20° in the HiRISE 1 m elevation model, an independent dataset. On the demo routes it finds 2 to 29 m. Shown as a caution.
+3. Radiation guidance limits the distance in time: Go / no-go checks the longest time back to the rover against 2 hours (NASA-STD-3001 technical brief OCHMO-TB-020: an EVA is protected in a solar particle event "if termination occurs within 2 hours and there is access to shielding"). The far spot (06) breaks this rule in demo time.
+
+### 8.3 Radio shadow and relay (for slide 6 and the live demo)
+- The relay is now calculated: the visitor places it on the Plan map; a place has contact if it sees the rover, or sees the relay while the relay sees the rover.
+- Demo line that is true in the app: for spot 06, placing the relay cut the time without contact from 3 h 14 to 34 min.
+- NOT true in the app: "a blocked route opens up" / "turns a blocked route green". Radio shadow is a caution, not a rule, so the relay does not unblock a route. Say "the radio shadow shrinks" instead.
+- Contact also enters the route with a weight (assumption): ground without contact costs more. The visible effect on this site is small; do not make it a headline.
+- NASA backing: Apollo 15 Mission Report Suppl. 6 (MSC-05161) compared measured radio loss with a terrain-shadow prediction: "The technique of predicting shadow losses due to obstacles in the radio line-of-sight provides a good estimate of the actual shadowing loss." NASA Glenn's Lunar Surface Relay-Mobile (2023) is a movable relay "placed in optimal locations".
+
+### 8.4 New in the walk
+- Route from here: off the planned path, the display shows the way from where the crew stands to the next goal; after "Turn back now" it shows the way to the rover. The planned route stays as a faint line.
+- Turn-back line on the small map: the edge of the ground from which the crew still finishes the plan and gets home with reserve; ground beyond it is dimmed. This is the picture for the core sentence. No NASA display of such a line was found; Apollo planned with a walk-back distance limit. Say it as our own model with the Apollo precedent.
+
+### 8.5 Say it before a judge asks
+- Rule values come from Moon and Apollo planning; NASA has not set them for Mars. The app marks them.
+- The Access Mars terrain is about 20 % smoother than HiRISE. That is why HiRISE checks the route.
+- Oxygen-optimal route: we tested 200 routes on the real grid. With our effort model the least-oxygen route and the shortest route differ by under 1 % (median 0.00 %, maximum 0.75 %). Present it as a finding, not a feature.
+- No GPS on Mars: not built; the walk knows its position exactly. Outlook for slide 7: Mars rovers are still located by people on Earth who match a panorama to the orbital map (JPL, ICRA 2024: 0.36 m against the HiRISE map), and Perseverance's longest drive without that review was "limited by growth in position uncertainty". Horizon-only matching is "on the order of 100 m, at best 10 m", so it would not help inside a 128 m site; rover and relay as radio beacons are the next step.
+
+### 8.6 Lines in sections 1–7 that no longer match the app
+- Video 22–27 s and the live pitch: "HUD advises Slow down" and pace advice are not built. Fast walk exists (Shift), with the reserve falling; there is no advice.
+- Video "Reserve at return: {pct} %": the app shows reserve as time (e.g. 1 h 12), not percent.
+- Video 20–22 s, slide 7, question "Funktioniert das woanders?": a second site is not built. Marias Pass and Pahrump Hills appear only as requests marked "soon".
+- Slide 4: "sun and shadow, hazards" and "safe abort route" are not built as such; built are slope, radio contact, suit use, reserve, turn-back and the way back to the rover.
+- Slide 5 "Simulated: weather, space weather, suit telemetry": temperature is a real Curiosity REMS measurement and the dose rate a real Curiosity RAD value; the suit levels are our model.
+- Slide 6 and live pitch: "turns a blocked route green" (see 8.3).
+- Section 6: the app cites the slope and excursion values from EVA-EXP-0042; section 6 names EVA-EXP-0075. The 10 km walk-back and the rover slope values are not used in the app.
+- The app's own text does not use the name "NASA" outside source citations (team decision); slides and video may name sources with credit, but no logo or mission patch.
+- AI disclosure for the submission text: the helmet frame image was generated with ChatGPT and carries a visible mark; the intro film was rendered by AI-written scripts and carries a visible mark; the code was written with Claude Code (`docs/ai-use.md`).
