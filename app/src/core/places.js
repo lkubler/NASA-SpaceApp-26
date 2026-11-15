@@ -32,12 +32,12 @@ export const CANDIDATES = [
 export const ACCESS_MARS_POINTS = [
   {
     id: 'A1', name: 'Buttes', x: 13.8, y: 1.2, z: 6.9, reach: { x: 12.75, z: 7.75 },
-    photo: 'murray/cards/mb1.jpg', photoNote: 'Curiosity self-portrait in front of a butte',
+    photo: null, photoNote: '',
     text: 'These are the Murray Buttes. Buttes are steep, knob-like rock formations. The largest one here is about as tall as a three-story building. These buttes served as Curiosity’s entryway to its main destination: Mount Sharp.',
   },
   {
     id: 'A2', name: 'Monument Valley', x: 21, y: 6.2, z: 3.7, reach: { x: 15.25, z: 1.75 },
-    photo: 'murray/cards/mb3.jpg', photoNote: 'Layered, cross-bedded butte wall with fallen blocks',
+    photo: null, photoNote: '',
     text: 'These buttes are similar to ones you’d find on Earth, formed when wind erodes ancient sandstone. Scientists have compared the region to Monument Valley.',
   },
   {
@@ -47,7 +47,7 @@ export const ACCESS_MARS_POINTS = [
   },
   {
     id: 'A4', name: 'Interference', x: -63.5, y: -3.9, z: 35.2, reach: { x: -63.25, z: 35.25 },
-    photo: 'murray/cards/mb4.jpg', photoNote: 'Boulder-strewn slope against the sky',
+    photo: null, photoNote: '',
     text: 'The buttes are beautiful, but are sometimes tall enough to block the signal between Curiosity and the Mars orbiters that fly overhead. That can temporarily reduce the amount of data that Curiosity can send back to Earth.',
   },
 ].map((p) => ({ ...p, kind: 'access-mars', label: 'real', source: AM_SRC }));
