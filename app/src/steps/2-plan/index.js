@@ -112,7 +112,7 @@ export default {
         ['point', ['Access Mars point ', labelTag(L.point)]], ['relay', ['Radio relay ', labelTag(EXTRA_TAGS.relay)]], ['zone', ['EVA zone ', labelTag(EXTRA_TAGS.zone)]]],
       layers: [
         { key: 'steep', swatch: 'steep', name: 'Too steep to walk', note: `> ${RULES.slopeMaxDeg.value}°`, on: true, tag: L.steep },
-        { key: 'shadow', swatch: 'shadow', name: 'No radio contact', note: '· no line of sight to the rover', on: true, tag: L.shadow, extra: compareBtn },
+        { key: 'shadow', swatch: 'shadow', name: 'No radio contact', note: '· no contact with the rover', on: true, tag: L.shadow, extra: compareBtn },
         { key: 'effort', swatch: 'effort', name: 'Walking effort', note: 'easy → hard', on: true, tag: EXTRA_TAGS.effort },
       ],
       onToggle: (key, on) => {

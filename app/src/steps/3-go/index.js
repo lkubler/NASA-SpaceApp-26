@@ -175,7 +175,7 @@ export default {
         h('span.gocaution__tag', 'Caution'),
         h('span.gocaution__name', radio.name),
         h('span.gocaution__v', d.planned),
-        h('span.gocaution__note', has ? 'No line of sight to the rover. Not a rule: the walk may go on.' : 'Line of sight to the rover all the way.'),
+        h('span.gocaution__note', has ? 'No contact with the rover. Not a rule: the walk may go on.' : 'Contact with the rover all the way.'),
         has ? h('span.gocaution__show', 'Show on route') : null);
       if (has) cautionLine.addEventListener('click', toggle(cautionLine, radio, d, 'caution'));
     }

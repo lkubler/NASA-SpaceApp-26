@@ -335,7 +335,7 @@ export function createHud(el) {
     mVals.dose.textContent = fmtMSv(log.doseMSv);
     mVals.temp.textContent = `${Math.round(outsideTempC(log.tS))} °C`;
     mVals.power.textContent = `${Math.round(fractions(log.levels).battery * 100)} %`;
-    mVals.radio.textContent = s.radio ? 'Rover · ok' : 'No line of sight';
+    mVals.radio.textContent = s.radio ? 'Contact · ok' : 'No contact';
     mVals.radio.className = 'walk-row__v mono ' + (s.radio ? 'tone-accent' : 'tone-advisory');
     mVals.demo.textContent = `${DEMO.timeFactor.value}${DEMO.timeFactor.unit}`;
 
@@ -425,7 +425,7 @@ export function createHud(el) {
       case 'edge': return ['The mapped terrain ends here.'];
       case 'steepAhead': return [`Ground over ${lim} `, { tag: RULES.slopeMaxDeg }, ` in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '. Closed to the route.'];
       case 'offPath': return [`${Math.round(i.m)} m `, { tag: OFF_TAG }, ' from the planned route. The route shown leads on from here.'];
-      case 'radioAhead': return [`No line of sight to the rover in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '.'];
+      case 'radioAhead': return [`No contact with the rover in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '.'];
       default: return [];
     }
   }
