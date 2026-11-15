@@ -137,8 +137,8 @@ for (const run of runs) {
     for (const b of await page.locator('.go__nums .bignum').all()) {
       goTxt[(await b.locator('.bignum__label').innerText()).replace(/\s*(model|real|assumption|simulated)( · lunar rule)?$/, '').trim()] = await b.locator('.bignum__value').innerText();
     }
-    const radioLine = await page.locator('.gocaution', { hasText: 'Radio shadow' }).first().innerText();
-    goTxt.radio = (/longest ([^\n]*?)\s*model/.exec(radioLine) || [])[1] || null;
+    const radioV = await page.locator('.gocaution .gorow__line .gorow__v').first().innerText();
+    goTxt.radio = radioV.replace(/\s*(model|real|assumption|simulated)\s*$/, '').trim() || null;
     console.log('  go', JSON.stringify(goTxt));
     if (goTxt.Distance !== planTxt.dist) fail(run, `distance Plan ${planTxt.dist} vs Go ${goTxt.Distance}`);
     if (goTxt.Duration !== planTxt.total) fail(run, `time Plan ${planTxt.total} vs Go ${goTxt.Duration}`);

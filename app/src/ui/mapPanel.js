@@ -36,9 +36,10 @@ export const MAP_DRAG_PX = DRAG_PX;
  *   patternPx: CSS pixels per pattern pixel.
  *   movable: false = no drag, wheel, click or key zoom; only the + / − buttons zoom about the centre.
  *   resetButton: false = no reset-view button.
+ *   zoomButtons: false = no + and − buttons (and no reset button).
  * @returns {{ el, svg, canvas, project, unproject, layer, path, addMarker, setLayers, clearLayer, ... }}
  */
-export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, patterns = {}, patternPx = PATTERN_PX, fade = false, movable = true, resetButton = true } = {}) {
+export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, patterns = {}, patternPx = PATTERN_PX, fade = false, movable = true, resetButton = true, zoomButtons = true } = {}) {
   const n = terrain.n;
   // source raster (relief or a step's own ground), one pixel per RES-th of a grid cell; not in the page
   const canvas = document.createElement('canvas');
@@ -64,7 +65,7 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
     btn('in', 'Zoom in (+)', '+', () => zoomBy(ZOOM_STEP)),
     btn('out', 'Zoom out (−)', '−', () => zoomBy(1 / ZOOM_STEP)),
     resetButton && btn('reset', 'Reset view (0)', '<svg viewBox="0 0 16 16" width="1em" height="1em" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>', () => reset()));
-  const el = h(`div.map${movable ? '' : '.map--fixed'}`, screen, svg, scale, north, controls);
+  const el = h(`div.map${movable ? '' : '.map--fixed'}`, screen, svg, scale, north, zoomButtons ? controls : null);
   // fade: ground, hatching, routes and markers stay hidden (the frame shows the dark ground tone) until
   // reveal(), then fade in together; revealed anyway after FADE_CAP_MS so a slow ground never hides the map
   let fadeTimer = 0;
