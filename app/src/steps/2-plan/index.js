@@ -508,7 +508,8 @@ export default {
             grip,
             h('span.plan-stop__ord.mono', stopOrdinal(lg.order)),
             h('span.row__label.plan-stop__name', marker(numberOf(id), { selected: true }), h('span.plan-stop__text', lg.name)),
-            h('span.row__value.mono', fmtDuration(lg.seconds), ' ', labelTag(DEMO.spotWorkMin)),
+            // the work at the stop (taking the sample), named so it does not read as a walk
+            h('span.row__value.mono', h('span.plan-stop__k', 'sampling '), fmtDuration(lg.seconds), ' ', labelTag(DEMO.spotWorkMin)),
             x);
           x.addEventListener('click', (e) => {
             e.stopPropagation();

@@ -107,13 +107,14 @@
 /* a stop row at rest: order, number, name, time. On hover or focus a drag handle (left) and × (right) show;
    their space is kept, so nothing shifts */
 .step--plan .plan-legs { position: relative; }
-.step--plan .plan-legs.is-round .row { position: relative; padding-left: 1.4em; }
+.step--plan .plan-legs.is-round .row { position: relative; padding-left: 1.4em; padding-right: 28px; } /* both sides kept for handle and ×: every value lines up */
+.step--plan .plan-stop__k { color: var(--text-2); font-family: var(--font-text); font-size: var(--fs-small); }
 .step--plan .plan-grip, .step--plan .plan-x {
   display: inline-grid; place-items: center; padding: 0; border: 0; background: none; color: #7d838b;
   opacity: 0; transition: opacity 120ms ease-out, color 120ms ease-out;
 }
 .step--plan .plan-grip { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1.3em; height: 24px; cursor: grab; touch-action: none; }
-.step--plan .plan-x { width: 24px; height: 24px; flex: none; margin-left: 0.3em; font: 400 calc(var(--fs-text) * 1.25)/1 var(--font-text); cursor: pointer; }
+.step--plan .plan-x { position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 24px; height: 24px; font: 400 calc(var(--fs-text) * 1.25)/1 var(--font-text); cursor: pointer; }
 .step--plan .plan-stop:hover .plan-grip, .step--plan .plan-stop:hover .plan-x,
 .step--plan .plan-stop:focus-within .plan-grip, .step--plan .plan-stop:focus-within .plan-x,
 .step--plan .plan-stop.is-dragging .plan-grip { opacity: 1; }
