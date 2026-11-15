@@ -1,5 +1,5 @@
-// Step 1 Mission (specs/1-mission.md): opening, Gale crater in 3D, the three sites, the two requests
-// from Earth, choosing one. Writes state.request (app/README.md).
+// Step 1 Mission (specs/1-mission.md): opening, Gale crater in 3D, the three sites, the missions
+// (one per site), choosing one. Writes state.request (app/README.md).
 import './style.css';
 import { h, headline, lede, pillButton, labelTag, LOCK_SVG } from '../../ui/index.js';
 import { ENVIRONMENT, DEMO } from '../../core/values.js';
@@ -264,7 +264,7 @@ export default {
       const sentAt = (ctx.state.request && ctx.state.request.sentAt) || Date.now() - DELAY.value * 60000;
       reqs = REQUESTS.map((r) => toRequest(r, credits, sentAt));
       btn = pillButton({ text: 'Plan this mission', arrow: true, onClick: () => goPlan(), disabled: !ctx.state.request });
-      const list = h('div.m1-reqs', { role: 'radiogroup', 'aria-label': 'Missions from Earth' });
+      const list = h('div.m1-reqs', { role: 'radiogroup', 'aria-label': 'Missions' });
       for (const r of reqs) {
         const c = requestCard(r);
         cardEls.set(r.id, c);
@@ -289,7 +289,7 @@ export default {
           h('div.m1-req__site', siteName(r.site), r.locked ? h('span.m1-req__soon', 'Soon') : null, done ? h('span.m1-req__done', 'Done') : null),
           h('div.m1-req__title', r.title),
           h('p.m1-req__why', r.why)),
-        h('span.m1-req__info', labelTag({ label: 'real', text: 'The scientific question is real; the message from Earth is part of the story.', source: r.whySource })),
+        h('span.m1-req__info', labelTag({ label: 'real', text: "The scientific question is real, from Curiosity's research. Sending a crew to sample it is our scenario.", source: r.whySource })),
         r.locked ? null : h('span.m1-req__check', { 'aria-hidden': 'true' }));
       el.addEventListener('mouseenter', () => hot(r.id, true));
       el.addEventListener('mouseleave', () => hot(r.id, false));

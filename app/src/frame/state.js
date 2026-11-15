@@ -3,7 +3,7 @@
 // Shape (documented again in app/README.md):
 // {
 //   step: 1..5,                    // current step (owned by the frame)
-//   request: null | Request,       // chosen request from Earth (step 1). Self-contained, see README
+//   request: null | Request,       // chosen mission (step 1). Self-contained, see README
 //   requestsDone: string[],        // ids of finished requests (step 5 adds one)
 //   candidates: CandidatePlan[],   // [{ candidate, route, plan }] from core planAllCandidates (step 2)
 //   stops: string[],               // chosen stops in visiting order, 0 to 3 ids, e.g. ['F3', 'F7'] (step 2)
