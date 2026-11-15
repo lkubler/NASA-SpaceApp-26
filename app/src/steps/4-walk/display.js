@@ -139,7 +139,7 @@ export const DISPLAY = {
   steepFillAlpha: 0.3,    // ... translucent fill at the foot, fading to nothing at the top (assumption)
   steepStripeM: 0.6,      // ... faint vertical stripes this far apart, drifting slowly along the wall ... (assumption)
   steepStripeMS: 0.12,    // ... at this speed in metres per second (assumption)
-  // target beacon (beacon.js): a thin beam of light at the current target with a soft ring on the ground; all assumption (display choices)
+  // target beacon (targetBeam.js): a thin beam of light at the current target with a soft ring on the ground; all assumption (display choices)
   beaconHeightM: 40,      // ... beam height above the ground, fading out towards the top, so it shows across the whole site
   beaconBelowM: 0.3,      // ... the beam reaches this far below the walk grid, so it never floats where the Access Mars mesh lies lower
   beaconCoreM: 0.05,      // ... clear core: half width in metres ...

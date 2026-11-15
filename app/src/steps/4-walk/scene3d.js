@@ -7,7 +7,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { getTerrainScene, setWalkLook, sceneToThree } from '../../core/terrainScene.js';
 import { RADIO, ROVER, CANDIDATES, radioShadowMask, roverField, getRelay } from '../../core/index.js';
 import { steepWallLines } from './steepBorder.js';
-import { createBeacon } from './beacon.js';
+import { createBeacon } from './targetBeam.js';
 import { DISPLAY as D } from './display.js';
 import { createSky, skyFog, sunDirection } from './sky.js';
 
@@ -40,7 +40,7 @@ export function createScene3d(host, t, opts = {}) {
   // Built once; the fade with distance runs in the shader (no per-frame work)
   const cues = [steepWall(t, opts.keepOpen), radioDots(t)].filter(Boolean);
   for (const c of cues) scene.add(c);
-  // the target beacon (beacon.js): its colour is the accent, its haze the scene's (pass the same colour and density as the fog)
+  // the target beacon (targetBeam.js): its colour is the accent, its haze the scene's (pass the same colour and density as the fog)
   const beacon = createBeacon(t, { color: ACCENT, fogColor: haze.color, fogDensity: haze.density });
   scene.add(beacon.group);
   // the rover: NASA's Space Exploration Vehicle model (public/models/sev.glb), loaded in the background; the
