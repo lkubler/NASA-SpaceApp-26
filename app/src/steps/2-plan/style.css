@@ -197,11 +197,9 @@
 .step--plan .plan-layer__eye .eye-off { display: none; }
 .step--plan .plan-layer.is-off > :not(.plan-layer__eye) { opacity: 0.4; }
 .step--plan .plan-layer.is-off .eye-off { display: inline; }
-.step--plan .plan-compare {
-  align-self: flex-start; margin-left: 2.6em; padding: 0.22em 0.8em; border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
-  background: none; color: var(--text-2); font: inherit; font-size: var(--fs-tag); cursor: pointer;
-}
-.step--plan .plan-compare:hover { color: var(--text); border-color: var(--text-2); }
+/* a layer that can not be shown yet (Compare without relay, before a relay is placed): greyed out, eye inactive */
+.step--plan .plan-layer.is-disabled > * { opacity: 0.3; }
+.step--plan .plan-layer.is-disabled .plan-layer__eye { cursor: default; background: none; }
 
 /* relay card: yellow mark, Move button */
 .step--plan .plan-relay { align-items: center; }
@@ -294,4 +292,3 @@
 .step--plan .plan-relay__remove { margin-left: 0.4em; color: var(--text-2); }
 .step--plan .plan-relay__move.is-on { border-color: #f6c945; color: #f6c945; }
 .step--plan .map.is-placing, .step--plan .map.is-placing * { cursor: crosshair; }
-.step--plan .plan-compare:disabled { opacity: 0.45; cursor: default; }

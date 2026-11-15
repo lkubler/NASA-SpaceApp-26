@@ -92,8 +92,9 @@ export function drawZone(map, terrain, zone) {
 const EYE = '<svg viewBox="0 0 20 20" width="1.15em" height="1.15em" aria-hidden="true"><path d="M1.5 10s3.2-5.5 8.5-5.5S18.5 10 18.5 10s-3.2 5.5-8.5 5.5S1.5 10 1.5 10Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.6" fill="currentColor"/><path class="eye-off" d="M3 17L17 3" stroke="currentColor" stroke-width="1.6"/></svg>';
 
 /**
- * Legend below the map in three groups. layers: [{ key, swatch, name, note, on, tag, extra }];
- * onToggle(key, on) is called when a layer is shown or hidden.
+ * Legend below the map in three groups. layers: [{ key, swatch, name, note, on, tag, disabled }];
+ * onToggle(key, on) is called when a layer is shown or hidden. Each layer gets L.set(on) and L.setDisabled(d)
+ * so the step can change it from outside (a disabled row is greyed out and its eye does nothing).
  */
 export function planLegend({ route, places, layers, onToggle, note }) {
   const item = (sw, text) => h('div.plan-lg__item', h(`span.plan-sw.plan-sw--${sw}`), h('span', text));
@@ -101,18 +102,20 @@ export function planLegend({ route, places, layers, onToggle, note }) {
     const btn = h('button.plan-layer__eye', { type: 'button', 'aria-pressed': String(L.on), 'aria-label': `${L.on ? 'Hide' : 'Show'} ${L.name}`, html: EYE });
     const row = h(`div.plan-layer${L.on ? '' : '.is-off'}`, h(`span.plan-sw.plan-sw--${L.swatch}`),
       h('span.plan-layer__name', L.name, L.note ? h('span.plan-layer__note', ` ${L.note}`) : null, L.tag ? [' ', labelTag(L.tag)] : null), btn);
-    btn.addEventListener('click', () => {
-      L.on = !L.on;
-      row.classList.toggle('is-off', !L.on);
-      btn.setAttribute('aria-pressed', String(L.on));
-      btn.setAttribute('aria-label', `${L.on ? 'Hide' : 'Show'} ${L.name}`);
-      onToggle(L.key, L.on);
-    });
-    return [row, L.extra || null];
+    L.set = (on) => {
+      L.on = on;
+      row.classList.toggle('is-off', !on);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', `${on ? 'Hide' : 'Show'} ${L.name}`);
+    };
+    L.setDisabled = (d) => { btn.disabled = d; row.classList.toggle('is-disabled', d); row.title = d && L.disabledHint ? L.disabledHint : ''; };
+    L.setDisabled(!!L.disabled);
+    btn.addEventListener('click', () => { L.set(!L.on); onToggle(L.key, L.on); });
+    return row;
   };
   return h('div.plan-lg',
     h('div.plan-lg__col', h('div.plan-lg__k', 'Route'), ...route.map(([sw, t]) => item(sw, t))),
     h('div.plan-lg__col', h('div.plan-lg__k', 'Places'), ...places.map(([sw, t]) => item(sw, t))),
-    h('div.plan-lg__col.plan-lg__col--layers', h('div.plan-lg__k', 'Map layers'), ...layers.flatMap(layerRow)),
+    h('div.plan-lg__col.plan-lg__col--layers', h('div.plan-lg__k', 'Map layers'), ...layers.map(layerRow)),
     note ? h('div.plan-lg__note', note) : null);
 }

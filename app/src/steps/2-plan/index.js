@@ -104,20 +104,21 @@ export default {
     const show = { steep: true, shadow: true, effort: true };
     // Compare: show the radio shadow and the route's stretches without contact as they are without the relay
     let comparing = false;
-    const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => toggleCompare() }, 'Compare without relay');
-    compareBtn.disabled = true;
+    const compareLayer = { key: 'compare', swatch: 'relay', name: 'Compare without relay', on: false, disabled: true, disabledHint: 'Place a radio relay first' };
     const leg = planLegend({
       route: [['rover-line', 'Rover drive'], ['foot', 'On foot'], ['handover', 'Handover to foot']],
       places: [['marker', ['Candidate spot ', labelTag(L.spot)]], ['selected', 'Chosen stop'], ['waypoint', ['Waypoint ', labelTag(L.waypoint)]], ['cheapest', 'Cheapest'],
         ['point', ['Access Mars point ', labelTag(L.point)]], ['relay', ['Radio relay ', labelTag(EXTRA_TAGS.relay)]]],
       layers: [
         { key: 'steep', swatch: 'steep', name: 'Too steep to walk', note: `> ${RULES.slopeMaxDeg.value}°`, on: true, tag: L.steep },
-        { key: 'shadow', swatch: 'shadow', name: 'No radio contact', note: '· no contact with the rover', on: true, tag: L.shadow, extra: compareBtn },
+        { key: 'shadow', swatch: 'shadow', name: 'No radio contact', note: '· no contact with the rover', on: true, tag: L.shadow },
         { key: 'effort', swatch: 'effort', name: 'Walking effort', note: 'easy → hard', on: true, tag: EXTRA_TAGS.effort },
+        compareLayer,
       ],
       onToggle: (key, on) => {
         show[key] = on;
-        if (key === 'steep' || key === 'shadow') map.setLayers({ [key]: on });
+        if (key === 'compare') setCompare(on);
+        else if (key === 'steep' || key === 'shadow') map.setLayers({ [key]: on });
         else drawMap();
       },
     });
@@ -715,8 +716,8 @@ export default {
       relayMove.textContent = placing ? 'Click the map' : rl ? 'Move' : 'Place';
       relayMove.classList.toggle('is-on', placing);
       relayRemove.hidden = !rl;
-      compareBtn.disabled = !rl;
-      compareBtn.textContent = comparing ? 'Back to with relay' : 'Compare without relay';
+      compareLayer.setDisabled(!rl);
+      compareLayer.set(comparing);
       if (rl) {
         const P = ctx.state.plan;
         relaySub.textContent = P ? `Placed · ${fmtDuration(P.radioShadowS || 0)} without radio on this route` : 'Placed · choose a spot to see its effect';
@@ -729,9 +730,9 @@ export default {
       else { notice = 'Click the map to set the relay. It must see the rover and stand on open ground.'; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = null; renderHint(); }, 5000); renderHint(); }
       renderRelayCard();
     }
-    function toggleCompare() {
-      if (!getRelay()) return;
-      comparing = !comparing;
+    function setCompare(on) {
+      if (!getRelay()) { compareLayer.set(false); return; }
+      comparing = on;
       map.refreshShadow({ withoutRelay: comparing });
       quietDraw = true;
       render();
