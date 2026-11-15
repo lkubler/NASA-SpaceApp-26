@@ -31,6 +31,7 @@ const RESERVE_TAG = { label: 'model', moon: true, text: RULES.walkBackRateFactor
 const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the suit model (Pandolf effort equation under Mars gravity): faster walking costs more per metre. ' + ASTRONAUT.fastPaceFactor.text, source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Suit model (src/core/suit.js), planner (src/core/planner.js)', url: '', where: '' } };
 const STEEP_CUE_TAG = MODEL_TAG(`A low border along the edge of ground steeper than ${RULES.slopeMaxDeg.value}° (closed to the route), shown within about ${D.cueFadeMaxM} m of you. Outline smoothed for display; the warnings use the planner's exact slope test on the 0.5 m walk grid.`);
+const BEACON_CUE_TAG = MODEL_TAG(`A thin beam of light and a ring on the ground at your current target (the next sample spot, then the rover), visible across the whole site and fading out within about ${D.beaconFadeGoneM} m so it does not cover the spot. Position from the walk grid, drawn for orientation.`);
 const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your eye to the rover antenna), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
@@ -42,6 +43,7 @@ export function createHud(el) {
   const groundMark = h('div.walk-groundmark.mono',
     h('div', h('span.walk-cue.walk-cue--steep'), `Over ${RULES.slopeMaxDeg.value}° `, tag(STEEP_CUE_TAG)),
     h('div', h('span.walk-cue.walk-cue--radio'), 'Radio shadow edge ', tag(RADIO_CUE_TAG)),
+    h('div', h('span.walk-cue.walk-cue--beacon'), 'Target beacon ', tag(BEACON_CUE_TAG)),
     h('div', 'Ground colour ', tag(GROUND_TAG)));
 
   // compass

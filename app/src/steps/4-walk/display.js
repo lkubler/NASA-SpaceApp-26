@@ -120,6 +120,19 @@ export const DISPLAY = {
   steepFillAlpha: 0.3,    // ... translucent fill at the foot, fading to nothing at the top (assumption)
   steepStripeM: 0.6,      // ... faint vertical stripes this far apart, drifting slowly along the wall ... (assumption)
   steepStripeMS: 0.12,    // ... at this speed in metres per second (assumption)
+  // target beacon (beacon.js): a thin beam of light at the current target with a soft ring on the ground; all assumption (display choices)
+  beaconHeightM: 40,      // ... beam height above the ground, fading out towards the top, so it shows across the whole site
+  beaconBelowM: 0.3,      // ... the beam reaches this far below the walk grid, so it never floats where the Access Mars mesh lies lower
+  beaconCoreM: 0.05,      // ... clear core: half width in metres ...
+  beaconCorePx: 2,        // ... and at least this many drawing-buffer pixels wide, so it stays crisp far away
+  beaconGlowM: 0.35,      // ... translucent glow: half width in metres (grows with distance with the core)
+  beaconGlowAlpha: 0.38,  // ... glow strength beside the core
+  beaconRingLineM: 0.05,  // ground ring: clear line, half width in metres (radius = atTargetM, the distance at which a sample can be taken)
+  beaconRingGlowM: 0.3,   // ... soft glow around the line, half width in metres
+  beaconRingLiftM: 0.07,  // ... lifted this far above the walk grid, like the radio dots
+  beaconFadeFullM: 9,     // seen from this far or farther: full strength; fading out when closer ...
+  beaconFadeGoneM: 5,     // ... gone at this distance (spec: fades out within about 5 m), so it never covers the sample spot
+  beaconFogShare: 0.5,    // far away the beam takes this share of the scene's haze colour (so it stays visible across the site)
   radioDotSpacingM: 0.6,  // radio shadow: one dot per this many metres of the shadow edge (assumption)
   radioDotRadiusM: 0.07,  // ... dot radius on the ground (assumption)
   radioDotLiftM: 0.07,    // ... lifted this far above the walk grid, like the route band (assumption)
