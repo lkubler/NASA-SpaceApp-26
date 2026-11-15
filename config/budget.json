@@ -1,5 +1,0 @@
-{
-  "_comment": "Read by scripts/tokens.py, only for /loop rounds. The session (5 h) limit may be used up fully; the loop then waits for the reset. The weekly limit is capped: at weekly_max_pct the loop starts no more agents.",
-  "weekly_max_pct": 90,
-  "weekly_save_pct": 80
-}
