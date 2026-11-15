@@ -135,8 +135,9 @@ export function craterView(wrap, { meta, heights, color }) {
   const listeners = new Set();
   let W = 1, Hh = 1;
 
+  let shiftY = 0;
   function applyView() {
-    if (shift) cam.setViewOffset(W, Hh, shift, 0, W, Hh); else cam.clearViewOffset();
+    if (shift || shiftY) cam.setViewOffset(W, Hh, shift, shiftY, W, Hh); else cam.clearViewOffset();
     cam.aspect = W / Hh;
     cam.updateProjectionMatrix();
   }
@@ -154,15 +155,17 @@ export function craterView(wrap, { meta, heights, color }) {
   ro.observe(wrap);
   resize();
 
-  /** Shift the scene left by px (to make room for the side panel), with a short slide. */
-  function setShift(px) {
+  /** Shift the scene left by px (to make room for the side panel), with a slide of dur ms. */
+  function setShift(px, dur = 240) {
     shiftTo = px;
     cancelAnimationFrame(anim);
-    const from = shift, t0 = performance.now(), dur = 240;
+    const from = shift, t0 = performance.now();
+    const slow = dur > 240; // a long slide eases in as well (sine), so it starts and ends gently
     const step = (t) => {
-      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      const k = Math.min(1, (t - t0) / dur), e = slow ? (1 - Math.cos(Math.PI * k)) / 2 : 1 - Math.pow(1 - k, 3);
       shift = from + (shiftTo - from) * e;
-      applyView(); render();
+      applyView();
+      if (!flying) render(); // during the fly-in its own loop renders: one render per frame, no dropped frames
       if (k < 1) anim = requestAnimationFrame(step);
     };
     anim = requestAnimationFrame(step);
@@ -181,7 +184,7 @@ export function craterView(wrap, { meta, heights, color }) {
    * background stays transparent until the end, so the globe behind shows around the crater.
    * onFrame(kmPerPx, k) gives the ground scale at the screen centre, for the globe to follow.
    */
-  let fly = 0;
+  let fly = 0, flying = false;
   function flyIn({ dur = 3200, fill = 0.16, onFrame = null } = {}) {
     const galeKm = 154, tanH = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
     const h0 = galeKm / fill / (2 * tanH * (W / Hh));       // start height: Gale spans `fill` of the width
@@ -192,6 +195,7 @@ export function craterView(wrap, { meta, heights, color }) {
     const c01 = (t) => Math.min(1, Math.max(0, t));
     cancelAnimationFrame(fly);
     renderer.setClearAlpha(0);
+    flying = true;
     return new Promise((resolve) => {
       const t0 = performance.now();
       const step = (now) => {
@@ -211,14 +215,49 @@ export function craterView(wrap, { meta, heights, color }) {
         render();
         if (onFrame) onFrame((2 * d * tanH) / Hh, k);
         if (k < 1) fly = requestAnimationFrame(step);
-        else { terrain.scale.y = 1; setLook(1); renderer.setClearAlpha(1); render(); resolve(); }
+        else { flying = false; terrain.scale.y = 1; setLook(1); renderer.setClearAlpha(1); render(); resolve(); }
       };
       step(t0);
     });
   }
 
+  /**
+   * Mission -> Plan: a fast dive from the resting view to straight above Murray Buttes, with Murray ending at screen point `at` (fractions of the view), where the Plan map's centre will be.
+   * It speeds up towards the end, so the page change comes at full speed and the Plan map takes the motion over.
+   * spanKm: ground width across the view at the end (the grid is 387 m per pixel; the page fades before it blurs).
+   */
+  function diveTo({ dur = 650, at = { x: 0.5, y: 0.5 }, spanKm = 5, onFrame = null } = {}) {
+    cancelAnimationFrame(anim); cancelAnimationFrame(fly);
+    const tanH = Math.tan(THREE.MathUtils.degToRad(cam.fov / 2));
+    const hEnd = spanKm / (2 * tanH * (W / Hh));
+    const g0 = restTarget.clone(), u0 = cam.up.clone();
+    const dir0 = cam.position.clone().sub(g0), d0 = dir0.length(); dir0.normalize();
+    // straight down; the camera only pitches (no roll), so the screen's top stays the heading it looked along
+    const dir1 = new THREE.Vector3(0, 1, 0), u1 = dir0.clone().setY(0).negate().normalize();
+    const sx0 = shift, sy0 = shiftY, sx1 = (0.5 - at.x) * W, sy1 = (0.5 - at.y) * Hh;
+    const tgt = new THREE.Vector3(), up = new THREE.Vector3(), dir = new THREE.Vector3();
+    const sm = (x) => x * x * (3 - 2 * x);
+    return new Promise((resolve) => {
+      const t0 = performance.now();
+      const step = (now) => {
+        const k = Math.min(1, (now - t0) / dur);
+        const a = sm(k);                                                // turn and aim: smooth at both ends
+        const dist = Math.exp(Math.log(d0) + (Math.log(hEnd) - Math.log(d0)) * k * k); // zoom speeds up to the end
+        tgt.lerpVectors(g0, murray, a);
+        dir.lerpVectors(dir0, dir1, a).normalize();
+        up.lerpVectors(u0, u1, a).normalize();
+        cam.position.copy(tgt).addScaledVector(dir, dist); cam.up.copy(up); cam.lookAt(tgt);
+        shift = sx0 + (sx1 - sx0) * a; shiftY = sy0 + (sy1 - sy0) * a;
+        applyView(); render();
+        if (onFrame) onFrame(k);
+        if (k < 1) fly = requestAnimationFrame(step); else resolve();
+      };
+      fly = requestAnimationFrame(step);
+    });
+  }
+
   return {
-    pointOf, project, setShift, render, flyIn,
+    pointOf, project, setShift, render, flyIn, diveTo,
     onRender(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     dispose() {
       cancelAnimationFrame(anim); cancelAnimationFrame(fly); ro.disconnect(); listeners.clear();

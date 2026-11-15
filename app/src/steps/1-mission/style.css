@@ -129,8 +129,8 @@
 
 .step--mission .m1-req {
   position: relative; display: flex; align-items: center; gap: 1.2em; padding: 0.85em 2.8em 0.85em 0.85em; cursor: pointer;
-  background: rgba(8, 8, 9, 0.82); border: 1px solid var(--line); border-radius: var(--radius-card);
-  backdrop-filter: blur(10px); transition: border-color var(--fade), background var(--fade);
+  background: rgba(8, 8, 9, 0.86); border: 1px solid var(--line); border-radius: var(--radius-card);
+  transition: border-color var(--fade), background var(--fade); /* no backdrop blur: it made the cards stutter when they slide in over the live 3D view */
 }
 .step--mission .m1-req:hover { border-color: var(--line-strong); background: rgba(16, 16, 18, 0.88); }
 .step--mission .m1-req.is-selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
@@ -205,3 +205,29 @@
 .step--mission { background: radial-gradient(ellipse 80% 70% at 55% 60%, #2b1a11 0%, #140c08 55%, #050302 100%); }
 /* opening screen: no step bar, only the project name */
 body:has(.step--mission.m1--intro) .stepbar { opacity: 0; pointer-events: none; }
+
+/* end of the flight (m1--settling): while the camera slows down and the scene slides left, the markers fade
+   in first, then the missions one after another from the right, then the button, then the headline */
+.step--mission.m1--handoff .m1-panel, .step--mission.m1--handoff .m1-overlay,
+.step--mission.m1--handoff .m1-hero, .step--mission.m1--handoff .m1-credit { z-index: 32; }
+.step--mission.m1--settling .m1-overlay { transition: opacity 1200ms ease-out 150ms; }
+.step--mission.m1--settling .m1-hero { transition: opacity 1400ms ease-out 900ms; }
+.step--mission.m1--settling .m1-credit { transition: opacity 1400ms ease-out 1300ms; }
+.step--mission .m1-panel.is-gliding { transform: none; opacity: 1; transition: none; }
+.step--mission .m1-panel.is-gliding .m1-req, .step--mission .m1-panel.is-gliding .m1-panel__action {
+  opacity: 0; transform: translate3d(28px, 0, 0); will-change: opacity, transform;
+  transition: opacity 1400ms cubic-bezier(0.4, 0, 0.2, 1), transform 1900ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.step--mission .m1-panel.is-gliding.is-open .m1-req, .step--mission .m1-panel.is-gliding.is-open .m1-panel__action { opacity: 1; transform: none; }
+.step--mission .m1-panel.is-gliding .m1-req:nth-child(1) { transition-delay: 300ms; }
+.step--mission .m1-panel.is-gliding .m1-req:nth-child(2) { transition-delay: 520ms; }
+.step--mission .m1-panel.is-gliding .m1-req:nth-child(3) { transition-delay: 740ms; }
+.step--mission .m1-panel.is-gliding .m1-req:nth-child(n+4) { transition-delay: 960ms; }
+.step--mission .m1-panel.is-gliding .m1-panel__action { transition-delay: 1000ms; }
+@media (prefers-reduced-motion: reduce) {
+  .step--mission .m1-panel.is-gliding .m1-req, .step--mission .m1-panel.is-gliding .m1-panel__action { transform: none; }
+}
+
+/* Mission -> Plan: everything but the ground fades fast while the camera dives onto Murray Buttes */
+.step--mission.m1--diving .m1-panel, .step--mission.m1--diving .m1-hero, .step--mission.m1--diving .m1-credit,
+.step--mission.m1--diving .m1-overlay { opacity: 0; transform: none; pointer-events: none; transition: opacity 260ms ease-in; }
