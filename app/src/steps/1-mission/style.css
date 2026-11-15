@@ -208,7 +208,8 @@
 /* opening -> crater: text leaves first, the globe zooms, then the whole opening fades into the crater */
 .step--mission .m1-intro.is-zooming .m1-intro__text,
 .step--mission .m1-intro.is-zooming .m1-intro__action,
-.step--mission .m1-intro.is-zooming .m1-intro__credit { opacity: 0; transform: translateY(-8px); transition: opacity 450ms ease-out, transform 450ms ease-out; }
+.step--mission .m1-intro.is-zooming .m1-intro__credit,
+.step--mission .m1-intro.is-zooming .m1-repo { opacity: 0; pointer-events: none; transform: translateY(-8px); transition: opacity 450ms ease-out, transform 450ms ease-out; }
 /* handoff: the crater canvas sits above the opening and fades in over the globe */
 .step--mission.m1--handoff .m1-view { z-index: 31; animation: m1-view-in 200ms linear both; }
 @keyframes m1-view-in { from { opacity: 0; } to { opacity: 1; } }
