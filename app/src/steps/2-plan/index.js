@@ -513,11 +513,12 @@ export default {
      */
     function footRows(lg, lp, tag) {
       const tone = lp && !lp.keepsRules ? 'warning' : null;
-      const foot = (m, sec) => row('On foot', `${fmtDistance(m)} · ${fmtDuration(sec)}`, { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tag, tone });
+      // a part shorter than 1 m or 1 min reads "< 1 m" / "< 1 min", not "0 m · 0 min" (display only)
+      const foot = (m, sec) => row('On foot', `${m < 1 ? '< 1 m' : fmtDistance(m)} · ${sec < 60 ? '< 1 min' : fmtDuration(sec)}`, { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tag, tone });
       if (!lp || !lp.parts) return [foot(lg.distanceM, lg.seconds)];
       const out = [];
       lp.parts.forEach((pt, j) => {
-        if (j) out.push(h('div.row.plan-via', { 'aria-label': 'Waypoint' }, h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--via')), h('span.row__label', labelTag(L.waypoint))));
+        if (j) out.push(h('div.row.plan-via', { 'aria-label': 'Waypoint' }, h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--via')), h('span.row__label', 'Waypoint ', labelTag(L.waypoint))));
         out.push(foot(pt.distanceM, pt.seconds));
       });
       return out;
