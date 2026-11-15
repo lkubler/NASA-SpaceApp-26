@@ -91,17 +91,19 @@
 
 /* one alert at a time, upper centre (keeps the ground ahead clear) */
 .walk-alert { position: absolute; top: 21%; left: 50%; transform: translateX(-50%); width: min(30em, 34%); }
-.walk-alert__box { text-shadow: none; animation: slide-up var(--slide) both; background: rgba(0, 0, 0, 0.6); }
+.walk-alert__box { text-shadow: none; background: rgba(0, 0, 0, 0.6); opacity: 1; transition: opacity var(--warn-fade) linear; }
+/* fading out (a box that is not the large one any more overlaps the new one while it fades) */
+.walk-alert__box.is-off { opacity: 0; position: absolute; left: 0; right: 0; top: 0; pointer-events: none; }
 .walk-alert__lvl { font-size: var(--fs-tag); opacity: 0.85; }
 .walk-alert .alert__text { color: var(--text); }
-.walk-alert__box.is-still { animation: none; }
 /* other active warnings: small chips at the right side of the large one, its top aligned (the large one keeps its place) */
 .walk-alert__chips { position: absolute; left: calc(100% + 0.6em); top: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.35em; }
 .walk-alert__chip {
   display: flex; align-items: center; gap: 0.45em; white-space: nowrap; font-size: var(--fs-tag); font-weight: 500;
   background: rgba(0, 0, 0, 0.62); border: 1px solid currentColor; border-radius: var(--radius-pill); padding: 0.25em 0.75em 0.25em 0.6em;
-  text-shadow: none; animation: fade-in var(--fade) both;
+  text-shadow: none; opacity: 1; transition: opacity var(--warn-fade) linear;
 }
+.walk-alert__chip.is-off { opacity: 0; }
 .walk-alert__chip span:last-child { color: var(--text); }
 .walk-alert__dot { width: 0.6em; height: 0.6em; border-radius: 50%; background: currentColor; flex: none; }
 .walk-alert__chip.is-warning { color: var(--warning); }

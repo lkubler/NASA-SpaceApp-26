@@ -11,6 +11,8 @@ export const DISPLAY = {
   relogM: 8,              // walk log: the same warning again within this distance counts as the same one
   offPathM: 6,            // "Off the path": farther than this from the planned route
   edgeBandM: 4,           // "Edge of the site": closer than this to the edge of the mapped square
+  warnHoldS: 2,           // a warning shows as long as its cause lasts and this long after it ends (spec: at least about 2 s); a cause flickering at its limit never blinks it (holdset.js)
+  warnFadeS: 0.3,         // ... and fades in and out over this time (the large warning and its chips)
   aheadHoldS: 1.2,        // keep the walking direction this long after the visitor stops
   homeTurnM: 1.5,         // "heads home": the way home got this much shorter since the warning
   atTargetM: 2.5,         // close enough to take the sample
