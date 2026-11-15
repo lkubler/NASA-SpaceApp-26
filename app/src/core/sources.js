@@ -218,10 +218,11 @@ export const TOOLS = [
   { name: 'Draco decoder (2017 build from Access Mars)', use: 'Decodes the compressed terrain mesh', licence: 'Apache-2.0', url: 'https://github.com/google/draco' },
   { name: 'Space Grotesk, Inter, JetBrains Mono (via Fontsource)', use: 'Typefaces', licence: 'SIL Open Font License 1.1', url: 'https://fontsource.org' },
   { name: 'Python with numpy, Pillow, DracoPy', use: 'Offline data preparation', licence: 'BSD / HPND / Apache-2.0', url: 'https://numpy.org' },
-  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4: an AI-generated green-screen image made by the team; the green was keyed out and “AI-generated image” written into the image pixels by our script', licence: 'Generated for this project; no agency branding', url: '' },
+  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4: an AI-generated image made by the team with ChatGPT; background removed; visible “AI-generated image” mark', licence: 'Generated for this project; no agency branding', url: '' },
   { name: 'Rover egress film (labelled AI-generated)', use: 'The intro film before the walk: the team’s film, rendered with Python/pyrender scripts from a Space Exploration Vehicle rover 3D model on placeholder terrain; cut at the fade to black and marked “AI-generated” in the pixels with FFmpeg', licence: 'Made for this project; no agency branding', url: '' },
   { name: 'glTF Transform and meshoptimizer', use: 'Shrinking the rover model offline (texture resize, mesh simplification, meshopt compression) and decoding it in the app', licence: 'MIT', url: 'https://gltf-transform.dev' },
   { name: 'FFmpeg', use: 'Cutting and re-encoding the intro film (offline)', licence: 'GPL / LGPL', url: 'https://ffmpeg.org' },
+  { name: 'ChatGPT (OpenAI)', use: 'Generating the helmet frame image', licence: 'AI tool; output noted in the project description', url: 'https://chatgpt.com' },
   { name: 'Claude Code (Anthropic)', use: 'AI coding agent: research notes, app code, data preparation scripts and unit tests, written under the team’s specs', licence: 'AI tool; output noted in the project description', url: 'https://www.anthropic.com/claude-code' },
 ];
 
@@ -229,5 +230,5 @@ export const AI_NOTE = [
   'The idea, its direction and every product decision come from the team.',
   'AI coding agents (Claude Code) did research, wrote the app code, the data preparation scripts and the unit tests under the team’s specs. Code and data written with AI help are noted here and in the project description.',
   'The intro film before the walk was rendered by scripts that an AI coding agent wrote, from a rover 3D model; it carries a visible “AI-generated” mark in every frame.',
-  'The helmet frame image is AI-generated and carries a visible “AI-generated image” mark. No agency logos or mission identifiers appear in generated content.',
+  'The helmet frame image was generated with ChatGPT and carries a visible “AI-generated image” mark. No agency logos or mission identifiers appear in generated content.',
 ];
