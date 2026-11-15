@@ -16,6 +16,7 @@
 .walk-cue--steep { width: 1.4em; height: 0.9em; border-bottom: 2px solid color-mix(in srgb, var(--steep) 70%, #ffd1a8); background: linear-gradient(to top, color-mix(in srgb, var(--steep) 60%, transparent), transparent); }
 .walk-cue--route { width: 1.4em; height: 0.35em; border-radius: 0.2em; background: color-mix(in srgb, var(--accent) 65%, transparent); }
 .walk-cue--beacon { width: 0.5em; height: 0.9em; border-left: 2px solid var(--accent); background: linear-gradient(to right, color-mix(in srgb, var(--accent) 45%, transparent), transparent); }
+.walk-cue--turn { width: 1.4em; height: 0; border-top: 2px solid #ffd37a; }
 .walk-cue--radio { width: 1.4em; height: 0.4em; background: radial-gradient(circle, var(--advisory) 0.15em, transparent 0.2em) 0 50% / 0.45em 100% repeat-x; }
 
 /* HUD sits inside the visor */
