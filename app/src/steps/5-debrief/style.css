@@ -58,8 +58,10 @@
 .step--debrief .dbf__note { font-size: var(--fs-tag); color: var(--text-2); max-width: 70ch; }
 
 /* warnings list under the table */
-.step--debrief .dbf__warn { margin-top: calc(var(--gap) * 1.4); min-height: 0; flex: 0 1 auto; display: flex; flex-direction: column; max-width: 760px; }
-.step--debrief .dbf__wl { list-style: none; margin: 0; padding: 0; overflow: auto; min-height: 0; display: flex; flex-direction: column; gap: 0.45em; }
+/* the list keeps its full height; the left column (.dbf__main) scrolls when it does not fit (a list that
+   shrank and scrolled on its own cut the last warnings off on short screens) */
+.step--debrief .dbf__warn { margin-top: calc(var(--gap) * 1.4); flex: none; display: flex; flex-direction: column; max-width: 760px; }
+.step--debrief .dbf__wl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.45em; }
 .step--debrief .dbf__wi { display: flex; gap: 0.6em; align-items: flex-start; font-size: var(--fs-small); }
 .step--debrief .dbf__wi .marker { font-size: var(--fs-tag); width: 2em; height: 2em; }
 .step--debrief .marker.tone-warning { border-color: var(--warning); }
