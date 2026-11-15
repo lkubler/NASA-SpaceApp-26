@@ -160,7 +160,7 @@ export const PLANNER = {
   steepPenalty: v(1e5, '×', 'model', 'NONE', '', 'Cost multiplier for closed ground in the fallback route.'),
   edgeToleranceM: v(0.1, 'm', 'assumption', 'NONE', '',
     'A point counts as standing on a closed cell only once it is this far inside the cell. A planned diagonal step between two open cells touches the corner of the cells beside it; this tolerance lets the planner and the Walk agree that such a step keeps the slope rule.'),
-  maxStops: v(3, 'stops', 'assumption', 'TEAM', 'chosen by the team (specs/feedback-1.md, Several stops)',
+  maxStops: v(3, 'stops', 'assumption', 'TEAM', 'chosen by the team',
     'The most sample stops one excursion may plan: rover, up to three stops in the order chosen, rover. One sample and the fixed work time at every stop.'),
 };
 

@@ -3,8 +3,8 @@
 
 import { HOME } from './values.js';
 
-const AM_SRC = 'Access Mars public/index.html, murray_buttes_markers (googlecreativelab/access-mars, Apache-2.0); photo NASA/JPL-Caltech';
-const T_SRC = 'Derived from the terrain: research/walk-targets.md §3 (butte-foot rule on the 0.5 m walk grid)';
+const AM_SRC = 'Access Mars, Murray Buttes markers (googlecreativelab/access-mars, Apache-2.0); photo NASA/JPL-Caltech';
+const T_SRC = 'Derived from the terrain: team research on sample spots (butte-foot rule on the 0.5 m walk grid)';
 
 /** Home: the parked rover at the start point. */
 export const ROVER = { id: 'rover', name: 'Rover', ...HOME.rover.value };

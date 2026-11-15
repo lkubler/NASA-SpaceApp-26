@@ -14,22 +14,22 @@ import { GROUND_FILL_TAG } from '../../core/groundColor.js';
 const tag = (o) => labelTag(o);
 const SIM_TAG = { label: 'simulated', text: 'The rover model is a simple stand-in built for this view; it marks where the crew parked. The real scene has a gap there where Access Mars cut out Curiosity.' };
 const MODEL_TAG = (text) => ({ label: 'model', text, source: { title: 'Our calculation from the walk grid (Access Mars Murray Buttes, NASA/JPL-Caltech imagery)', url: '', where: '' } });
-const AM_TAG = { label: 'real', text: 'Card text from Access Mars (Google Creative Lab with NASA/JPL), a 2016 web experience built from Curiosity’s images of Murray Buttes.', source: { title: 'Access Mars, public/index.html', url: 'https://github.com/googlecreativelab/access-mars', where: 'murray_buttes_markers' } };
+const AM_TAG = { label: 'real', text: 'Card text from Access Mars (Google Creative Lab with NASA/JPL), a 2016 web experience built from Curiosity’s images of Murray Buttes.', source: { title: 'Access Mars', url: 'https://github.com/googlecreativelab/access-mars', where: 'Murray Buttes markers' } };
 const fullTime = timeLeft(fullLevels()).seconds;
 
 // distances shown with the target and on the markers: path distance from here along the fastest way that
 // keeps every rule (the plan's cost field), with its walking time; the sample card names a straight distance
 const DIST_TAG = MODEL_TAG('Straight-line distance measured on the 0.5 m walk grid.');
 const ROUTE_TAG = MODEL_TAG('Path distance from where you stand along the fastest way that keeps every rule, measured on the 0.5 m walk grid, and its walking time from the suit model, in demo time.');
-const TIME_TAG = { label: 'model', text: 'Suit time since you left the rover, counted from the rover itself like the plan: walking and work times from the suit model, shown at demo speed. The debrief shows the same clock.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
+const TIME_TAG = { label: 'model', text: 'Suit time since you left the rover, counted from the rover itself like the plan: walking and work times from the suit model, shown at demo speed. The debrief shows the same clock.', source: { title: 'Our suit model', url: '', where: '' } };
 const SLOPE_TAG = MODEL_TAG('Slope of the ground here, from the 0.5 m walk grid built from the Access Mars terrain.');
 const AHEAD_TAG = MODEL_TAG('Distance ahead in your walking direction, measured on the 0.5 m walk grid.');
 const OFF_TAG = MODEL_TAG('Distance from you to the nearest point of the planned route, measured on the 0.5 m walk grid.');
 const LAST_M_TAG = MODEL_TAG('Straight-line distance from here to the rover, measured on the 0.5 m walk grid.');
-const LAST_S_TAG = { label: 'model', text: 'Walking time of the last metres at planning pace, from the suit model, in demo time. It is added to the clock when you end the excursion.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
-const RESERVE_TAG = { label: 'model', moon: true, text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
-const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the suit model (Pandolf effort equation under Mars gravity): faster walking costs more per metre. ' + ASTRONAUT.fastPaceFactor.text, source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
-const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Suit model (src/core/suit.js), planner (src/core/planner.js)', url: '', where: '' } };
+const LAST_S_TAG = { label: 'model', text: 'Walking time of the last metres at planning pace, from the suit model, in demo time. It is added to the clock when you end the excursion.', source: { title: 'Our suit model', url: '', where: '' } };
+const RESERVE_TAG = { label: 'model', moon: true, text: RULES.walkBackRateFactor.text + ' Reserve on return = time left minus the way home from here, if you continue as planned.', source: { title: 'Our suit model', url: '', where: '' } };
+const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the suit model (Pandolf effort equation under Mars gravity): faster walking costs more per metre. ' + ASTRONAUT.fastPaceFactor.text, source: { title: 'Our suit model', url: '', where: '' } };
+const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Our suit model and route planner', url: '', where: '' } };
 const STEEP_CUE_TAG = MODEL_TAG(`A low border along the edge of ground steeper than ${RULES.slopeMaxDeg.value}° (closed to the route), shown within about ${D.cueFadeMaxM} m of you. Outline smoothed for display; the warnings use the planner's exact slope test on the 0.5 m walk grid.`);
 const BEACON_CUE_TAG = MODEL_TAG(`A thin beam of light and a ring on the ground at your current target (the next sample spot, then the rover), visible across the whole site and fading out within about ${D.beaconFadeGoneM} m so it does not cover the spot. Position from the walk grid, drawn for orientation.`);
 const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your eye to the rover antenna), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);

@@ -60,11 +60,11 @@ export const DOCS = {
     url: 'https://ntrs.nasa.gov/citations/20220013418',
   },
   WALK_TERRAIN: {
-    title: 'Team research: walk terrain inventory (research/walk-terrain.md)',
+    title: 'Team research: walk terrain inventory',
     url: 'research/walk-terrain.md',
   },
   WALK_TARGETS: {
-    title: 'Team research: sample candidates in the walk square (research/walk-targets.md)',
+    title: 'Team research: sample candidates in the walk square',
     url: 'research/walk-targets.md',
   },
   NONE: {
@@ -95,7 +95,7 @@ export const DATA = [
     url: 'https://www.uahirise.org/dtm/',
   },
   {
-    name: 'Curiosity waypoints (MSL_waypoints.json)',
+    name: 'Curiosity waypoints',
     by: 'NASA/JPL-Caltech',
     use: 'Curiosity’s drive path near Murray Buttes; in step 1 the landing site (Bradbury Landing, where we place the base: assumption) and the drive from there to Murray Buttes',
     licence: 'NASA public data',
@@ -104,7 +104,7 @@ export const DATA = [
   {
     name: 'Curiosity photos (Mastcam, MAHLI, Navcam)',
     by: 'NASA/JPL-Caltech/MSSS (Mastcam, MAHLI); NASA/JPL-Caltech (Navcam)',
-    use: 'Shown in the requests, at the sample spot and in the report: “Sloping buttes and cross-bedded sandstone” (PIA21042, Mastcam, sol 1454, NASA/JPL-Caltech/MSSS); “Layered outcrop at Quela” (Navcam, sol 1455, NASA/JPL-Caltech); “Quela drill hole at the foot of a butte” (MAHLI, sol 1464, NASA/JPL-Caltech/MSSS). Raw frames from the Curiosity raw image archive; list with file ids in public/data/murray/photos/credits.json',
+    use: 'Shown in the requests, at the sample spot and in the report: “Sloping buttes and cross-bedded sandstone” (PIA21042, Mastcam, sol 1454, NASA/JPL-Caltech/MSSS); “Layered outcrop at Quela” (Navcam, sol 1455, NASA/JPL-Caltech); “Quela drill hole at the foot of a butte” (MAHLI, sol 1464, NASA/JPL-Caltech/MSSS). Raw frames from the Curiosity raw image archive, with their file ids',
     licence: 'JPL Image Use Policy',
     url: 'https://www.jpl.nasa.gov/imagepolicy',
   },
@@ -118,7 +118,7 @@ export const DATA = [
   {
     name: 'Curiosity Mastcam images of Marias Pass and Pahrump Hills (PIA20174, PIA18476)',
     by: 'NASA/JPL-Caltech/MSSS',
-    use: 'Photos on the two missions marked "soon" in step 1 (public/data/missions/)',
+    use: 'Photos on the two missions marked "soon" in step 1',
     licence: 'JPL Image Use Policy',
     url: 'https://images.nasa.gov/details/PIA20174',
   },
@@ -132,14 +132,14 @@ export const DATA = [
   {
     name: 'Planet Mars, 3D Model (glTF)',
     by: 'NASA/JPL-Caltech, via NASA Science',
-    use: 'The planet on the opening screen (public/models/mars.glb; mesh smoothed at load time, texture unchanged) and the surface colour of the Gale crater view',
+    use: 'The planet on the opening screen (mesh smoothed at load time, texture unchanged) and the surface colour of the Gale crater view',
     licence: 'NASA media usage guidelines',
     url: 'https://science.nasa.gov/resource/planet-mars-3d-model/',
   },
   {
     name: 'Space Exploration Vehicle, 3D model (glTF)',
     by: 'NASA/LaRC/Advanced Concepts Lab, via NASA Science 3D Resources',
-    use: 'The rover in the walk (public/models/sev.glb): textures reduced to 1024 px, mesh simplified to 85,062 triangles and compressed, otherwise unedited; scaled to 4.5 m length at load time (assumption)',
+    use: 'The rover in the walk: textures reduced to 1024 px, mesh simplified to 85,062 triangles and compressed, otherwise unedited; scaled to 4.5 m length at load time (assumption)',
     licence: 'NASA media usage guidelines',
     url: 'https://science.nasa.gov/3d-resources/space-exploration-vehicle/',
   },
@@ -167,7 +167,7 @@ export const DATA = [
   {
     name: 'Deep Star Maps 2020 (8K, galactic coordinates)',
     by: 'NASA/Goddard Space Flight Center Scientific Visualization Studio; Hipparcos-2, Tycho-2 and Gaia DR2 catalogs (Gaia DR2: ESA/Gaia/DPAC)',
-    use: 'The star sky on the opening screen: a 2560 x 1440 crop around the core of the Milky Way (public/sky/milky-way.jpg)',
+    use: 'The star sky on the opening screen: a 2560 x 1440 crop around the core of the Milky Way',
     licence: 'NASA SVS, credit as given',
     url: 'https://svs.gsfc.nasa.gov/4851',
   },
@@ -193,10 +193,10 @@ export const TOOLS = [
   { name: 'Vitest', use: 'Unit tests', licence: 'MIT', url: 'https://vitest.dev' },
   { name: 'Draco decoder (2017 build from Access Mars)', use: 'Decodes the compressed terrain mesh', licence: 'Apache-2.0', url: 'https://github.com/google/draco' },
   { name: 'Space Grotesk, Inter, JetBrains Mono (via Fontsource)', use: 'Typefaces', licence: 'SIL Open Font License 1.1', url: 'https://fontsource.org' },
-  { name: 'Python with numpy, Pillow, DracoPy', use: 'Offline data preparation (scripts/preprocess)', licence: 'BSD / HPND / Apache-2.0', url: 'https://numpy.org' },
-  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4: an AI-generated green-screen image made by the team (source docs/design/helm-source.webp); the green was keyed out and “AI-generated image” written into the image pixels by our script (scripts/preprocess/build_helmet.py)', licence: 'Generated for this project; no NASA branding', url: '' },
-  { name: 'Rover egress film (labelled AI-generated)', use: 'The intro film before the walk (public/egress/egress.mp4): the team’s film, rendered with Python/pyrender scripts from a Space Exploration Vehicle rover 3D model on placeholder terrain (docs/design/egress/README.md); cut at the fade to black and marked “AI-generated” in the pixels with FFmpeg', licence: 'Made for this project; no NASA branding', url: '' },
-  { name: 'glTF Transform and meshoptimizer', use: 'Shrinking the rover model offline (texture resize, mesh simplification, meshopt compression; scripts/preprocess/README.md) and decoding it in the app', licence: 'MIT', url: 'https://gltf-transform.dev' },
+  { name: 'Python with numpy, Pillow, DracoPy', use: 'Offline data preparation', licence: 'BSD / HPND / Apache-2.0', url: 'https://numpy.org' },
+  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4: an AI-generated green-screen image made by the team; the green was keyed out and “AI-generated image” written into the image pixels by our script', licence: 'Generated for this project; no NASA branding', url: '' },
+  { name: 'Rover egress film (labelled AI-generated)', use: 'The intro film before the walk: the team’s film, rendered with Python/pyrender scripts from a Space Exploration Vehicle rover 3D model on placeholder terrain; cut at the fade to black and marked “AI-generated” in the pixels with FFmpeg', licence: 'Made for this project; no NASA branding', url: '' },
+  { name: 'glTF Transform and meshoptimizer', use: 'Shrinking the rover model offline (texture resize, mesh simplification, meshopt compression) and decoding it in the app', licence: 'MIT', url: 'https://gltf-transform.dev' },
   { name: 'FFmpeg', use: 'Cutting and re-encoding the intro film (offline)', licence: 'GPL / LGPL', url: 'https://ffmpeg.org' },
   { name: 'Claude Code (Anthropic)', use: 'AI coding agent: research notes, app code, data preparation scripts and unit tests, written under the team’s specs', licence: 'AI tool; output noted in the project description', url: 'https://www.anthropic.com/claude-code' },
 ];

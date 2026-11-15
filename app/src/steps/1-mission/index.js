@@ -171,9 +171,9 @@ export default {
         h('span', `Height ×${VERTICAL_EXAGGERATION} `),
         labelTag(DEMO.craterHeightFactor),
         ...(meta.drive ? [h('span.m1-credit__sep', '·'), h('span', 'Sites and drive: Curiosity waypoints '),
-          labelTag({ label: 'real', text: `Positions of Murray Buttes, Marias Pass and Pahrump Hills, and the drive from Bradbury Landing, from Curiosity's waypoints (sols ${meta.drive.sols[0]} to ${meta.drive.sols[1]}).`, source: { title: 'Curiosity waypoints (MSL_waypoints.json), NASA/JPL-Caltech', url: meta.drive.url } }),
+          labelTag({ label: 'real', text: `Positions of Murray Buttes, Marias Pass and Pahrump Hills, and the drive from Bradbury Landing, from Curiosity's waypoints (sols ${meta.drive.sols[0]} to ${meta.drive.sols[1]}).`, source: { title: 'Curiosity waypoints, NASA/JPL-Caltech', url: meta.drive.url } }),
           h('span.m1-credit__sep', '·'), h('span', 'Base at Bradbury Landing '),
-          labelTag({ label: 'assumption', text: `There is no base on Mars. We place the crew's base at ${meta.base.name}, where Curiosity landed in August 2012. The position is real (Curiosity's first waypoint), and the line is Curiosity's real drive from there to Murray Buttes, ${meta.drive.km} km as drawn.`, source: { title: 'Curiosity waypoints (MSL_waypoints.json), NASA/JPL-Caltech', url: meta.drive.url } })] : []),
+          labelTag({ label: 'assumption', text: `There is no base on Mars. We place the crew's base at ${meta.base.name}, where Curiosity landed in August 2012. The position is real (Curiosity's first waypoint), and the line is Curiosity's real drive from there to Murray Buttes, ${meta.drive.km} km as drawn.`, source: { title: 'Curiosity waypoints, NASA/JPL-Caltech', url: meta.drive.url } })] : []),
       );
     }
 
