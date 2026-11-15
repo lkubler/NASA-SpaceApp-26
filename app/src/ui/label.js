@@ -38,10 +38,10 @@ function cancelHide() { clearTimeout(hideTimer); }
 function hideSoon() { cancelHide(); hideTimer = setTimeout(() => { if (!pinned) closePop(); }, 160); }
 
 const KIND_TEXT = {
-  real: 'Real · NASA data or a value from a NASA document',
+  real: 'Real · mission data or a value from a source document',
   model: 'Model · calculated by us from real data',
   simulated: 'Simulated · a placeholder, no data behind it',
-  assumption: 'Assumption · a value we chose, or one no NASA document confirms',
+  assumption: 'Assumption · a value we chose, or one no source document confirms',
 };
 
 function openPop(anchor, kind, text, src, moon) {
@@ -52,7 +52,7 @@ function openPop(anchor, kind, text, src, moon) {
   pop = h('div.vlabel-pop.fade-in', { role: 'dialog' },
     h('div.vlabel-pop__kind.mono', KIND_TEXT[kind]),
     text ? h('p.vlabel-pop__text', text) : null,
-    moon ? h('p.vlabel-pop__moon', 'This value comes from NASA’s planning for the Moon.') : null,
+    moon ? h('p.vlabel-pop__moon', 'This value comes from planning for the Moon.') : null,
     h('div.vlabel-pop__src', h('span.muted', 'Source: '), link, src.where ? h('span.muted', ', ' + src.where) : null),
   );
   pop.__anchor = anchor;
