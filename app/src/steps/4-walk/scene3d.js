@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { getTerrainScene, sceneToThree } from '../../core/terrainScene.js';
+import { getTerrainScene, setWalkLook, sceneToThree } from '../../core/terrainScene.js';
 import { RADIO, ROVER, CANDIDATES, radioShadowMask, roverField } from '../../core/index.js';
 import { steepWallLines } from './steepBorder.js';
 import { DISPLAY as D } from './display.js';
@@ -72,6 +72,7 @@ export function createScene3d(host, t, opts = {}) {
     const [ts] = await Promise.all([getTerrainScene(), Promise.race([sevReady, new Promise((r) => setTimeout(r, D.roverWaitMs))])]);
     terrainRoot = ts.root;
     scene.add(terrainRoot);
+    setWalkLook(true); // the ground look of specs/x-textures.md: only here, the maps keep the plain textures
     return ts;
   }
 
@@ -139,6 +140,7 @@ export function createScene3d(host, t, opts = {}) {
   function dispose() {
     disposed = true;
     window.removeEventListener('resize', resize);
+    setWalkLook(false);
     if (terrainRoot) scene.remove(terrainRoot); // shared object: leave it intact for other views
     for (const b of Object.values(bands)) { b.geometry.dispose(); b.material.dispose(); }
     patch.geometry.dispose(); patch.material.dispose();

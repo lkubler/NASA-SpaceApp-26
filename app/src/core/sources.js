@@ -2,7 +2,7 @@
 // Values in values.js point to these keys. The sources page lists all of them.
 // Short keys follow research/suit-values.md and research/source-check.md.
 
-import { GROUND_NOTE } from './groundColor.js';
+import { GROUND_NOTE, GROUND_FILL_NOTE } from './groundColor.js';
 export const DOCS = {
   CON: {
     title: 'NASA, Exploration EVA System Concept of Operations, EVA-EXP-0042 Rev B (2020)',
@@ -85,7 +85,7 @@ export const DATA = [
     use: 'The terrain you plan on and walk through; the 0.5 m height and slope grids; the sky image; the four Access Mars points and their photos',
     licence: 'Apache-2.0 (code and scene); imagery NASA/JPL-Caltech',
     url: 'https://github.com/googlecreativelab/access-mars',
-    note: GROUND_NOTE,
+    note: GROUND_NOTE + ' ' + GROUND_FILL_NOTE,
   },
   {
     name: 'HiRISE elevation model DTEEC_040770_1755_039280_1755_U01 and orthoimage',

@@ -11,6 +11,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { GROUND_RAMP } from './groundColor.js';
+import { prepareGroundLook, patchGroundLook, patchSkylineLook, setWalkLook } from './groundLook.js';
+export { setWalkLook } from './groundLook.js';
 
 const base = () => import.meta.env.BASE_URL || './';
 
@@ -95,7 +97,11 @@ export function getTerrainScene(onProgress) {
       const tiles = [];
       let simple = null, background = null;
       const manager = new THREE.LoadingManager();
-      const done = () => resolve({ root, tiles, simple, background, skyUrl: base() + 'murray/background.jpg' });
+      const done = () => {
+        root.updateMatrixWorld(true);
+        try { prepareGroundLook(tiles); } catch (e) { console.warn('ground look not prepared', e); }
+        resolve({ root, tiles, simple, background, skyUrl: base() + 'murray/background.jpg' });
+      };
       manager.onLoad = done; // all tile textures loaded
       manager.onError = (u) => console.warn('texture failed', u);
       const tl = new THREE.TextureLoader(manager);
@@ -112,12 +118,12 @@ export function getTerrainScene(onProgress) {
         if (n.includes('BACKGROUND')) {
           background = o;
           o.material = new THREE.MeshBasicMaterial({ map: tex(base() + 'murray/background.jpg'), side: THREE.DoubleSide });
-          tintGrey(o.material); // the 4 km skyline is grey (no colour imagery) almost everywhere
+          patchSkylineLook(o.material, { uniforms: GREY_TINT }); // the 4 km skyline is grey (no colour imagery) almost everywhere
           return;
         }
         const id = /ID_(\d+)/.exec(n);
         o.material = new THREE.MeshBasicMaterial({ map: id ? tex(base() + 'murray/tiles/' + id[1] + '.jpg') : null, color: id ? 0xffffff : 0x8a5a3a });
-        if (id) tintGrey(o.material);
+        if (id) patchGroundLook(o.material, { uniforms: GREY_TINT }); // = the grey tint, plus the walk's ground look when switched on
         tiles.push(o);
       });
       root.updateMatrixWorld(true);
@@ -140,24 +146,6 @@ const GREY_TINT = {
   uGroundDark: { value: srgb(GROUND_RAMP.dark) },
   uGroundLight: { value: srgb(GROUND_RAMP.light) },
 };
-function tintGrey(material) {
-  material.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, GREY_TINT);
-    shader.fragmentShader = shader.fragmentShader
-      .replace('void main() {', 'uniform float uGreyTint; uniform vec3 uGroundDark, uGroundLight;\nvoid main() {')
-      .replace('#include <map_fragment>', `#include <map_fragment>
-        {
-          vec3 sc = pow(max(diffuseColor.rgb, vec3(0.0)), vec3(1.0 / 2.2)); // back to sRGB for the grey test
-          float mx = max(sc.r, max(sc.g, sc.b)), mn = min(sc.r, min(sc.g, sc.b));
-          float sat = mx > 0.03 ? (mx - mn) / mx : 0.0;
-          float grey = 1.0 - clamp((sat - 0.07) / 0.12, 0.0, 1.0);
-          float lum = dot(sc, vec3(0.3, 0.59, 0.11));
-          vec3 tint = mix(uGroundDark, uGroundLight, clamp((lum - 0.2) / 0.5, 0.0, 1.0));
-          diffuseColor.rgb = mix(diffuseColor.rgb, tint, grey * uGreyTint);
-        }`);
-  };
-  material.customProgramCacheKey = () => 'grey-tint';
-}
 /** Tint the grey (no colour imagery) ground in the 3D view (on, default) or show the raw textures (off). */
 export function setGreyTint(on) { GREY_TINT.uGreyTint.value = on ? 1 : 0; }
 
