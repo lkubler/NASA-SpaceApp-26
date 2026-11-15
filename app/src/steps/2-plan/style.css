@@ -5,14 +5,10 @@
 .step--plan .split__map { height: auto; aspect-ratio: auto; max-width: none; width: 100%; }
 .step--plan .split__map > .map { flex: 1 1 auto; height: auto; width: 100%; aspect-ratio: auto; min-height: 0; }
 .step--plan .split__side { max-width: none; }
-.step--plan .plan-chip {
-  align-self: flex-start; display: inline-flex; align-items: center; gap: 0.5em; max-width: 100%;
-  padding: 0.3em 0.85em 0.3em 0.7em; border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
-  font-size: var(--fs-small); background: rgba(255, 255, 255, 0.04);
-}
-.step--plan .plan-chip__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
-.step--plan .plan-chip__k { color: var(--text-2); }
-.step--plan .plan-chip__v { color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.step--plan .plan-goal { display: flex; align-items: baseline; gap: 0.45em; font-size: var(--fs-small); margin-bottom: -0.35em; white-space: nowrap; min-width: 0; }
+.step--plan .plan-goal__k { color: var(--text-2); }
+.step--plan .plan-goal__sep { color: var(--text-3); }
+.step--plan .plan-goal__v { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
 .step--plan .legend { gap: 0.45em 1.2em; margin-top: 0.7em; }
 .step--plan .legend__note { margin-left: 0; }
 .step--plan .legend .vlabel { margin-left: -0.3em; }
@@ -62,7 +58,7 @@
 .step--plan .plan-legs { display: flex; flex-direction: column; }
 .step--plan .plan-legs .row { padding: 0.32em 0; }
 .step--plan .plan-spacer { flex: 1; min-height: 0.5em; }
-.step--plan .plan-totals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 1.2em; }
+.step--plan .plan-totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1em 1.4em; border-top: 1px solid var(--line); padding-top: 1em; }
 .step--plan .plan-totals .bignum__value { font-size: clamp(22px, 3.4vh, 40px); }
 .step--plan .plan-limiting { color: var(--text-2); font-size: var(--fs-small); margin-top: 0.1em; }
 .step--plan .plan-demo { color: var(--text-2); font-size: var(--fs-tag); font-family: var(--font-mono); margin-top: 0.2em; }
@@ -130,3 +126,116 @@
   .step--plan .plan-cards .alert__title { font-size: var(--fs-text); }
   .step--plan .plan-cards.is-round .alert__text { display: none; } /* the round's map and totals show where and how much */
 }
+
+/* ---------- design of Sun 15.11. (mockup): legend in three groups, map layers, zone, rover drive, relay ---------- */
+.step--plan .map__canvas { filter: brightness(0.86) saturate(0.95); }
+.step--plan .plan-zone-dim { fill: rgba(0, 0, 0, 0.42); pointer-events: none; }
+.step--plan .plan-zone-corner { fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 1.6; }
+.step--plan .plan-zone-label circle { display: none; }
+.step--plan .plan-zone-label .map-marker__label { text-anchor: start; transform: translate(0, -11px); fill: #fff; font-weight: 500; }
+.step--plan .map-path--rover { fill: none; stroke: #ececec; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.92; }
+.step--plan .plan-effort { fill: none; stroke-width: 3.4; stroke-linecap: round; }
+.step--plan .plan-base rect { fill: #000; stroke: #fff; stroke-width: 1.3; }
+.step--plan .plan-base .map-marker__label { fill: #fff; }
+.step--plan .plan-handover circle:first-child { r: 3.6; fill: #000; stroke: #fff; stroke-width: 1.2; }
+.step--plan .plan-handover__dot { fill: var(--accent); }
+.step--plan .plan-handover .map-marker__label { fill: #fff; }
+.step--plan .plan-relay-mark rect { fill: #f6c945; stroke: #000; stroke-width: 0.8; }
+.step--plan .plan-relay-mark .map-marker__label { fill: #f6c945; }
+.step--plan .plan-terrain { position: absolute; left: 0.9em; bottom: 0.7em; font-size: var(--fs-tag); color: var(--text-2); text-shadow: 0 1px 4px #000; z-index: 2; }
+
+/* legend: three groups side by side, map layers as rows that show or hide */
+.step--plan .plan-lg { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.5fr); gap: 0 1.6em; margin-top: 0.9em; font-size: var(--fs-small); }
+.step--plan .plan-lg__col { display: flex; flex-direction: column; gap: 0.35em; padding-left: 1.4em; border-left: 1px solid var(--line); }
+.step--plan .plan-lg__col:first-child { padding-left: 0; border-left: 0; }
+.step--plan .plan-lg__k { color: var(--text-2); font-size: var(--fs-small); margin-bottom: 0.15em; }
+.step--plan .plan-lg__item { display: flex; align-items: center; gap: 0.7em; }
+.step--plan .plan-lg__note { grid-column: 1 / -1; }
+.step--plan .plan-sw { flex: none; display: inline-block; width: 1.3em; height: 0.85em; }
+.step--plan .plan-sw--rover-line { height: 2px; background: #ececec; }
+.step--plan .plan-sw--foot { background: radial-gradient(circle, var(--accent) 1.6px, transparent 2px) 0 50% / 0.37em 100% repeat-x; }
+.step--plan .plan-sw--base { width: 0.85em; height: 0.85em; border: 1.5px solid #fff; background: #000; margin: 0 0.22em; }
+.step--plan .plan-sw--handover { width: 0.85em; height: 0.85em; border-radius: 50%; border: 1.5px solid #fff; background: radial-gradient(circle, var(--accent) 28%, #000 32%); margin: 0 0.22em; }
+.step--plan .plan-sw--marker { width: 0.95em; height: 0.95em; border-radius: 50%; border: 1.5px solid #fff; margin: 0 0.17em; }
+.step--plan .plan-sw--selected { width: 0.95em; height: 0.95em; border-radius: 50%; background: var(--accent); margin: 0 0.17em; }
+.step--plan .plan-sw--cheapest { width: 0.95em; height: 0.95em; border-radius: 50%; border: 1.5px dashed var(--accent); margin: 0 0.17em; }
+.step--plan .plan-sw--point { width: 0.55em; height: 0.55em; border-radius: 50%; background: #fff; margin: 0 0.37em; }
+.step--plan .plan-sw--relay { width: 0.85em; height: 0.85em; background: #f6c945; margin: 0 0.22em; }
+.step--plan .plan-sw--zone { height: 0; border-top: 1.5px dashed rgba(255, 255, 255, 0.85); }
+.step--plan .plan-sw--steep { border-radius: 3px; background: repeating-linear-gradient(-45deg, #e85448 0 2px, rgba(150, 30, 30, 0.35) 2px 4.5px); }
+.step--plan .plan-sw--shadow { border-radius: 3px; background: radial-gradient(circle, #f0a046 1.1px, transparent 1.5px) 0 0 / 4px 4px; }
+.step--plan .plan-sw--effort { border-radius: 3px; background: linear-gradient(90deg, rgb(168, 230, 255), rgb(40, 110, 255)); }
+.step--plan .plan-layer {
+  display: flex; align-items: center; gap: 0.7em; padding: 0.38em 0.5em 0.38em 0.8em;
+  border: 1px solid var(--line); border-radius: 9px; background: rgba(255, 255, 255, 0.02); transition: opacity var(--fade);
+}
+.step--plan .plan-layer__name { flex: 1; min-width: 0; }
+.step--plan .plan-layer__note { color: var(--text-2); }
+.step--plan .plan-layer__eye { display: inline-grid; place-items: center; width: 2em; height: 1.7em; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text); cursor: pointer; }
+.step--plan .plan-layer__eye:hover, .step--plan .plan-layer__eye:focus-visible { background: rgba(255, 255, 255, 0.08); outline: none; }
+.step--plan .plan-layer__eye .eye-off { display: none; }
+.step--plan .plan-layer.is-off > :not(.plan-layer__eye) { opacity: 0.4; }
+.step--plan .plan-layer.is-off .eye-off { display: inline; }
+.step--plan .plan-compare {
+  align-self: flex-start; margin-left: 2.6em; padding: 0.22em 0.8em; border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  background: none; color: var(--text-2); font: inherit; font-size: var(--fs-tag); cursor: pointer;
+}
+.step--plan .plan-compare:hover { color: var(--text); border-color: var(--text-2); }
+
+/* relay card: yellow mark, Move button */
+.step--plan .plan-relay { align-items: center; }
+.step--plan .plan-relay__mark { flex: none; width: 1.05em; height: 1.05em; background: #f6c945; margin: 0 0.55em 0 0.45em; }
+.step--plan .plan-relay__move {
+  flex: none; padding: 0.45em 1.1em; border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  background: none; color: var(--text); font: inherit; font-weight: 600; cursor: pointer;
+}
+.step--plan .plan-relay__move:hover { border-color: var(--text-2); }
+
+/* leg icons for the drive and the handover */
+.step--plan .plan-leg-icon--handover { width: 0.75em; height: 0.75em; border-radius: 50%; border: 1.5px solid #fff; }
+.step--plan .plan-leg-icon--drive { width: 2px; height: 1.1em; background: #ececec; margin: 0 0.35em; }
+.step--plan .plan-leg-icon--relay { width: 0.75em; height: 0.75em; background: #f6c945; }
+
+/* the panel holds card, relay, legs and the four totals without scrolling */
+.step--plan .plan-totals .bignum__value { font-size: clamp(20px, 3vh, 34px); }
+.step--plan .plan-legs .row { padding: 0.24em 0; }
+.step--plan .plan-relay { padding-top: 0.6em; padding-bottom: 0.6em; }
+.step--plan .split__panel { gap: calc(var(--gap) * 0.8); }
+@media (max-height: 800px) {
+  .step--plan .plan-legs .row { padding: 0.1em 0; }
+  .step--plan .plan-totals { gap: 0.6em 1.2em; padding-top: 0.6em; }
+  .step--plan .plan-relay { padding-top: 0.4em; padding-bottom: 0.4em; }
+  .step--plan .plan-relay .card__sub { display: none; }
+  .step--plan .plan-limiting { font-size: var(--fs-tag); }
+}
+
+/* compact list and relay card, so the four totals stay in view (mockup density) */
+.step--plan .plan-legs { font-size: 0.93em; }
+.step--plan .plan-legs .row { padding: 0.14em 0; }
+.step--plan .plan-relay .card__title { font-size: var(--fs-text); }
+.step--plan .plan-relay .card__sub { font-size: var(--fs-tag); }
+.step--plan .plan-relay__move { padding: 0.35em 0.95em; font-size: var(--fs-small); }
+.step--plan .headline { margin-bottom: 0; }
+.step--plan .plan-totals .bignum__label { font-size: var(--fs-small); }
+.step--plan .plan-limiting { font-size: var(--fs-tag); }
+.step--plan .plan-totals .bignum { border-top: 0; padding-top: 0; }
+.step--plan .plan-totals .bignum__value { margin-top: 0.05em; line-height: 1.1; }
+.step--plan .plan-spacer { min-height: 0.2em; }
+.step--plan .plan-demo { margin-top: 0; }
+/* short screens: the four totals in one row */
+@media (max-height: 800px) {
+  .step--plan .plan-totals { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 0.9em; }
+  .step--plan .plan-totals .bignum__value { font-size: clamp(18px, 3vh, 26px); }
+  .step--plan .plan-totals .bignum__label, .step--plan .plan-limiting { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+
+/* the base is never drawn: a note in the map corner says where the rover comes from */
+.step--plan .plan-basehint {
+  position: absolute; top: 0.8em; right: 2.6em; z-index: 2; font-size: var(--fs-small); color: #e6e6e8;
+  background: rgba(0, 0, 0, 0.55); padding: 0.25em 0.7em; border-radius: var(--radius-pill); backdrop-filter: blur(4px);
+}
+.step--plan .plan-basehint__k { font-weight: 600; color: #fff; }
+.step--plan .plan-basehint__arrow { color: #fff; }
+
+.step--plan .plan-totals .bignum__value { font-size: clamp(20px, 2.7vh, 30px); }
+.step--plan .plan-goal { margin-bottom: -0.55em; }

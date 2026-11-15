@@ -102,6 +102,7 @@ for (const run of runs) {
     await page.waitForFunction((id) => window.__state.spotId === id, cfg.spot);
     await shot(`plan-${cfg.spot}`);
     if (cfg.stops) {
+      // (the list starts with Base, Rover drive and Set relay, look only: +3 rows)
       // further clicks add stops in the order clicked; markers are found by their number (chosen ones move up)
       for (const id of cfg.stops.slice(1)) {
         await page.locator('.step--plan .map-marker--number.plan-hit').filter({ hasText: String(cands.indexOf(id) + 1).padStart(2, '0') }).click({ force: true });
@@ -112,13 +113,13 @@ for (const run of runs) {
       const badges = await page.locator('.step--plan .plan-order text').allInnerTexts();
       if (badges.length !== cfg.stops.length) fail(run, `order badges ${badges}`);
       const legRows = await page.locator('.step--plan .plan-legs .row').count();
-      if (legRows !== 2 * cfg.stops.length + 3) fail(run, `leg list has ${legRows} rows`);
+      if (legRows !== 2 * cfg.stops.length + 6) fail(run, `leg list has ${legRows} rows`);
       await shot(`plan-${cfg.stops.length}-stops`);
     }
     const planTxt = {
-      total: await text('.plan-totals .bignum:nth-child(1) .bignum__value'),
-      reserve: await text('.plan-totals .bignum:nth-child(2) .bignum__value'),
-      steep: await text('.plan-totals .bignum:nth-child(3) .bignum__value'),
+      total: await text('.plan-totals .bignum:nth-child(2) .bignum__value'),
+      reserve: await text('.plan-totals .bignum:nth-child(1) .bignum__value'),
+      steep: await text('.plan-totals .bignum:nth-child(4) .bignum__value'),
       dist: (await text('.plan-cards .card__right')).replace(/\s*model$/, ''),
     };
     // the first stop: in a round its number is in the leg list (the walk's first target)

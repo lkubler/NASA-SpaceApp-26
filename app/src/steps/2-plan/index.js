@@ -11,6 +11,7 @@ import { planAllCandidates, planRound, planNumbers, stopOrdinal, MAX_STOPS, PLAN
 import { paintGround, composeGround, hatchPattern, dotPattern } from './ground.js';
 import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
 import { GROUND_TAG } from '../../core/groundColor.js';
+import { EXTRA_TAGS, zoneOf, relayPointOf, roverDriveOf, drawEffort, drawZone, planLegend } from './extras.js';
 
 let root = null;
 let cleanup = [];
@@ -80,7 +81,8 @@ export default {
     // too steep (hatched) and radio shadow (dotted) are drawn by the shared map at screen size, so they
     // stay right at every zoom; the ground under them is this step's own render
     // fade: ground, hatching and markers appear together once the ground is painted and the markers drawn
-    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true });
+    // the map stays where it opens (on the EVA zone): no dragging, no reset; + and − still zoom about its centre
+    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true, movable: false, resetButton: false });
     let groundDone = false, drawnOnce = false;
     const revealWhenReady = () => { if (groundDone && drawnOnce) map.reveal(); };
     const tip = h('div.plan-tip', { hidden: true });
@@ -96,35 +98,51 @@ export default {
     }).catch((e) => console.warn('top-down terrain render failed, keeping the relief', e))
       .finally(() => { groundDone = true; revealWhenReady(); });
 
-    const leg = legend([
-      { kind: 'foot', text: 'On foot' },
-      { kind: 'radio', text: 'Route in radio shadow' },
-      { kind: 'rover', text: ['Rover, home ', labelTag(HOME.rover)] },
-      { kind: 'marker', text: ['Candidate spot ', labelTag(L.spot)] },
-      { kind: 'order', text: 'Chosen stop, visiting order' },
-      { kind: 'cheapest', text: 'Cheapest' },
-      { kind: 'point', text: ['Access Mars point ', labelTag(L.point)] },
-      { kind: 'steep', text: [`Too steep (> ${RULES.slopeMaxDeg.value}°) `, labelTag(L.steep)] },
-      { kind: 'shadow', text: ['Radio shadow ', labelTag(L.shadow)] },
-    ], ['Terrain: Access Mars ', labelTag(L.terrain), ' · ground colour ', labelTag(GROUND_TAG)]);
+    // map layers the visitor can show or hide (walking effort: look only, see extras.js)
+    const show = { steep: true, shadow: true, effort: true };
+    const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => later('Comparing with and without the relay comes in a later version.') }, 'Compare without relay');
+    const leg = planLegend({
+      route: [['rover-line', 'Rover drive'], ['foot', 'On foot'], ['handover', 'Handover to foot']],
+      places: [['marker', ['Candidate spot ', labelTag(L.spot)]], ['selected', 'Chosen stop'], ['cheapest', 'Cheapest'],
+        ['point', ['Access Mars point ', labelTag(L.point)]], ['relay', ['Radio relay ', labelTag(EXTRA_TAGS.relay)]], ['zone', ['EVA zone ', labelTag(EXTRA_TAGS.zone)]]],
+      layers: [
+        { key: 'steep', swatch: 'steep', name: 'Too steep to walk', note: `> ${RULES.slopeMaxDeg.value}°`, on: true, tag: L.steep },
+        { key: 'shadow', swatch: 'shadow', name: 'No radio contact', note: '· no line of sight to the rover', on: true, tag: L.shadow, extra: compareBtn },
+        { key: 'effort', swatch: 'effort', name: 'Walking effort', note: 'easy → hard', on: true, tag: EXTRA_TAGS.effort },
+      ],
+      onToggle: (key, on) => {
+        show[key] = on;
+        if (key === 'steep' || key === 'shadow') map.setLayers({ [key]: on });
+        else drawMap();
+      },
+    });
+    // terrain credit inside the map, bottom left
+    map.el.append(h('div.plan-terrain', 'Terrain: Access Mars ', labelTag(L.terrain), ' · ground colour ', labelTag(GROUND_TAG)));
+    // where the rover comes from: the base, far off the map to the north-east
+    map.el.append(h('div.plan-basehint', h('span.plan-basehint__k', 'Base'), ' Bradbury Landing · 8 km ', h('span.plan-basehint__arrow', '↗'), ' ', labelTag(EXTRA_TAGS.drive)));
     Lay.map.append(map.el, leg);
     ctx.flipIn(map.el); // x-transitions: back from Go / no-go the map moves here from its small place
 
     // ----- panel -----
     const cards = h('div.plan-cards', { 'data-enter': 2 });
+    // the radio relay (look only): a card with Move; placing it comes later
+    const relayCard = h('div.card.plan-relay', { 'data-enter': 2 },
+      h('span.plan-relay__mark'),
+      h('div.card__body', h('div.card__title', 'Radio relay ', labelTag(EXTRA_TAGS.relay)), h('div.card__sub', 'Shrinks the radio shadow · not placed yet')),
+      h('button.plan-relay__move', { type: 'button', onclick: () => later('Moving the relay comes in a later version.') }, 'Move'));
     const legs = h('div.plan-legs');
     const totals = h('div.plan-totals', { 'data-enter': 2 });
     const demo = h('div.plan-demo', 'Demo time: clock and suit run ', String(DEMO.timeFactor.value), DEMO.timeFactor.unit, ' faster ', labelTag(DEMO.timeFactor));
     const btn = pillButton({ text: 'Confirm route', onClick: () => ctx.next(), disabled: !ctx.state.route });
     const req = ctx.state.request;
     // the goal is set by the request from step 1; this step only plans the route to it
-    const reqBox = req ? h('div.plan-chip', { title: req.titleLong || req.title },
-      h('span.plan-chip__dot'), h('span.plan-chip__k', 'Request'), h('span.plan-chip__v', req.title)) : null;
+    const reqBox = req ? h('div.plan-goal', { title: req.titleLong || req.title },
+      h('span.plan-goal__k', 'Murray Buttes'), h('span.plan-goal__sep', '·'), h('span.plan-goal__v', req.title)) : null;
     // one short line that says what a click does now (and why a click did nothing)
     const hint = h('div.plan-hint', { role: 'status', 'aria-live': 'polite', tabindex: '-1' });
     const head = headline('Plan your mission.');
     head.dataset.enter = '1';
-    Lay.panel.append(reqBox, head, hint, cards, legs, h('div.plan-spacer'), totals, demo);
+    Lay.panel.append(reqBox, head, hint, cards, relayCard, legs, h('div.plan-spacer'), totals, demo);
     Lay.action.append(btn);
 
     cards.append(card({ title: 'Calculating routes…', sub: 'Fastest route to every spot that keeps every rule.' }));
@@ -142,6 +160,13 @@ export default {
     const numberOf = (id) => spotNumber(id) || String(cands.findIndex((c) => c.candidate.id === id) + 1).padStart(2, '0');
     const cheapest = cheapestId(cands);
     let pinned = null; // Access Mars point whose card is pinned open
+    // look-only extras (extras.js): the zone around every place of the plan, a relay on its high ground
+    const clampT = (v) => Math.max(terrain.min + 2, Math.min(terrain.max - 2, v));
+    const zz = zoneOf([...cands.map((c) => c.candidate), ROVER], 6);
+    const zone = { x0: clampT(zz.x0), x1: clampT(zz.x1), z0: clampT(zz.z0), z1: clampT(zz.z1) };
+    const relayAt = relayPointOf(terrain, zone, [...cands.map((c) => c.candidate), ...ACCESS_MARS_POINTS]);
+    // the map opens on the EVA zone, so the zone fills it and the rover drive runs out of the picture
+    map.setHome([{ x: zone.x0, z: zone.z0 }, { x: zone.x1, z: zone.z1 }], { margin: 0.02, maxK: 3, square: false });
 
     // the widest the map may be: north and south of the rover it must still show every marker and route
     const reach = Math.max(...cands.map(({ candidate: c, route }) => Math.max(Math.abs(c.z),
@@ -197,6 +222,14 @@ export default {
     };
     let notice = null, noticeTimer = 0; // a short message after a click that could not add a stop
     cleanup.push(() => clearTimeout(noticeTimer));
+    /** A click on a look-only control (relay, compare): a short note in the hint line. */
+    function later(msg) {
+      notice = msg;
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => { notice = null; renderHint(); }, 4000);
+      renderHint();
+      hint.classList.remove('is-flash'); void hint.offsetWidth; hint.classList.add('is-flash');
+    }
     const setStops = (ids) => {
       notice = null;
       if (!ids.length) ctx.set({ stops: [], spotId: null, route: null, plan: null });
@@ -275,13 +308,28 @@ export default {
       const fresh = drawnPlan !== undefined && sel && sel.plan && sel.plan !== drawnPlan;
       drawnPlan = (sel && sel.plan) || null;
 
+      // EVA zone (look only): darker ground outside, corner brackets, its size
+      drawZone(map, terrain, zone);
+      // rover drive from the base (look only): a white line from the map edge towards the base to the rover
+      const vb = visibleBox(), p0 = map.unproject(vb.x0, vb.y1), p1 = map.unproject(vb.x1, vb.y0);
+      const drive = roverDriveOf(terrain, { x0: p0.x, x1: p1.x, z0: p0.z, z1: p1.z });
+      // the base itself is 8 km away and never drawn: the drive just runs off the map edge towards it
+      if (drive) map.path(drive.points, { style: 'rover' });
+      // radio relay (look only)
+      if (relayAt) map.addMarker(relayAt.x, relayAt.z, { kind: 'rover', label: 'Relay', layer: 'markers' }).classList.add('plan-relay-mark');
+
       // the round over the chosen stops
       if (sel && sel.plan) {
         const rs = runs(sel.plan.profile);
         const paths = [];
         for (const r of rs) if (r.kind === 'shadow') paths.push(map.path(r.points, { style: 'radio' }));
+        // walking effort on: the route as one line coloured by the slope under it; off: cyan dots
+        if (show.effort) paths.push(...drawEffort(map, sel.plan.profile.filter((q) => !q.closed)));
         // the stretch that breaks a rule is drawn above the spot markers, so it stays visible
-        for (const r of rs) paths.push(map.path(r.points, r.kind === 'closed' ? { style: 'broken', layer: 'top' } : { style: 'foot' }));
+        for (const r of rs) {
+          if (r.kind === 'closed') paths.push(map.path(r.points, { style: 'broken', layer: 'top' }));
+          else if (!show.effort) paths.push(map.path(r.points, { style: 'foot' }));
+        }
         if (fresh) map.drawIn(sel.plan.profile, paths);
         for (const b of sel.plan.brokenRules) {
           if (!b.where || b.id === 'slope') continue;
@@ -289,8 +337,10 @@ export default {
         }
       }
 
-      // rover, home
-      map.addMarker(ROVER.x, ROVER.z, { kind: 'rover', label: 'Home' });
+      // the rover: where the crew hands over from the drive to foot
+      const ho = map.addMarker(ROVER.x, ROVER.z, { kind: 'point', label: 'Handover', layer: 'top' });
+      ho.classList.add('plan-handover');
+      ho.append(s('circle', { r: 1.6, class: 'plan-handover__dot' }));
 
       // candidates; a chosen one is filled cyan and carries its visiting order ("1st") beside its own number
       const selGs = [];
@@ -369,7 +419,7 @@ export default {
       let text;
       if (notice) text = notice;
       else if (!ids.length) text = 'Click a spot on the map to plan the route there and back.';
-      else if (ids.length === 1) text = `Click more spots to add stops (up to ${MAX_STOPS}); click a chosen one to remove it.`;
+      else if (ids.length === 1) text = `Click spots to add stops (up to ${MAX_STOPS}) or remove them.`;
       else if (ids.length < MAX_STOPS) text = `Click a spot for a ${stopOrdinal(ids.length + 1)} stop. ↑ ↓ change the order, × removes.`;
       else text = `${MAX_STOPS} stops, the most per excursion. ↑ ↓ change the order, × removes.`;
       hint.textContent = text;
@@ -392,10 +442,10 @@ export default {
       const out = [];
       P.legs.forEach((lg, i) => {
         if (lg.kind === 'rover' && i === 0) {
-          out.push(row('Rover, home', '', { lead: h('span.plan-leg-icon.plan-leg-icon--rover') }));
+          out.push(row('Handover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }), relayRow());
         } else if (lg.kind === 'rover') {
           // the way to clear sits at the end of the list, on the last row
-          out.push(h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--rover')), h('span.row__label', 'Rover'),
+          out.push(h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--handover')), h('span.row__label', 'Back at the rover'),
             h('span.plan-clear', textLink('Clear all stops', () => { setStops([]); hint.focus(); }))));
         } else if (lg.kind === 'foot') {
           const lp = P.legPlans[(i - 1) / 2];
@@ -415,6 +465,14 @@ export default {
       });
       return out;
     }
+
+    /** Base and the rover drive (look only: not counted in the totals), above the round. */
+    const driveRows = () => [
+      row('Base', 'Bradbury Landing · 8 km', { lead: h('span.plan-leg-icon.plan-leg-icon--rover') }),
+      row('Rover', h('span.muted', 'drive, not counted'), { lead: h('span.plan-leg-icon.plan-leg-icon--drive'), tag: EXTRA_TAGS.drive }),
+    ];
+    /** Setting the relay (look only). */
+    const relayRow = () => row('Set relay', h('span.muted', 'later'), { lead: h('span.plan-leg-icon.plan-leg-icon--relay'), tag: EXTRA_TAGS.relay });
 
     function renderPanel() {
       const ids = stopIds();
@@ -454,6 +512,7 @@ export default {
             : 'No route to this spot keeps this rule; the best route is shown.')));
         }
       }
+      legs.append(...driveRows());
       if (P && ids.length > 1) legs.append(...stopList(P, ids));
       else {
         const legRows = P ? P.legs : [
@@ -465,17 +524,26 @@ export default {
           if (P && lg.kind === 'foot') { value = `${fmtDistance(lg.distanceM)} · ${fmtDuration(lg.seconds)}`; tag = L.time; }
           else if (P && lg.kind === 'spot') { value = fmtDuration(lg.seconds); tag = DEMO.spotWorkMin; }
           else if (!P && lg.kind !== 'rover') value = '–';
-          const name = lg.kind === 'rover' ? (i === 0 ? 'Rover, home' : 'Rover') : lg.name;
-          legs.append(row(name, value, { lead, tag }));
+          if (lg.kind === 'rover') {
+            legs.append(row(i === 0 ? 'Handover' : 'Back at the rover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }));
+            if (i === 0) legs.append(relayRow());
+            return;
+          }
+          legs.append(row(lg.name, value, { lead, tag }));
         });
       }
+      // four totals in a 2 x 2 grid, each with the limit it is held against
       const slopeBroken = P && P.steepestDeg > RULES.slopeMaxDeg.value;
-      const reserve = bigNumber({ label: 'Reserve on return', value: P ? fmtDuration(P.reserveS) : '–', tag: L.reserve, tone: P && P.reserveS < 0 ? 'warning' : null });
-      reserve.append(h('div.plan-limiting', P ? `limited by ${P.limitingName.toLowerCase()}` : ' '));
+      const total = (label, value, sub, tag, tone = null) => {
+        const b = bigNumber({ label, value, tag, tone });
+        b.append(h('div.plan-limiting', sub));
+        return b;
+      };
       totals.append(
-        bigNumber({ label: ids.length > 1 ? 'Total time, round' : 'Total time', value: P ? fmtDuration(P.timeS, { approx: true }) : '–', tag: L.time }),
-        reserve,
-        bigNumber({ label: 'Steepest slope', value: P ? fmtDeg(P.steepestDeg) : '–', tag: L.slope, tone: P ? (slopeBroken ? 'warning' : 'accent') : null }),
+        total('Reserve on return', P ? fmtDuration(P.reserveS) : '–', P ? `limited by ${P.limitingName.toLowerCase()}` : ' ', L.reserve, P && P.reserveS < 0 ? 'warning' : null),
+        total(ids.length > 1 ? 'EVA time, round' : 'EVA time', P ? fmtDuration(P.timeS, { approx: true }) : '–', `max. ${RULES.evaPlannedH.value} h planned`, L.time),
+        total('Without radio', P ? fmtDuration(P.radioShadowS || 0) : '–', 'a caution, no limit', L.shadow, P && P.radioShadowS > 0 ? 'caution' : null),
+        total('Steepest part', P ? fmtDeg(P.steepestDeg) : '–', `max. ${RULES.slopeMaxDeg.value}°`, L.slope, P ? (slopeBroken ? 'warning' : 'accent') : null),
       );
       btn.disabled = !ctx.state.route;
     }
