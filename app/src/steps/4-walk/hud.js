@@ -12,7 +12,7 @@ import frameUrl from './helmet-frame.webp';
 import { GROUND_FILL_TAG } from '../../core/groundColor.js';
 
 const tag = (o) => labelTag(o);
-const SIM_TAG = { label: 'simulated', text: 'The rover model is a simple stand-in built for this view; it marks where the crew parked. The real scene has a gap there where Access Mars cut out Curiosity.' };
+const SIM_TAG = { label: 'simulated', text: `The rover is NASA’s Space Exploration Vehicle 3D model, scaled to ${D.roverLengthM} m length (assumption). Its position is simulated: it marks where the crew parked. The real scene has a gap there where Access Mars cut out Curiosity.`, source: { title: 'Space Exploration Vehicle, 3D model (NASA/LaRC/Advanced Concepts Lab, via NASA Science 3D Resources)', url: 'https://science.nasa.gov/3d-resources/space-exploration-vehicle/', where: '' } };
 const MODEL_TAG = (text) => ({ label: 'model', text, source: { title: 'Our calculation from the walk grid (Access Mars Murray Buttes, NASA/JPL-Caltech imagery)', url: '', where: '' } });
 const AM_TAG = { label: 'real', text: 'Card text from Access Mars (Google Creative Lab with NASA/JPL), a 2016 web experience built from Curiosity’s images of Murray Buttes.', source: { title: 'Access Mars', url: 'https://github.com/googlecreativelab/access-mars', where: 'Murray Buttes markers' } };
 const fullTime = timeLeft(fullLevels()).seconds;
