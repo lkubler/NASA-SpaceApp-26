@@ -183,7 +183,7 @@ export default {
       credit.append(
         h('span.m1-credit__k', 'Sources'),
         h('span', 'Gale crater: HRSC (ESA Mars Express), NASA 3D model '),
-        labelTag({ label: 'real', text: `Elevation of Gale crater from a printable 3D model, made from stereo images of the HRSC camera on ESA's Mars Express; ${Math.round(meta.width_km)} × ${Math.round(meta.height_km)} km, ${Math.round(meta.km_per_pixel * 1000)} m per pixel. We placed it on the map and converted it to metres by fitting it to MOLA laser altimetry (correlation ${meta.fit.r}). Surface colour from the same Mars 3D model as the opening globe (low resolution, about 6 pixels per degree). Site positions from Curiosity's drive path; Mount Sharp is the highest point of the central mound in this grid.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
+        labelTag({ label: 'real', text: `Heights of Gale crater from a 3D model made from HRSC stereo images on ESA’s Mars Express (${Math.round(meta.width_km)} × ${Math.round(meta.height_km)} km), converted to metres with MOLA altimetry. Colour from the Mars globe model; site positions from Curiosity’s drive.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
         h('span.m1-credit__sep', '·'),
         h('span', `Height ×${VERTICAL_EXAGGERATION} `),
         labelTag(DEMO.craterHeightFactor),
@@ -288,7 +288,7 @@ export default {
           h('div.m1-req__site', siteName(r.site), r.locked ? h('span.m1-req__soon', 'Soon') : null, done ? h('span.m1-req__done', 'Done') : null),
           h('div.m1-req__title', r.title),
           h('p.m1-req__why', r.why)),
-        h('span.m1-req__info', labelTag({ label: 'real', text: `Why it matters: ${r.why} The question is real; the message from Earth is part of the demo.`, source: r.whySource })),
+        h('span.m1-req__info', labelTag({ label: 'real', text: 'The scientific question is real; the message from Earth is part of the story.', source: r.whySource })),
         r.locked ? null : h('span.m1-req__check', { 'aria-hidden': 'true' }));
       el.addEventListener('mouseenter', () => hot(r.id, true));
       el.addEventListener('mouseleave', () => hot(r.id, false));

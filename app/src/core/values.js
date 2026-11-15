@@ -6,6 +6,7 @@
 //   src:   key into DOCS in sources.js;  where: section / page / slide in that document
 //   text:  one or two sentences for the label popover
 //   moon:  true when the value comes from lunar planning (specs/rules.md "Moon values")
+//   internal: true for planner tuning that is not a mission value; left out of the Sources page table
 // Values that research/source-check.md marks unconfirmed carry label 'assumption'.
 
 import { DOCS } from './sources.js';
@@ -124,10 +125,12 @@ export const ENVIRONMENT = {
     'One-way signal delay on the day of this mission, chosen inside the expected range while a crew is at Mars.'),
 };
 
+// Tuned with `npm run tune` (scripts/tune.mjs), see app/README.md.
+const TIME_FACTOR = 76;
+
 export const DEMO = {
-  // Tuned with `npm run tune` (scripts/tune.mjs), see app/README.md.
-  timeFactor: v(76, '×', 'assumption', 'NONE', 'tuned for the 128 m demo square',
-    'Demo time: the clock and the suit’s consumption run this many times faster than reality, so turning back becomes a real decision inside the 128 m site.'),
+  timeFactor: v(TIME_FACTOR, '×', 'assumption', 'NONE', 'chosen by the team',
+    `Demo time: the clock and the suit’s use run ${TIME_FACTOR}× faster than real time.`),
   spotWorkMin: v(20, 'min', 'assumption', 'NONE', '',
     'Fixed time for taking the sample at the spot, counted in time and consumption.'),
   screenSpeedFactor: v(5, '×', 'assumption', 'NONE', 'Walk: Shift tapped twice',
@@ -157,9 +160,9 @@ export const HOME = {
 export const PLANNER = {
   // 1e5: one metre of closed ground costs more than any open route in the 128 m square can be long,
   // so the fallback first minimises closed ground, then time.
-  steepPenalty: v(1e5, '×', 'model', 'NONE', '', 'Cost multiplier for closed ground in the fallback route.'),
+  steepPenalty: v(1e5, '×', 'model', 'NONE', '', 'Cost multiplier for closed ground in the fallback route.', { internal: true }),
   edgeToleranceM: v(0.1, 'm', 'assumption', 'NONE', '',
-    'A point counts as standing on a closed cell only once it is this far inside the cell. A planned diagonal step between two open cells touches the corner of the cells beside it; this tolerance lets the planner and the Walk agree that such a step keeps the slope rule.'),
+    'A point counts as standing on a closed cell only once it is this far inside the cell. A planned diagonal step between two open cells touches the corner of the cells beside it; this tolerance lets the planner and the Walk agree that such a step keeps the slope rule.', { internal: true }),
   maxStops: v(3, 'stops', 'assumption', 'TEAM', 'chosen by the team',
     'The most sample stops one excursion may plan: rover, up to three stops in the order chosen, rover. One sample and the fixed work time at every stop.'),
 };

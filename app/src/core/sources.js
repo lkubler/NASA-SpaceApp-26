@@ -163,7 +163,7 @@ export const DATA = [
   {
     name: 'Space Exploration Vehicle, 3D model (glTF)',
     by: 'NASA/LaRC/Advanced Concepts Lab, via NASA Science 3D Resources',
-    use: 'The rover in the walk: textures reduced to 1024 px, mesh simplified to 85,062 triangles and compressed, otherwise unedited; scaled to 4.5 m length at load time (assumption)',
+    use: 'The rover in the walk. Made smaller for the web, otherwise unedited; its 4.5 m length is our assumption.',
     licence: 'NASA media usage guidelines',
     url: 'https://science.nasa.gov/3d-resources/space-exploration-vehicle/',
   },
@@ -219,7 +219,7 @@ export const TOOLS = [
   { name: 'Space Grotesk, Inter, JetBrains Mono (via Fontsource)', use: 'Typefaces', licence: 'SIL Open Font License 1.1', url: 'https://fontsource.org' },
   { name: 'Python with numpy, Pillow, DracoPy', use: 'Offline data preparation', licence: 'BSD / HPND / Apache-2.0', url: 'https://numpy.org' },
   { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4: an AI-generated image made by the team with ChatGPT; background removed; visible “AI-generated image” mark', licence: 'Generated for this project; no agency branding', url: '' },
-  { name: 'Rover egress film (labelled AI-generated)', use: 'The intro film before the walk: the team’s film, rendered with Python/pyrender scripts from a Space Exploration Vehicle rover 3D model on placeholder terrain; cut at the fade to black and marked “AI-generated” in the pixels with FFmpeg', licence: 'Made for this project; no agency branding', url: '' },
+  { name: 'Rover egress film (labelled AI-generated)', use: 'The intro film before the walk, rendered by AI-written Python scripts (pyrender) from the Space Exploration Vehicle 3D model; shortened and marked “AI-generated” in the picture.', licence: 'Made for this project; no agency branding', url: '' },
   { name: 'glTF Transform and meshoptimizer', use: 'Shrinking the rover model offline (texture resize, mesh simplification, meshopt compression) and decoding it in the app', licence: 'MIT', url: 'https://gltf-transform.dev' },
   { name: 'FFmpeg', use: 'Cutting and re-encoding the intro film (offline)', licence: 'GPL / LGPL', url: 'https://ffmpeg.org' },
   { name: 'ChatGPT (OpenAI)', use: 'Generating the helmet frame image', licence: 'AI tool; output noted in the project description', url: 'https://chatgpt.com' },

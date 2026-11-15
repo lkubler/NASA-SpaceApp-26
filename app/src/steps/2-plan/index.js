@@ -102,7 +102,7 @@ export default {
 
     // map layers the visitor can show or hide (walking effort: look only, see extras.js)
     const show = { steep: true, shadow: true, effort: true };
-    const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => later('Comparing with and without the relay comes in a later version.') }, 'Compare without relay');
+    const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => later('Comparing with and without the relay is not available in this demo.') }, 'Compare without relay');
     const leg = planLegend({
       route: [['rover-line', 'Rover drive'], ['foot', 'On foot'], ['handover', 'Handover to foot']],
       places: [['marker', ['Candidate spot ', labelTag(L.spot)]], ['selected', 'Chosen stop'], ['waypoint', ['Waypoint ', labelTag(L.waypoint)]], ['cheapest', 'Cheapest'],
@@ -130,8 +130,8 @@ export default {
     // the radio relay (look only): a card with Move; placing it comes later
     const relayCard = h('div.card.plan-relay', { 'data-enter': 2 },
       h('span.plan-relay__mark'),
-      h('div.card__body', h('div.card__title', 'Radio relay ', labelTag(EXTRA_TAGS.relay)), h('div.card__sub', 'Shrinks the radio shadow · not placed yet')),
-      h('button.plan-relay__move', { type: 'button', onclick: () => later('Moving the relay comes in a later version.') }, 'Move'));
+      h('div.card__body', h('div.card__title', 'Radio relay ', labelTag(EXTRA_TAGS.relay)), h('div.card__sub', 'Shrinks the radio shadow · not in this demo')),
+      h('button.plan-relay__move', { type: 'button', onclick: () => later('Moving the relay is not available in this demo.') }, 'Move'));
     const legs = h('div.plan-legs');
     const totals = h('div.plan-totals', { 'data-enter': 2 });
     const demo = h('div.plan-demo', 'Demo time: clock and suit run ', String(DEMO.timeFactor.value), DEMO.timeFactor.unit, ' faster ', labelTag(DEMO.timeFactor));
@@ -530,7 +530,7 @@ export default {
       row('Rover', h('span.muted', 'drive, not counted'), { lead: h('span.plan-leg-icon.plan-leg-icon--drive'), tag: EXTRA_TAGS.drive }),
     ];
     /** Setting the relay (look only). */
-    const relayRow = () => row('Set relay', h('span.muted', 'later'), { lead: h('span.plan-leg-icon.plan-leg-icon--relay'), tag: EXTRA_TAGS.relay });
+    const relayRow = () => row('Set relay', h('span.muted', 'not in this demo'), { lead: h('span.plan-leg-icon.plan-leg-icon--relay'), tag: EXTRA_TAGS.relay });
 
     function renderPanel() {
       const ids = stopIds();

@@ -26,7 +26,7 @@ const labelWord = (e) => (KINDS.includes(e.label) ? e.label : 'assumption');
 
 export function sourcesPage(onClose) {
   const link = (url, text) => (/^https?:/.test(url) ? h('a', { href: url, target: '_blank', rel: 'noopener' }, text) : h('span', text));
-  const values = listValues();
+  const values = listValues().filter(({ entry }) => !entry.internal);
   const el = h('div.sources', { role: 'dialog', 'aria-label': 'Sources' },
     h('div.sources__inner',
       h('div.sources__head',
