@@ -139,7 +139,9 @@ export default {
     const zz = zoneOf([...cands.map((c) => c.candidate), ...stops, ROVER], 6);
     const zone = { x0: clampT(zz.x0), x1: clampT(zz.x1), z0: clampT(zz.z0), z1: clampT(zz.z1) };
     const relayAt = relayPointOf(terrain, zone, [...cands.map((c) => c.candidate), ...ACCESS_MARS_POINTS]);
-    map.setHome([{ x: zone.x0, z: zone.z0 }, { x: zone.x1, z: zone.z1 }], { margin: 0.04, maxK: 3, square: false });
+    // the map shows the EVA zone only: its frame takes the zone's shape, so no darkened ground around it
+    map.el.style.aspectRatio = `${Math.max(1, Math.min(1.8, (zone.x1 - zone.x0) / (zone.z1 - zone.z0))).toFixed(3)} / 1`;
+    map.setHome([{ x: zone.x0, z: zone.z0 }, { x: zone.x1, z: zone.z1 }], { margin: 0.05, maxK: 3, square: false }); // a little ground beyond the zone, so markers at its edge stay whole
     let groundDone = false, drawn = false;
     const revealWhenReady = () => { if (groundDone && drawn) map.reveal(); };
     const cv = map.canvas.getContext('2d');

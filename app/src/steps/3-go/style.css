@@ -59,16 +59,16 @@
 .step--go .gorow__fill { display: block; height: 100%; background: currentColor; border-radius: 2px; }
 
 /* map: the plan's look (zone, rover drive, relay, handover), the round on foot as a solid cyan line */
-.step--go .go__map .map { width: 100%; aspect-ratio: 1.3 / 1; }
+.step--go .go__map .map { width: 100%; aspect-ratio: 1.3 / 1; max-height: 52vh; } /* aspect set from the zone */
 .step--go .go__map .map__canvas { filter: brightness(0.86) saturate(0.95); }
 .step--go .map-path--foot { stroke-dasharray: none; stroke-width: 3; }
 .step--go .map-path--shadow { stroke-dasharray: none; stroke-width: 3; opacity: 0.5; }
 .step--go .map-path--broken { stroke-width: 5; stroke-dasharray: 0.1 4; }
 .step--go .map-path--rover { fill: none; stroke: #ececec; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.92; }
-.step--go .plan-zone-dim { fill: rgba(0, 0, 0, 0.42); pointer-events: none; }
+.step--go .plan-zone-dim { display: none; } /* the map shows the zone only */
 .step--go .plan-zone-corner { fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 1.6; }
 .step--go .plan-zone-label circle { display: none; }
-.step--go .plan-zone-label .map-marker__label { text-anchor: start; transform: translate(0, -11px); fill: #fff; font-weight: 500; }
+.step--go .plan-zone-label .map-marker__label { text-anchor: start; transform: translate(5px, 2px); fill: #fff; font-weight: 500; } /* inside the frame: the map ends at the zone's edge */
 .step--go .go-handover circle:first-child { r: 3.6; fill: #000; stroke: #fff; stroke-width: 1.2; }
 .step--go .go-handover__dot { fill: var(--accent); }
 .step--go .go-handover .map-marker__label { fill: #fff; }
