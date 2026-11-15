@@ -88,6 +88,17 @@ export function drawZone(map, terrain, zone) {
   return { w, h: hgt };
 }
 
+/** One hover note for the legend, top right of the cursor (fixed, so the legend's overflow never cuts it). */
+let pop = null;
+function showPop(text, x, y) {
+  if (!pop) { pop = h('div.plan-hoverpop', { role: 'tooltip' }); document.body.append(pop); }
+  pop.textContent = text;
+  const w = pop.offsetWidth, ph = pop.offsetHeight;
+  pop.style.left = Math.min(window.innerWidth - w - 8, x + 14) + 'px';
+  pop.style.top = Math.max(8, y - ph - 10) + 'px';
+}
+export function hidePop() { if (pop) { pop.remove(); pop = null; } }
+
 /** Eye icon (open / crossed out). */
 const EYE = '<svg viewBox="0 0 20 20" width="1.15em" height="1.15em" aria-hidden="true"><path d="M1.5 10s3.2-5.5 8.5-5.5S18.5 10 18.5 10s-3.2 5.5-8.5 5.5S1.5 10 1.5 10Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.6" fill="currentColor"/><path class="eye-off" d="M3 17L17 3" stroke="currentColor" stroke-width="1.6"/></svg>';
 
@@ -108,7 +119,12 @@ export function planLegend({ route, places, layers, onToggle, note }) {
       btn.setAttribute('aria-pressed', String(on));
       btn.setAttribute('aria-label', `${on ? 'Hide' : 'Show'} ${L.name}`);
     };
-    L.setDisabled = (d) => { btn.disabled = d; row.classList.toggle('is-disabled', d); if (d && L.disabledHint) row.dataset.hint = L.disabledHint; else delete row.dataset.hint; };
+    L.setDisabled = (d) => { btn.disabled = d; row.classList.toggle('is-disabled', d); if (!d) hidePop(); };
+    // a disabled layer says why on hover: a note top right of the cursor that follows it
+    if (L.disabledHint) {
+      row.addEventListener('mousemove', (e) => { if (row.classList.contains('is-disabled')) showPop(L.disabledHint, e.clientX, e.clientY); });
+      row.addEventListener('mouseleave', hidePop);
+    }
     L.setDisabled(!!L.disabled);
     btn.addEventListener('click', () => { L.set(!L.on); onToggle(L.key, L.on); });
     return row;

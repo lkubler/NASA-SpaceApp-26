@@ -11,7 +11,7 @@ import { planAllCandidates, planRound, planNumbers, stopOrdinal, MAX_STOPS, wayp
 import { paintGround, composeGround, hatchPattern, dotPattern } from './ground.js';
 import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
 import { GROUND_TAG } from '../../core/groundColor.js';
-import { EXTRA_TAGS, zoneOf, roverDriveOf, drawEffort, drawZone, planLegend } from './extras.js';
+import { EXTRA_TAGS, zoneOf, roverDriveOf, drawEffort, drawZone, planLegend, hidePop } from './extras.js';
 import { waypointEditor, parseWaypoints } from './waypoints.js';
 
 let root = null;
@@ -794,7 +794,7 @@ export default {
     revealWhenReady();
   },
 
-  unmount() { root = null; cleanup.forEach((f) => f()); cleanup = []; },
+  unmount() { root = null; hidePop(); cleanup.forEach((f) => f()); cleanup = []; },
 
   /**
    * State after this step is finished, for ?step=N. ?spot=F7 picks another candidate; ?stops=F3,F7,F1 a round
