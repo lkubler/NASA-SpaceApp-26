@@ -1,11 +1,11 @@
 # M.H.U.D. – Martian Head-Up Display
 
+Built at the NASA Space Apps Challenge 2026 (Heilbronn) for the challenge
+[Interplanetary Survival Guide: Martian Map](https://www.spaceappschallenge.org/2026/challenges/interplanetary-survival-guide-martian-map/).
+
 A map for one excursion on foot on Mars that answers one question at every step: from where I stand, can I
 still get home? Plan a route at Murray Buttes in Gale crater, check it go / no-go, walk it in first person on
 real terrain from NASA data, and compare plan and walk in the debrief.
-
-Built at the NASA Space Apps Challenge 2026 (Heilbronn) for the challenge
-[Interplanetary Survival Guide: Martian Map](https://www.spaceappschallenge.org/2026/challenges/interplanetary-survival-guide-martian-map/).
 
 Live demo: https://lkubler.github.io/NASA-SpaceApp-26/
 
