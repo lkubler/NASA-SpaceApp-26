@@ -97,4 +97,6 @@ Static web app (Vite, Three.js), hosted on GitHub Pages. Data preparation: Pytho
 
 The idea and the requirements are the team's (see [`PROPOSAL.md`](PROPOSAL.md)). The code was written with Claude Code (Anthropic) from them. The helmet frame is an AI-generated image (ChatGPT) and is marked in the app. Full log: [`docs/ai-use.md`](docs/ai-use.md).
 
+Licence: [Apache-2.0](LICENSE) for the team's code and texts; data and media from other providers keep their own terms, see [`NOTICE`](NOTICE).
+
 More: [pitch deck (PDF)](demo/presentation/MHUD-pitch.pdf) · [image credits for the deck](CREDITS.md) · [research notes with sources](research/)

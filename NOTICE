@@ -1,0 +1,20 @@
+M.H.U.D. – Martian Head-Up Display
+Copyright 2026 The M.H.U.D. team (HelloX3030, lkubler, t-ecker)
+
+The source code and the texts of this project are licensed under the
+Apache License, Version 2.0 (see LICENSE).
+
+The licence covers the team's own work only. Data, images and 3D models
+from other providers in this repository keep the terms of their providers,
+among them:
+
+- Access Mars terrain of Murray Buttes and the Draco decoder:
+  Google, Apache License 2.0.
+- Images, 3D models and data of NASA and its partners (NASA/JPL-Caltech,
+  MSSS, University of Arizona, USGS, GSFC, LaRC): used with credit under
+  the NASA media usage guidelines.
+- Gale crater relief from Mars Express HRSC data: ESA/DLR/FU Berlin.
+- Helmet frame image: generated with ChatGPT.
+
+The full list with sources is in docs/data-use.md and on the Sources page
+of the app.
