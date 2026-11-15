@@ -104,10 +104,10 @@ const EYE = '<svg viewBox="0 0 20 20" width="1.15em" height="1.15em" aria-hidden
 
 /**
  * Legend below the map in three groups. layers: [{ key, swatch, name, note, on, tag, disabled }];
- * onToggle(key, on) is called when a layer is shown or hidden. Each layer gets L.set(on) and L.setDisabled(d)
+ * onToggle(key, on) is called when a layer is shown or hidden; onDisabled(key) when a disabled layer's eye is clicked. Each layer gets L.set(on) and L.setDisabled(d)
  * so the step can change it from outside (a disabled row is greyed out and its eye does nothing).
  */
-export function planLegend({ route, places, layers, onToggle, note }) {
+export function planLegend({ route, places, layers, onToggle, onDisabled, note }) {
   const item = (sw, text) => h('div.plan-lg__item', h(`span.plan-sw.plan-sw--${sw}`), h('span', text));
   const layerRow = (L) => {
     const btn = h('button.plan-layer__eye', { type: 'button', 'aria-pressed': String(L.on), 'aria-label': `${L.on ? 'Hide' : 'Show'} ${L.name}`, html: EYE });
@@ -119,14 +119,18 @@ export function planLegend({ route, places, layers, onToggle, note }) {
       btn.setAttribute('aria-pressed', String(on));
       btn.setAttribute('aria-label', `${on ? 'Hide' : 'Show'} ${L.name}`);
     };
-    L.setDisabled = (d) => { btn.disabled = d; row.classList.toggle('is-disabled', d); if (!d) hidePop(); };
+    // aria-disabled, not disabled: a click on it still arrives and can point to what is missing
+    L.setDisabled = (d) => { btn.setAttribute('aria-disabled', String(d)); row.classList.toggle('is-disabled', d); if (!d) hidePop(); };
     // a disabled layer says why on hover: a note top right of the cursor that follows it
     if (L.disabledHint) {
       row.addEventListener('mousemove', (e) => { if (row.classList.contains('is-disabled')) showPop(L.disabledHint, e.clientX, e.clientY); });
       row.addEventListener('mouseleave', hidePop);
     }
     L.setDisabled(!!L.disabled);
-    btn.addEventListener('click', () => { L.set(!L.on); onToggle(L.key, L.on); });
+    btn.addEventListener('click', () => {
+      if (row.classList.contains('is-disabled')) { if (onDisabled) onDisabled(L.key); return; }
+      L.set(!L.on); onToggle(L.key, L.on);
+    });
     return row;
   };
   return h('div.plan-lg',

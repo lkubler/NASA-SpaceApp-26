@@ -115,6 +115,8 @@ export default {
         { key: 'effort', swatch: 'effort', name: 'Walking effort', note: 'easy → hard', on: true, tag: EXTRA_TAGS.effort },
         compareLayer,
       ],
+      // a click on Compare before a relay is placed: the relay card glows, that is where to place one
+      onDisabled: (key) => { if (key === 'compare') nudgeRelay(); },
       onToggle: (key, on) => {
         show[key] = on;
         if (key === 'compare') setCompare(on);
@@ -730,6 +732,12 @@ export default {
       else { notice = 'Click the map to set the relay. It must see the rover and stand on open ground.'; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = null; renderHint(); }, 5000); renderHint(); }
       renderRelayCard();
     }
+    function nudgeRelay() {
+      relayCard.classList.remove('is-nudge');
+      void relayCard.offsetWidth; // restart the animation on a second click
+      relayCard.classList.add('is-nudge');
+    }
+    relayCard.addEventListener('animationend', () => relayCard.classList.remove('is-nudge'));
     function setCompare(on) {
       if (!getRelay()) { compareLayer.set(false); return; }
       comparing = on;
