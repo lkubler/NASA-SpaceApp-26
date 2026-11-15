@@ -7,11 +7,11 @@ import './style.css';
 import { h, s, splitLayout, headline, card, pillButton, mapPanel, legend, marker, row, bigNumber, alertBox, labelTag,
   textLink, fmtDuration, fmtDistance, fmtDeg } from '../../ui/index.js';
 import { planAllCandidates, planRound, planNumbers, stopOrdinal, MAX_STOPS, waypointAllowed, waypointsFor, legKeysOf, PLANNER, ROVER, ACCESS_MARS_POINTS, RULES,
-  DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA, sourceOf, spotNumber } from '../../core/index.js';
+  DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA, sourceOf, spotNumber, getRelay, setRelay, relayAllowed, withRelay, onRelayChange } from '../../core/index.js';
 import { paintGround, composeGround, hatchPattern, dotPattern } from './ground.js';
 import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
 import { GROUND_TAG } from '../../core/groundColor.js';
-import { EXTRA_TAGS, zoneOf, relayPointOf, roverDriveOf, drawEffort, drawZone, planLegend } from './extras.js';
+import { EXTRA_TAGS, zoneOf, roverDriveOf, drawEffort, drawZone, planLegend } from './extras.js';
 import { waypointEditor, parseWaypoints } from './waypoints.js';
 
 let root = null;
@@ -102,7 +102,10 @@ export default {
 
     // map layers the visitor can show or hide (walking effort: look only, see extras.js)
     const show = { steep: true, shadow: true, effort: true };
-    const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => later('Comparing with and without the relay is not available in this demo.') }, 'Compare without relay');
+    // Compare: show the radio shadow and the route's stretches without contact as they are without the relay
+    let comparing = false;
+    const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => toggleCompare() }, 'Compare without relay');
+    compareBtn.disabled = true;
     const leg = planLegend({
       route: [['rover-line', 'Rover drive'], ['foot', 'On foot'], ['handover', 'Handover to foot']],
       places: [['marker', ['Candidate spot ', labelTag(L.spot)]], ['selected', 'Chosen stop'], ['waypoint', ['Waypoint ', labelTag(L.waypoint)]], ['cheapest', 'Cheapest'],
@@ -127,11 +130,14 @@ export default {
 
     // ----- panel -----
     const cards = h('div.plan-cards', { 'data-enter': 2 });
-    // the radio relay (look only): a card with Move; placing it comes later
+    // the radio relay: placed on the map by the visitor, one click; "Move" places it again, "Remove" takes it away
+    const relaySub = h('div.card__sub');
+    const relayMove = h('button.plan-relay__move', { type: 'button', onclick: () => togglePlacing() }, 'Place');
+    const relayRemove = h('button.plan-relay__move.plan-relay__remove', { type: 'button', onclick: () => { setRelay(null); } }, 'Remove');
     const relayCard = h('div.card.plan-relay', { 'data-enter': 2 },
       h('span.plan-relay__mark'),
-      h('div.card__body', h('div.card__title', 'Radio relay ', labelTag(EXTRA_TAGS.relay)), h('div.card__sub', 'Shrinks the radio shadow · not in this demo')),
-      h('button.plan-relay__move', { type: 'button', onclick: () => later('Moving the relay is not available in this demo.') }, 'Move'));
+      h('div.card__body', h('div.card__title', 'Radio relay ', labelTag(EXTRA_TAGS.relay), ' ', labelTag(EXTRA_TAGS.contact)), relaySub),
+      relayMove, relayRemove);
     const legs = h('div.plan-legs');
     const totals = h('div.plan-totals', { 'data-enter': 2 });
     const demo = h('div.plan-demo', 'Demo time: clock and suit run ', String(DEMO.timeFactor.value), DEMO.timeFactor.unit, ' faster ', labelTag(DEMO.timeFactor));
@@ -158,15 +164,14 @@ export default {
     if (ctx.params.get('broken') === '1' && !ctx.state.candidates.some((c) => c.candidate.id === BROKEN_TEST_TARGET.id)) {
       ctx.set({ candidates: [...ctx.state.candidates, ...planAllCandidates(terrain, [BROKEN_TEST_TARGET])] });
     }
-    const cands = ctx.state.candidates;
+    let cands = ctx.state.candidates;
     const numberOf = (id) => spotNumber(id) || String(cands.findIndex((c) => c.candidate.id === id) + 1).padStart(2, '0');
-    const cheapest = cheapestId(cands);
+    let cheapest = cheapestId(cands);
     let pinned = null; // Access Mars point whose card is pinned open
     // look-only extras (extras.js): the zone around every place of the plan, a relay on its high ground
     const clampT = (v) => Math.max(terrain.min + 2, Math.min(terrain.max - 2, v));
     const zz = zoneOf([...cands.map((c) => c.candidate), ROVER], 6);
     const zone = { x0: clampT(zz.x0), x1: clampT(zz.x1), z0: clampT(zz.z0), z1: clampT(zz.z1) };
-    const relayAt = relayPointOf(terrain, zone, [...cands.map((c) => c.candidate), ...ACCESS_MARS_POINTS]);
     // the map opens on the EVA zone, so the zone fills it and the rover drive runs out of the picture
     map.setHome([{ x: zone.x0, z: zone.z0 }, { x: zone.x1, z: zone.z1 }], { margin: 0.02, maxK: 3, square: false });
 
@@ -214,6 +219,7 @@ export default {
     // one stop: the candidate's own route and numbers, exactly as before; several: planned leg by leg (cached)
     // waypoints (specs/x-waypoints.md): kept per leg; only those of legs the round still has count
     const rounds = new Map();
+    const alts = new Map(); // the same rounds planned without the relay (Compare, and the second time without contact)
     const curWps = () => ctx.state.waypoints || {};
     const roundOf = (ids, wpsAll = curWps()) => {
       const wps = waypointsFor(ids, wpsAll);
@@ -225,6 +231,19 @@ export default {
         rounds.set(key, { route, plan: planNumbers(terrain, route) });
       }
       return rounds.get(key);
+    };
+    /** The round over ids planned as if no relay stood: its plan has the time without contact without the relay. */
+    const altOf = (ids) => {
+      if (!getRelay()) return roundOf(ids);
+      const wps = waypointsFor(ids, curWps());
+      const key = ids.join('>') + (wps ? JSON.stringify(wps) : '');
+      if (!alts.has(key)) {
+        alts.set(key, withRelay(null, () => {
+          const route = planRound(terrain, ids.map((id) => candOf(id).candidate), wps);
+          return { route, plan: planNumbers(terrain, route) };
+        }));
+      }
+      return alts.get(key);
     };
     let notice = null, noticeTimer = 0; // a short message after a click that could not add a stop
     cleanup.push(() => clearTimeout(noticeTimer));
@@ -336,7 +355,8 @@ export default {
     function drawMap() {
       ['areas', 'routes', 'markers', 'top'].forEach((n) => map.clearLayer(n));
       const ids = stopIds();
-      const sel = ids.length ? { plan: ctx.state.plan } : null;
+      // Compare shows the round as it would be without the relay; the numbers in the panel stay the real ones
+      const sel = ids.length ? { plan: comparing && getRelay() ? altOf(ids).plan : ctx.state.plan } : null;
       const fresh = !quietDraw && drawnPlan !== undefined && sel && sel.plan && sel.plan !== drawnPlan;
       quietDraw = false;
       drawnPlan = (sel && sel.plan) || null;
@@ -351,8 +371,9 @@ export default {
       const drive = driveMemo.drive;
       // the base itself is 8 km away and never drawn: the drive just runs off the map edge towards it
       if (drive) map.path(drive.points, { style: 'rover' });
-      // radio relay (look only)
-      if (relayAt) map.addMarker(relayAt.x, relayAt.z, { kind: 'rover', label: 'Relay', layer: 'markers' }).classList.add('plan-relay-mark');
+      // the radio relay the visitor placed (hidden while comparing: that view is without it)
+      const rl = getRelay();
+      if (rl && !comparing) map.addMarker(rl.x, rl.z, { kind: 'rover', label: 'Relay', layer: 'top' }).classList.add('plan-relay-mark');
 
       // the round over the chosen stops
       if (sel && sel.plan) {
@@ -529,8 +550,8 @@ export default {
       row('Base', 'Bradbury Landing · 8 km', { lead: h('span.plan-leg-icon.plan-leg-icon--rover') }),
       row('Rover', h('span.muted', 'drive, not counted'), { lead: h('span.plan-leg-icon.plan-leg-icon--drive'), tag: EXTRA_TAGS.drive }),
     ];
-    /** Setting the relay (look only). */
-    const relayRow = () => row('Set relay', h('span.muted', 'not in this demo'), { lead: h('span.plan-leg-icon.plan-leg-icon--relay'), tag: EXTRA_TAGS.relay });
+    /** The relay in the list: placed or not. */
+    const relayRow = () => row('Relay', h('span.muted', getRelay() ? 'placed' : 'not placed'), { lead: h('span.plan-leg-icon.plan-leg-icon--relay'), tag: EXTRA_TAGS.relay });
 
     function renderPanel() {
       const ids = stopIds();
@@ -609,13 +630,81 @@ export default {
       totals.append(
         total('Reserve on return', P ? fmtDuration(P.reserveS) : '–', P ? `limited by ${P.limitingName.toLowerCase()}` : ' ', L.reserve, P && P.reserveS < 0 ? 'warning' : null),
         total(ids.length > 1 ? 'EVA time, round' : 'EVA time', P ? fmtDuration(P.timeS, { approx: true }) : '–', `max. ${RULES.evaPlannedH.value} h planned`, L.time),
-        total('Without radio', P ? fmtDuration(P.radioShadowS || 0) : '–', 'a caution, no limit', L.shadow, P && P.radioShadowS > 0 ? 'caution' : null),
+        total('Without radio', P ? fmtDuration(P.radioShadowS || 0) : '–',
+          P && getRelay() ? `with relay · ${fmtDuration(altOf(ids).plan.radioShadowS || 0)} without` : 'a caution, no limit', L.shadow, P && P.radioShadowS > 0 ? 'caution' : null),
         total('Steepest part', P ? fmtDeg(P.steepestDeg) : '–', `max. ${RULES.slopeMaxDeg.value}°`, L.slope, P ? (slopeBroken ? 'warning' : 'accent') : null),
       );
       btn.disabled = !ctx.state.route;
     }
 
-    function render() { drawMap(); renderPanel(); }
+    function render() { drawMap(); renderPanel(); renderRelayCard(); }
+
+    // ----- the relay: place, move, remove; everything that depends on contact is calculated again -----
+    let placing = false;
+    function renderRelayCard() {
+      const rl = getRelay();
+      relayMove.textContent = placing ? 'Click the map' : rl ? 'Move' : 'Place';
+      relayMove.classList.toggle('is-on', placing);
+      relayRemove.hidden = !rl;
+      compareBtn.disabled = !rl;
+      compareBtn.textContent = comparing ? 'Back to with relay' : 'Compare without relay';
+      if (rl) {
+        const P = ctx.state.plan;
+        relaySub.textContent = P ? `Placed · ${fmtDuration(P.radioShadowS || 0)} without radio on this route` : 'Placed · choose a spot to see its effect';
+      } else relaySub.textContent = 'Not placed · it must see the rover, on open ground';
+    }
+    function togglePlacing() {
+      placing = !placing;
+      map.el.classList.toggle('is-placing', placing);
+      if (!placing) tip.hidden = true;
+      else { notice = 'Click the map to set the relay. It must see the rover and stand on open ground.'; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = null; renderHint(); }, 5000); renderHint(); }
+      renderRelayCard();
+    }
+    function toggleCompare() {
+      if (!getRelay()) return;
+      comparing = !comparing;
+      map.refreshShadow({ withoutRelay: comparing });
+      quietDraw = true;
+      render();
+    }
+    /** The relay was placed, moved or removed: shadow, candidates, the chosen round and its numbers are calculated again. */
+    function recalc() {
+      comparing = false;
+      rounds.clear(); alts.clear();
+      map.refreshShadow();
+      cands = planAllCandidates(terrain);
+      cheapest = cheapestId(cands);
+      const ids = stopIds().filter((id) => candOf(id));
+      if (ids.length) { const r = roundOf(ids); ctx.set({ candidates: cands, route: r.route, plan: r.plan }); }
+      else ctx.set({ candidates: cands });
+      quietDraw = true;
+      render();
+    }
+    cleanup.push(onRelayChange(() => recalc()));
+    const placeAt = (e) => {
+      const p = map.eventToScene(e);
+      return { ok: relayAllowed(terrain, p.x, p.z), p };
+    };
+    // a click while placing sets the relay there (before the map's own click handlers see it)
+    map.el.addEventListener('click', (e) => {
+      if (!placing) return;
+      e.stopPropagation(); e.preventDefault();
+      const { ok, p } = placeAt(e);
+      if (!ok) {
+        notice = 'The relay can not stand there: it must see the rover, on ground the suit can walk on.';
+        clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = null; renderHint(); }, 4000);
+        renderHint(); hint.classList.remove('is-flash'); void hint.offsetWidth; hint.classList.add('is-flash');
+        return;
+      }
+      placing = false; map.el.classList.remove('is-placing'); tip.hidden = true;
+      notice = null;
+      setRelay(p);
+    }, true);
+    map.el.addEventListener('pointermove', (e) => {
+      if (!placing) return;
+      const { ok, p } = placeAt(e);
+      showTip(p.x, p.z, [h(`div.plan-tip__row.${ok ? 'tone-accent' : 'tone-warning'}`, ok ? 'The relay can stand here' : 'Not here: no line of sight to the rover, or too steep')]);
+    });
 
     const onDoc = () => { if (pinned) { pinned = null; tip.hidden = true; } };
     document.addEventListener('click', onDoc);

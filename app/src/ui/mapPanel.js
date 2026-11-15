@@ -84,9 +84,10 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
 
   // ---------- masks for the screen-space overlays ----------
   const masks = {};
+  let shadowRelay; // undefined: the relay in force; null: the shadow without a relay (the Plan's compare view)
   function maskCanvas(name) {
     if (masks[name]) return masks[name];
-    const mask = name === 'steep' ? closedMask(terrain) : radioShadowMask(terrain);
+    const mask = name === 'steep' ? closedMask(terrain) : radioShadowMask(terrain, undefined, shadowRelay);
     const a = document.createElement('canvas'); a.width = a.height = n;
     const ag = a.getContext('2d');
     const id = ag.createImageData(n, n);
@@ -365,6 +366,8 @@ export function mapPanel(terrain, { steep = true, shadow = false, scaleM = 20, p
     redraw() { schedule(); },
     /** Size factor for all markers, now and later. */
     setMarkerScale(k) { markerK = k; lastQ = null; placeAll(); },
+    /** Draw the radio shadow again (the relay changed). withoutRelay: show the shadow as it is without the relay. */
+    refreshShadow({ withoutRelay = false } = {}) { shadowRelay = withoutRelay ? null : undefined; delete masks.shadow; schedule(); },
     /** Toggle the raster layers { steep, shadow }. */
     setLayers(o) { Object.assign(state, o); schedule(); },
     /** Current view { cx, cy, k } (SVG units, zoom); fn(view) after every change of view. */

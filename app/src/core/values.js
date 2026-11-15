@@ -106,6 +106,8 @@ export const RADIO = {
     'Eye height of the astronaut above the ground, used for the line of sight to the rover.'),
   roverAntennaM: v(1.7, 'm', 'assumption', 'NONE', '',
     'Height of the rover antenna, taken as eye height. Radio shadow is geometric line of sight only, no radio physics.'),
+  relayMastM: v(3, 'm', 'assumption', 'NONE', '',
+    'Height of the antenna on the radio relay the crew can set out. The relay device is simulated.'),
 };
 
 export const ENVIRONMENT = {
@@ -163,6 +165,8 @@ export const PLANNER = {
   steepPenalty: v(1e5, '×', 'model', 'NONE', '', 'Cost multiplier for closed ground in the fallback route.', { internal: true }),
   edgeToleranceM: v(0.1, 'm', 'assumption', 'NONE', '',
     'A point counts as standing on a closed cell only once it is this far inside the cell. A planned diagonal step between two open cells touches the corner of the cells beside it; this tolerance lets the planner and the Walk agree that such a step keeps the slope rule.', { internal: true }),
+  contactWeight: v(0.5, '×', 'assumption', 'NONE', '',
+    'Extra cost of walking in radio shadow in the route calculation: a metre without contact counts as 1.5 m, so the route prefers ground with contact when the detour is small. It never opens closed ground and never breaks a rule. Distance and time shown are the real ones.'),
   maxStops: v(3, 'stops', 'assumption', 'TEAM', 'chosen by the team',
     'The most sample stops one excursion may plan: rover, up to three stops in the order chosen, rover. One sample and the fixed work time at every stop.'),
 };
@@ -185,7 +189,7 @@ const NAMES = {
     pandolf: 'Effort equation (Pandolf)',
   },
   SUIT: { designW: 'Backpack design work rate', designH: 'Backpack supply time' },
-  RADIO: { eyeHeightM: 'Eye height', roverAntennaM: 'Rover antenna height' },
+  RADIO: { eyeHeightM: 'Eye height', roverAntennaM: 'Rover antenna height', relayMastM: 'Relay antenna height' },
   ENVIRONMENT: {
     doseMSvPerDay: 'Radiation dose rate at Gale crater', airTempK: 'Air temperature at Murray Buttes', solSeconds: 'Length of a Mars day',
     evaStartLmstH: 'Excursion start, local Mars time', signalDelayMinMin: 'Shortest signal delay Earth to Mars',
@@ -198,7 +202,7 @@ const NAMES = {
     coreTempPerW: 'Core temperature per watt of work', suitPressureKPa: 'Suit pressure', co2KPa: 'CO2 in the helmet',
   },
   HOME: { rover: 'Rover position' },
-  PLANNER: { steepPenalty: 'Cost of closed ground in the fallback route', edgeToleranceM: 'Closed-cell edge tolerance', maxStops: 'Most stops per excursion' },
+  PLANNER: { contactWeight: 'Weight of radio shadow in the route', steepPenalty: 'Cost of closed ground in the fallback route', edgeToleranceM: 'Closed-cell edge tolerance', maxStops: 'Most stops per excursion' },
 };
 for (const [group, names] of Object.entries(NAMES)) {
   for (const [key, name] of Object.entries(names)) if (ALL[group][key] && !ALL[group][key].name) ALL[group][key].name = name;
