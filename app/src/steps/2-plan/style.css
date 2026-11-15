@@ -200,6 +200,15 @@
 /* a layer that can not be shown yet (Compare without relay, before a relay is placed): greyed out, eye inactive */
 .step--plan .plan-layer.is-disabled > * { opacity: 0.3; }
 .step--plan .plan-layer.is-disabled .plan-layer__eye { cursor: default; background: none; }
+/* hover on a disabled layer: a short note above it, why it is off (styled like the map tip) */
+.step--plan .plan-layer.is-disabled { position: relative; cursor: help; }
+.step--plan .plan-layer.is-disabled[data-hint]::after {
+  content: attr(data-hint); position: absolute; left: 0.6em; bottom: calc(100% + 6px); z-index: 4;
+  background: rgba(8, 8, 9, 0.95); border: 1px solid var(--line-strong); border-radius: 8px;
+  padding: 0.4em 0.7em; font-size: var(--fs-small); color: var(--text); white-space: nowrap; pointer-events: none;
+  opacity: 0; transform: translateY(3px); transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+.step--plan .plan-layer.is-disabled[data-hint]:hover::after { opacity: 1; transform: none; }
 
 /* relay card: yellow mark, Move button */
 .step--plan .plan-relay { align-items: center; }

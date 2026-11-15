@@ -108,7 +108,7 @@ export function planLegend({ route, places, layers, onToggle, note }) {
       btn.setAttribute('aria-pressed', String(on));
       btn.setAttribute('aria-label', `${on ? 'Hide' : 'Show'} ${L.name}`);
     };
-    L.setDisabled = (d) => { btn.disabled = d; row.classList.toggle('is-disabled', d); row.title = d && L.disabledHint ? L.disabledHint : ''; };
+    L.setDisabled = (d) => { btn.disabled = d; row.classList.toggle('is-disabled', d); if (d && L.disabledHint) row.dataset.hint = L.disabledHint; else delete row.dataset.hint; };
     L.setDisabled(!!L.disabled);
     btn.addEventListener('click', () => { L.set(!L.on); onToggle(L.key, L.on); });
     return row;
