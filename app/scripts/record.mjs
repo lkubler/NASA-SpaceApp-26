@@ -194,6 +194,55 @@ const CLIPS = {
       await rec.stop();
     },
   },
+  // Storyboard 17-21 s: spot 06 lies in radio shadow; placing the relay shrinks the shadow and the time without contact
+  relay: {
+    about: 'Plan map with spot 06: place the radio relay, radio shadow and time without contact are calculated again',
+    async run(page, rec) {
+      await page.goto(base + '?step=2');
+      await page.waitForSelector('.step--plan .map.map--fade:not(.is-pending)', { timeout: 60000 });
+      await wait(1500);
+      // unrecorded: only spot 06 as the stop (Plan opens with the request's spot; a click removes or adds a stop)
+      const mark = (n) => page.locator('.step--plan .map-marker--number.plan-hit').filter({ hasText: n });
+      for (const id of (await S(page)).stops || []) {
+        const n = await page.evaluate((i) => import('/src/core/index.js').then((c) => c.spotNumber(i)), id);
+        await mark(n).click({ force: true });
+        await wait(800);
+      }
+      await mark('06').click({ force: true });
+      await page.waitForFunction(() => (window.__state.stops || []).join() === 'F7', null, { timeout: 20000 });
+      await wait(2000);
+      // screen position of a scene point (x east, z north), from two spot markers (the map is a linear top view)
+      const at = async (id) => {
+        const n = await page.evaluate((i) => import('/src/core/index.js').then((c) => c.spotNumber(i)), id);
+        const b = await page.locator('.step--plan .map-marker--number.plan-hit').filter({ hasText: n }).boundingBox();
+        return { sx: b.x + b.width / 2, sy: b.y + b.height / 2 };
+      };
+      // two spots that are not chosen (a chosen marker carries an order badge that moves its box)
+      const [a, b] = [await at('F5'), await at('F3')];
+      const A = { x: 26.75, z: 31.25 }, B = { x: -1.75, z: -27.75 };
+      const toScreen = (x, z) => ({
+        x: a.sx + ((x - A.x) * (b.sx - a.sx)) / (B.x - A.x),
+        y: a.sy + ((z - A.z) * (b.sy - a.sy)) / (B.z - A.z),
+      });
+      const relay = toScreen(30, -10); // open ground that sees both the rover and spot 06
+      await page.mouse.move(VW * 0.75, VH * 0.5);
+      await rec.start();
+      await wait(1500);
+      const place = await page.locator('.plan-relay__move').first().boundingBox();
+      await page.mouse.move(place.x + place.width / 2, place.y + place.height / 2, { steps: 25 });
+      await wait(300);
+      await page.mouse.click(place.x + place.width / 2, place.y + place.height / 2);
+      await wait(600);
+      await page.mouse.move(relay.x, relay.y, { steps: 35 });
+      await wait(300);
+      await page.mouse.click(relay.x, relay.y);
+      await wait(3500);
+      await rec.stop();
+      const r = await page.evaluate(() => import('/src/core/index.js').then((c) => c.getRelay()));
+      if (!r) throw new Error('relay not placed');
+      console.log(`  relay at ${r.x.toFixed(1)}, ${r.z.toFixed(1)}`);
+    },
+  },
   // Go / no-go: the rule checks for a three-stop round
   go: {
     about: 'Go / no-go: rule checks for a three-stop round, open the way-home check',
@@ -282,7 +331,7 @@ const CLIPS = {
     },
   },
   debrief: {
-    about: 'Debrief: planned against walked, then send the report to Earth',
+    about: 'Debrief: planned against walked, then New mission',
     async run(page, rec) {
       await page.goto(base + '?step=5');
       await page.waitForSelector('.dbf__table', { timeout: 60000 });
@@ -290,10 +339,10 @@ const CLIPS = {
       await page.mouse.move(VW * 0.9, VH * 0.6);
       await rec.start();
       await wait(2000);
-      const btn = await page.locator('.dbf__send').boundingBox();
+      const btn = await page.locator('.dbf__foot .pill').boundingBox();
       await page.mouse.move(btn.x + btn.width / 2, btn.y + btn.height / 2, { steps: 30 });
       await wait(400);
-      await page.click('.dbf__send');
+      await page.click('.dbf__foot .pill');
       await wait(2500);
       await rec.stop();
     },
