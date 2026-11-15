@@ -43,7 +43,7 @@ export const ACCESS_MARS_POINTS = [
   {
     id: 'A3', name: 'Bruce Murray', x: -10.56, y: 1.8, z: -12.9, reach: { x: -10.75, z: -12.75 },
     photo: null, photoNote: '',
-    text: 'The Murray Buttes are named after the late Bruce Murray, a Caltech planetary scientist and director of NASA’s Jet Propulsion Laboratory. He worked on NASA’s first missions to Mars and laid the groundwork for future Mars exploration.',
+    text: 'The Murray Buttes are named after the late Bruce Murray, a Caltech planetary scientist and director of the Jet Propulsion Laboratory. He worked on the first missions to Mars and laid the groundwork for future Mars exploration.',
   },
   {
     id: 'A4', name: 'Interference', x: -63.5, y: -3.9, z: 35.2, reach: { x: -63.25, z: 35.25 },

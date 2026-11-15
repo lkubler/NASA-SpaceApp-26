@@ -3,23 +3,6 @@
  "ai_note": "No AI-generated or AI-altered images; files are only resized and recompressed.",
  "photos": [
   {
-   "id": "quela_drill",
-   "station": "Quela",
-   "sol": 1464,
-   "camera": "MAHLI (arm camera, close-up)",
-   "title": "Quela drill hole at the foot of a butte",
-   "credit": "NASA/JPL-Caltech/MSSS",
-   "utc": "2016-09-18",
-   "file_id": "1464MH0003990030503897C00",
-   "file": "photos/quela_drill.jpg",
-   "size_px": [
-    896,
-    896
-   ],
-   "license": "NASA/JPL imagery: usable for any purpose without prior permission with credit, no NASA/JPL logos, no implied endorsement (JPL Image Use Policy https://www.jpl.nasa.gov/imagepolicy ; NASA Media Guidelines). Raw frames are unprocessed. Mastcam/MAHLI credit follows the NASA caption convention 'NASA/JPL-Caltech/MSSS'; MSSS asks for commercial reuse permission.",
-   "source_url": "http://mars.jpl.nasa.gov/msl-raw-images/msss/01464/mhli/1464MH0003990030503897C00_DXXX.jpg"
-  },
-  {
    "id": "crossbedding_PIA21042",
    "station": "Murray Buttes (between Marimba and Quela)",
    "sol": 1454,

@@ -32,7 +32,7 @@ const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const smooth = (v) => { const x = clamp01(v); return x * x * (3 - 2 * x); };
 const angleTo = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
-let seen = false; // the first walk of a session only (module flag: a reload is a new session)
+let seen = false; // the film plays before the first walk of a session only (module flag: a reload is a new session)
 
 /**
  * Camera path of part B for a start pose { x, z } beside the rover: hatch -> one step down and out -> start.
@@ -89,7 +89,8 @@ const lengthOf = (points) => points.slice(1).reduce((s, b, i) => s + Math.hypot(
  */
 export function createIntro(el, hudRoot, ctx) {
   const devJump = ctx.params.get('step') === '4';
-  const want = !seen && (!devJump || ctx.params.get('intro') === '1');
+  const first = !seen; // later walks: no film, only stepping out of the rover (part B)
+  const want = !devJump || ctx.params.get('intro') === '1';
   seen = true;
   if (!want) { releaseIntroFilm(); return { ready() {}, frame: () => false, stop() {} }; }
 
@@ -137,7 +138,7 @@ export function createIntro(el, hudRoot, ctx) {
   window.__intro = { get phase() { return phase; }, path: null, skip };
 
   // ---------- part A: the film ----------
-  const film = takeIntroFilm();
+  const film = first ? takeIntroFilm() : null;
   if (film) {
     video = film;
     video.className = 'walk-intro__film';

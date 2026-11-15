@@ -37,7 +37,7 @@ export const L = {
   },
   shelter: {
     label: 'model', src: RULES.shelterReturnH.src, where: RULES.shelterReturnH.where,
-    text: `Longest time back to the rover from any point of the route, by the fastest way home. The rover is taken as the shelter (assumption). If a solar storm hits, an excursion is protected when it ends within ${RULES.shelterReturnH.value} ${RULES.shelterReturnH.unit} with access to shielding (real, from the radiation guidance). The radiation shown above is the dose rate Curiosity measured on the surface (${ENVIRONMENT.doseMSvPerDay.value} ${ENVIRONMENT.doseMSvPerDay.unit}); a storm would add to it. Shown in demo time (${demo()}).`,
+    text: `Longest time back to the rover from any point of the route, by the fastest way home. The rover is taken as the shelter (assumption). If a solar storm hits, an excursion is protected when it ends within ${RULES.shelterReturnH.value} ${RULES.shelterReturnH.unit} with access to shielding and with dose alarms worn by the crew (real, from the radiation guidance). The radiation shown above is the dose rate Curiosity measured on the surface (${ENVIRONMENT.doseMSvPerDay.value} ${ENVIRONMENT.doseMSvPerDay.unit}); a storm would add to it. Shown in demo time (${demo()}).`,
   },
   /** Slope check against HiRISE; noDataM: metres of the route that the elevation model does not cover. */
   hirise: (noDataM = 0) => ({

@@ -213,7 +213,7 @@ export default {
         const mission = REQUESTS.find((r) => r.site === s.id);
         const open = mission && !mission.locked;
         const node = h(`${open ? 'button' : 'div'}.m1-pin.m1-site.m1-site--${s.id}${open ? '.m1-site--open' : '.m1-site--soon'}`,
-          open ? { type: 'button', 'aria-label': `${s.name}: ${mission.title}`, onclick: () => pickMission(mission.id) } : { title: `${s.name}: coming soon` },
+          open ? { type: 'button', 'aria-label': `${s.name}: ${mission.title}`, onclick: () => pickMission(mission.id) } : { title: `${s.name}: coming soon`, onclick: () => mission && notYet(mission.id) },
           h('span.m1-site__dot'), h('span.m1-site__lead'),
           h('span.m1-site__name', s.name, open ? null : h('span.m1-site__soon', 'soon')));
         if (mission) {
@@ -310,9 +310,30 @@ export default {
       el.classList.toggle('m1--hot', on);
     }
 
+    /** A click on a site that is not open yet: its card and marker pulse once, the pill says why. */
+    const notYetTimers = new Map();
+    function notYet(id) {
+      const r = REQUESTS.find((x) => x.id === id);
+      if (!r) return;
+      const card = cardEls.get(id), site = siteEls.get(r.site);
+      const pill = card && card.querySelector('.m1-req__soon');
+      for (const n of [card, site]) {
+        if (!n) continue;
+        n.classList.remove('is-notyet');
+        void n.offsetWidth; // restart the pulse on a second click
+        n.classList.add('is-notyet');
+      }
+      if (pill) pill.textContent = 'Not available yet';
+      clearTimeout(notYetTimers.get(id));
+      notYetTimers.set(id, setTimeout(() => {
+        for (const n of [card, site]) if (n) n.classList.remove('is-notyet');
+        if (pill) pill.textContent = 'Soon';
+      }, 2200));
+    }
     function pickMission(id) {
       const r = reqs.find((x) => x.id === id);
-      if (!r || r.locked) return;
+      if (r && r.locked) { notYet(id); return; }
+      if (!r) return;
       ctx.getTerrain(); // start loading the Plan map's ground now, so it is there when the dive lands
       ctx.set({ request: r });
       markChosen();

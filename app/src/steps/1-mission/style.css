@@ -231,3 +231,15 @@ body:has(.step--mission.m1--intro) .stepbar { opacity: 0; pointer-events: none; 
 /* Mission -> Plan: everything but the ground fades fast while the camera dives onto Murray Buttes */
 .step--mission.m1--diving .m1-panel, .step--mission.m1--diving .m1-hero, .step--mission.m1--diving .m1-credit,
 .step--mission.m1--diving .m1-overlay { opacity: 0; transform: none; pointer-events: none; transition: opacity 260ms ease-in; }
+
+/* a click on a site that is not open yet: card and marker pulse once in the neutral line colour, the pill says why */
+@keyframes m1-notyet { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.5); } 100% { box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); } }
+.step--mission .m1-req.is-notyet { border-color: var(--line-strong); animation: m1-notyet 700ms ease-out; }
+.step--mission .m1-req__soon { transition: color var(--fade), border-color var(--fade), background var(--fade); white-space: nowrap; }
+.step--mission .m1-req.is-notyet .m1-req__soon { color: #fff; border-color: #fff; background: rgba(255, 255, 255, 0.1); }
+.step--mission .m1-site--soon { pointer-events: auto; cursor: default; }
+.step--mission .m1-site--soon::before { content: ''; position: absolute; left: -18px; top: -18px; width: 36px; height: 36px; border-radius: 50%; }
+.step--mission .m1-site--soon .m1-site__name { pointer-events: auto; }
+.step--mission .m1-site.is-notyet .m1-site__dot { animation: m1-notyet 700ms ease-out; border-color: #fff; }
+.step--mission .m1-site.is-notyet .m1-site__name, .step--mission .m1-site.is-notyet .m1-site__soon { color: #fff; }
+@media (prefers-reduced-motion: reduce) { .step--mission .m1-req.is-notyet, .step--mission .m1-site.is-notyet .m1-site__dot { animation: none; } }

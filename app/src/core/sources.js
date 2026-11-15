@@ -91,11 +91,11 @@ export const DOCS = {
   },
   BANHAM: {
     title: 'Banham et al. 2021, JGR Planets, doi 10.1029/2020JE006554 (mission text: cross-bedded sandstone)',
-    url: '',
+    url: 'https://doi.org/10.1029/2020JE006554',
   },
   JPL_MARIAS: {
     title: 'NASA JPL, "NASA Mars Rover Moves Onward After Marias Pass Studies" (19 Aug 2015) (mission text: high-silica rock)',
-    url: '',
+    url: 'https://www.jpl.nasa.gov/news/nasa-mars-rover-moves-onward-after-marias-pass-studies/',
   },
   JPL_MINERAL: {
     title: 'NASA JPL, "NASA Scientists Discover Unexpected Mineral on Mars" (2016) (mission text: high-silica rock)',
@@ -107,7 +107,7 @@ export const DOCS = {
   },
   PIA19039: {
     title: 'NASA, PIA19039 Pahrump Hills walkabout (mission text: lake mudstone)',
-    url: '',
+    url: 'https://science.nasa.gov/photojournal/mars-rover-curiositys-walkabout-at-pahrump-hills/',
   },
   NONE: {
     title: 'No source: placeholder chosen by the team for the demo',
@@ -130,7 +130,7 @@ export const DATA = [
     note: GROUND_NOTE + ' ' + GROUND_FILL_NOTE,
   },
   {
-    name: 'HiRISE elevation model DTEEC_040770_1755_039280_1755_U01 and orthoimage',
+    name: 'HiRISE elevation model DTEEC_040770_1755_039280_1755_U01',
     by: 'NASA/JPL/University of Arizona/USGS',
     use: 'Placed the walk square in Gale crater. In Go / no-go it is a second, independent check of the route: the metres of the route steeper than the slope rule in the 1 m elevation model (slope file of the elevation model; the orthoimage is not shown in the app)',
     licence: 'PDS public data',
@@ -144,9 +144,9 @@ export const DATA = [
     url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json',
   },
   {
-    name: 'Curiosity photos (Mastcam, MAHLI)',
+    name: 'Curiosity photo (Mastcam)',
     by: 'NASA/JPL-Caltech/MSSS',
-    use: 'Shown in the requests, at the sample spot and in the report: “Sloping buttes and cross-bedded sandstone” (PIA21042, Mastcam, sol 1454, NASA/JPL-Caltech/MSSS); in the report when no photo was shown at the spot: “Quela drill hole at the foot of a butte” (MAHLI, sol 1464, NASA/JPL-Caltech/MSSS). Raw frames from the Curiosity raw image archive, with their file ids',
+    use: 'Shown in the requests and at the sample spot: “Sloping buttes and cross-bedded sandstone” (PIA21042, Mastcam, sol 1454, NASA/JPL-Caltech/MSSS)',
     licence: 'JPL Image Use Policy',
     url: 'https://www.jpl.nasa.gov/imagepolicy',
   },

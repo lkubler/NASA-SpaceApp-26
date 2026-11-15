@@ -343,7 +343,10 @@ for (const run of runs) {
     await page.click('.go__action .pill');
     await page.waitForFunction(() => window.__state.step === 4 && window.__walk);
     await page.waitForSelector('.walk-loading.is-off', { state: 'attached', timeout: 60000 });
-    if (await page.evaluate(() => !!document.querySelector('.walk-intro'))) fail(run, 'second walk of the session shows the intro again');
+    // later walks: no film, but the stepping out of the rover plays again (team decision, Sun 15.11.)
+    if (await page.evaluate(() => !!document.querySelector('.walk-intro__film'))) fail(run, 'second walk of the session shows the film again');
+    await page.waitForFunction(() => !document.querySelector('.walk-intro'), null, { timeout: 30000 });
+    await page.waitForTimeout(800);
     await page.evaluate(() => window.__walk.hold(true));
     const w2 = await S();
     if (w2.walk.sample || w2.walk.distanceM > 6 || w2.walk.warnings.length) fail(run, 'second walk did not start fresh');

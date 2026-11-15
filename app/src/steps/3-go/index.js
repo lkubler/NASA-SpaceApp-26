@@ -245,7 +245,7 @@ export default {
         h('span.gorow__icon', { html: ICON[d.tone] || ICON.ok }),
         h('span.gorow__text', h('span.gocheck__name', 'Slope in HiRISE'),
           h('span.gorow__note', (steep ? 'a second elevation model sees steeper ground; not a rule' : 'a second elevation model agrees with the route') + gap)),
-        h('span.gorow__vals', h('span.gorow__line', v(steep ? m : '0 m', L.hirise(hr.noDataM)), h('span.gorow__sep', ' / '), h('span.gorow__v', `steeper than ${RULES.slopeMaxDeg.value}${RULES.slopeMaxDeg.unit}`))));
+        h('span.gorow__vals', h('span.gorow__line', v(steep ? m : '0 m', L.hirise(hr.noDataM)), h('span.gorow__sep', ' / '), v(`steeper than ${RULES.slopeMaxDeg.value}${RULES.slopeMaxDeg.unit}`, RULES.slopeMaxDeg))));
       rows.push({ b, d });
     }
     const brokenN = rows.filter((r) => r.d.tone === 'broken').length;
