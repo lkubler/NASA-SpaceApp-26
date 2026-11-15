@@ -18,6 +18,8 @@ import { GROUND_RAMP } from '../core/groundColor.js';
 import { labelTag } from './label.js';
 
 const RES = 4; // source canvas pixels per grid cell
+/** Source canvas pixels per grid cell (a step that paints its own ground ahead of time needs the size). */
+export const MAP_RES = RES;
 // view layout only (no physical values): zoom range, step per click / button / key, motion
 const ZOOM_MIN = 1, ZOOM_MAX = 6, ZOOM_STEP = 2, ANIM_MS = 220, DRAG_PX = 4, PATTERN_PX = 0.7;
 const FADE_CAP_MS = 4000; // fade option: longest wait for reveal() before the map is shown anyway
