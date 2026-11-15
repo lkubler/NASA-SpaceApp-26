@@ -378,7 +378,7 @@ export function createSim(t, route, log) {
     if (s.tb && s.tb.on) {
       cur.turnBack = true;
       info.turnBack = s.tb.skip
-        ? { reserveS: s.tb.skip.reserveS, skipped: s.tb.skip.stops }
+        ? { reserveS: s.reserve.seconds, skipped: s.tb.skip.stops } // the reserve on the way home, as on the display
         : { reserveS: s.reserve.seconds, viaSpot: log.phase === 'out' && !log.sample };
     }
 

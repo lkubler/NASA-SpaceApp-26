@@ -122,6 +122,9 @@ describe('walk on a round', () => {
     expect(sim.s.active.turnBack).toBe(true);
     expect(sim.s.alert).toBe('turnBack');
     expect(sim.s.alertInfo.turnBack.skipped.map((s) => s.order)).toEqual([3]);
+    // the warning shows the reserve on the way home, the same number as the display (not the spent round's 0 min)
+    expect(sim.s.alertInfo.turnBack.reserveS).toBe(sim.s.reserve.seconds);
+    expect(sim.s.alertInfo.turnBack.reserveS).toBeGreaterThan(60);
     expect(log.turnedBack.skipped).toEqual(['F3']);
     expect(log.stops.map((s) => [s.sampled, s.skipped])).toEqual([[true, false], [true, false], [false, true]]);
     // the display: target rover, the way home from here (stop 2 is where the last planned leg does not start)

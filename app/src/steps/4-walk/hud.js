@@ -398,7 +398,7 @@ export function createHud(el) {
       case 'turnBack': if (i.skipped) {
         const n = i.skipped.map((x) => x.order);
         const which = n.length === 1 ? `Stop ${n[0]} skipped` : `Stops ${n.slice(0, -1).join(', ')} and ${n[n.length - 1]} skipped`;
-        return ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, ` with the remaining stops. ${which}: head for the rover.`];
+        return ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, ` on the way home. ${which}: head for the rover.`];
       }
       return i.viaSpot
         ? ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, ' if you go on to the spot and back. Head for the rover.']
