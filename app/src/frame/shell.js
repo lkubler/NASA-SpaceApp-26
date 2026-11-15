@@ -16,7 +16,7 @@ const SHOW_BAR = new Set([1, 2, 3, 4, 5]); // step 4: the top menu is the way ba
 // Step transitions (specs/x-transitions.md), UI timing only; mirrored in styles/frame.css (--t-*).
 // slide: the old page fades out moving in the direction of travel, the new one fades in from the other side.
 // black: Walk -> Debrief and Go / no-go -> a later walk fade through black. Reduced motion: a plain fade.
-const T = { out: 220, done: 440, black: 300, reduced: 150 }; // done: page in 140 + 260 ms, last block 140 + 120 + 180 ms
+const T = { flip: 400, zoom: 360, out: 220, done: 440, black: 300, reduced: 150 }; // done: page in 140 + 260 ms, last block 140 + 120 + 180 ms
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 export function startShell(root, { startStep = 1 } = {}) {
@@ -36,6 +36,7 @@ export function startShell(root, { startStep = 1 } = {}) {
   let shownStep = 0;     // the step on screen (state.step can be reset before a mount, e.g. New mission)
   let walkMounts = 0;     // walks mounted this page load (the first one opens with the intro, specs/x-intro.md)
   let trans = null;       // the running step transition: { finish() }
+  let flipFrom = null;    // Plan <-> Go / no-go: where the old map was (x-transitions); taken by ctx.flipIn
   let overlay = null;
   let overlayDim = null, overlayTimer = 0;
   const overlayListeners = new Set();
@@ -65,6 +66,12 @@ export function startShell(root, { startStep = 1 } = {}) {
     newMission: () => { resetMission(); mount(1); },
     openSources: () => openSources(),
     getTerrain,
+    /**
+     * Plan <-> Go / no-go: the new step's map starts where the old one was and moves to its own place
+     * (position and size only, 0.4 s). A step calls it once its map is in the page; without a running
+     * Plan <-> Go transition it does nothing.
+     */
+    flipIn: (node) => flipIn(node),
     /** fn(open: boolean) when the sources page opens / closes (e.g. pause the walk). */
     onOverlay: (fn) => { overlayListeners.add(fn); return () => overlayListeners.delete(fn); },
     params: new URLSearchParams(location.search),
@@ -116,9 +123,21 @@ export function startShell(root, { startStep = 1 } = {}) {
 
   /** End the running transition at once: the old page goes (unmounted), the new one shows in full. */
   function finishTransition() {
+    flipFrom = null;
     if (!trans) return;
     const t = trans; trans = null;
     t.finish();
+  }
+
+  function flipIn(node) {
+    const from = flipFrom; flipFrom = null;
+    if (!from || !trans || !node || !node.animate || performance.now() - from.at > 400) return;
+    const r = node.getBoundingClientRect();
+    if (!r.width || !r.height) return;
+    node.animate([
+      { transformOrigin: '0 0', transform: `translate(${from.left - r.left}px, ${from.top - r.top}px) scale(${from.width / r.width}, ${from.height / r.height})` },
+      { transformOrigin: '0 0', transform: 'none' },
+    ], { duration: T.flip, easing: 'cubic-bezier(0.3, 0.7, 0.2, 1)' });
   }
 
   /**
@@ -146,9 +165,22 @@ export function startShell(root, { startStep = 1 } = {}) {
     if (n === 4) walkMounts++;
 
     const reduced = reducedMotion();
+    // Plan <-> Go / no-go: the map with the route moves between its two places (only when the old map is on screen)
+    const oldMap = !reduced && oldEl && ((from === 2 && n === 3) || (from === 3 && n === 2)) && oldEl.querySelector('.map:not(.plan-map-wait)');
+    // Mission -> Plan: the crater view zooms slightly towards Murray Buttes while the page fades (needs the marker on screen)
+    const murray = !reduced && from === 1 && n === 2 && oldEl.querySelector('.m1-site--murray .m1-site__dot');
+    let zoomAt = null;
+    if (murray) {
+      const r = murray.getBoundingClientRect(), o = oldEl.getBoundingClientRect();
+      if (r.width && r.left > o.left && r.left < o.right && r.top > o.top && r.top < o.bottom) zoomAt = `${(r.left + r.width / 2 - o.left).toFixed(0)}px ${(r.top + r.height / 2 - o.top).toFixed(0)}px`;
+    }
     const kind = !from ? 'none'
       : reduced ? 'fade'
-        : (from === 4 && n === 5) || (from === 3 && n === 4 && !firstWalk) ? 'black' : 'slide';
+        : (from === 4 && n === 5) || (from === 3 && n === 4 && !firstWalk) ? 'black' : oldMap ? 'flip' : zoomAt ? 'zoom' : 'slide';
+    if (kind === 'flip') {
+      const r = oldMap.getBoundingClientRect();
+      flipFrom = r.width && r.height ? { left: r.left, top: r.top, width: r.width, height: r.height, at: performance.now() } : null;
+    }
     const dir = n > from ? 'step--fwd' : 'step--back';
     const el = h(`div.step.step--${current.id}`, { dataset: { step: String(n) } });
     if (kind === 'none') el.classList.add('fade-in');
@@ -156,6 +188,7 @@ export function startShell(root, { startStep = 1 } = {}) {
 
     if (oldEl) {
       oldEl.inert = true;
+      if (kind === 'zoom') oldEl.style.setProperty('--zoom-at', zoomAt);
       oldEl.classList.add('step--out', `step--${kind}`, dir);
       stage.insertBefore(el, oldEl);
       if (oldMod === current) dropOld(); // never two instances of one step module
@@ -176,7 +209,7 @@ export function startShell(root, { startStep = 1 } = {}) {
       // timed from the first frame (the CSS animations start there; a heavy mount can hold that frame back)
       const frame = requestAnimationFrame(() => {
         if (kind === 'black') timers.push(setTimeout(() => { dropOld(); black.classList.replace('is-in', 'is-out'); }, T.black));
-        else timers.push(setTimeout(dropOld, reduced ? T.reduced : T.out));
+        else timers.push(setTimeout(dropOld, reduced ? T.reduced : kind === 'zoom' ? T.zoom : T.out));
         timers.push(setTimeout(() => { if (trans === t) finishTransition(); }, reduced ? T.reduced + 20 : kind === 'black' ? 2 * T.black + 20 : T.done));
       });
       const t = {
@@ -185,7 +218,7 @@ export function startShell(root, { startStep = 1 } = {}) {
           timers.forEach(clearTimeout);
           dropOld();
           if (black) black.remove();
-          el.classList.remove('step--in', 'step--slide', 'step--fade', 'step--black', 'step--fwd', 'step--back');
+          el.classList.remove('step--in', 'step--slide', 'step--flip', 'step--zoom', 'step--fade', 'step--black', 'step--fwd', 'step--back');
           delete document.documentElement.dataset.stepTransition;
         },
       };
