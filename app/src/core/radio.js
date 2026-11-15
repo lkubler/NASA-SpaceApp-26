@@ -1,7 +1,7 @@
-// Radio shadow (specs/rules.md): no line of sight to the rover at eye height. A caution, not a rule.
+// Radio shadow (specs/rules.md): no line of sight to the rover, suit antenna to rover antenna. A caution, not a rule.
 // Relay (specs/x-relay.md): a place has contact if it sees the rover, or sees the relay while the relay sees
 // the rover. The relay is one shared state here; Plan, Go, Walk and Debrief all read the same shadow.
-// Geometric only: a straight line from the rover antenna to the astronaut's eye, tested against the
+// Geometric only: a straight line from the rover antenna to the astronaut's suit antenna, tested against the
 // ground every half cell. No radio physics. Mars curvature is ignored (drop over 180 m is 5 mm).
 
 import { RADIO, HOME, RULES } from './values.js';
@@ -68,7 +68,7 @@ export function radioShadowMask(terrain, rover = roverPos(), relay = _relay) {
   if (byKey && byKey[k]) return byKey[k];
   const m = new Uint8Array(terrain.size);
   const a = roverAnt(rover);
-  const eye = RADIO.eyeHeightM.value;
+  const eye = RADIO.suitAntennaM.value;
   const via = relay && relaySeesRover(terrain, relay, rover) ? relayAnt(relay) : null;
   for (let i = 0; i < m.length; i++) {
     const p = terrain.centerOf(terrain.colOf(i), terrain.rowOf(i));
@@ -82,7 +82,7 @@ export function radioShadowMask(terrain, rover = roverPos(), relay = _relay) {
 
 /** true if the astronaut at x, z has contact with the rover (direct, or through the relay if one is placed). */
 export function hasRadio(terrain, x, z, rover = roverPos(), relay = _relay) {
-  const e = { x, z, h: RADIO.eyeHeightM.value };
+  const e = { x, z, h: RADIO.suitAntennaM.value };
   if (lineOfSight(terrain, roverAnt(rover), e)) return true;
   return !!relay && relaySeesRover(terrain, relay, rover) && lineOfSight(terrain, relayAnt(relay), e);
 }

@@ -33,7 +33,7 @@ export const L = {
   },
   shadow: {
     label: 'model', src: 'WALK_TERRAIN', where: 'line of sight on the walk grid',
-    text: 'Longest stretch of the route without line of sight to the rover at eye height. Geometric line of sight only, no radio physics. Shown in demo time.',
+    text: 'Longest stretch of the route without line of sight to the rover, suit antenna to rover antenna (or to the relay, if one is placed). Geometric line of sight only, no radio physics. Shown in demo time.',
   },
   suit: {
     label: 'simulated', src: 'NONE', where: '',

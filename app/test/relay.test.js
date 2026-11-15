@@ -32,7 +32,7 @@ describe('relay: contact', () => {
     let gained = 0;
     for (let i = 0; i < t.size; i += 7) {
       const p = t.centerOf(t.colOf(i), t.rowOf(i));
-      const eye = { x: p.x, z: p.z, h: RADIO.eyeHeightM.value };
+      const eye = { x: p.x, z: p.z, h: RADIO.suitAntennaM.value };
       const direct = lineOfSight(t, rover, eye), viaRelay = lineOfSight(t, relay, eye);
       expect(withIt[i] === 0, `cell ${i}`).toBe(direct || viaRelay);
       expect(without[i] === 0, `cell ${i}`).toBe(direct);

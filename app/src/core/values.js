@@ -103,11 +103,15 @@ export const SUIT = {
 
 export const RADIO = {
   eyeHeightM: v(1.7, 'm', 'assumption', 'NONE', '',
-    'Eye height of the astronaut above the ground, used for the line of sight to the rover.'),
-  roverAntennaM: v(1.7, 'm', 'assumption', 'NONE', '',
-    'Height of the rover antenna, taken as eye height. Radio shadow is geometric line of sight only, no radio physics.'),
-  relayMastM: v(3, 'm', 'assumption', 'NONE', '',
-    'Height of the antenna on the radio relay the crew can set out. The relay device is simulated.'),
+    'Eye height of the astronaut above the ground: where the camera stands in the walk. The radio line of sight uses the suit antenna height.'),
+  suitAntennaM: v(1.83, 'm', 'real', 'APOLLO15_COMM', '§2.1.2, assumption 3 (6 ft)',
+    'Height of the suit antenna above the ground in the Apollo 15 prediction of terrain shadowing of the suit radio link. Used for the astronaut end of the line of sight.',
+    { moon: true, name: 'Suit antenna height' }),
+  roverAntennaM: v(2, 'm', 'real', 'LSRM', '§V (2 m expected on lunar vehicles)',
+    'Height of the rover antenna: about 2 m, the height expected on lunar surface vehicles. Radio shadow is geometric line of sight only, no radio physics.',
+    { moon: true }),
+  relayMastM: v(3, 'm', 'assumption', 'LSRM', '§V (a relay concept uses a 10 m boom; ours is a simple mast)',
+    'Height of the antenna on the radio relay the crew can set out. No source gives a height for such a relay; the relay device is simulated.'),
 };
 
 export const ENVIRONMENT = {
@@ -189,7 +193,7 @@ const NAMES = {
     pandolf: 'Effort equation (Pandolf)',
   },
   SUIT: { designW: 'Backpack design work rate', designH: 'Backpack supply time' },
-  RADIO: { eyeHeightM: 'Eye height', roverAntennaM: 'Rover antenna height', relayMastM: 'Relay antenna height' },
+  RADIO: { eyeHeightM: 'Eye height (camera)', suitAntennaM: 'Suit antenna height', roverAntennaM: 'Rover antenna height', relayMastM: 'Relay antenna height' },
   ENVIRONMENT: {
     doseMSvPerDay: 'Radiation dose rate at Gale crater', airTempK: 'Air temperature at Murray Buttes', solSeconds: 'Length of a Mars day',
     evaStartLmstH: 'Excursion start, local Mars time', signalDelayMinMin: 'Shortest signal delay Earth to Mars',
