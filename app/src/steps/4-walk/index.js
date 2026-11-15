@@ -364,6 +364,7 @@ export default {
       hud.update(sim, heading);
       hud.setLook(look);
       const tg = sim.target();
+      v3.beacon.setTarget(log.ended ? null : tg); // the walk's own target: the beacon follows the marker
       const tgP = v3.project(tg.x, t.heightAt(tg.x, tg.z) + (tg.kind === 'rover' ? 3.2 : 1.6), tg.z);
       const rvP = v3.project(ROVER.x, t.heightAt(ROVER.x, ROVER.z) + 3.0, ROVER.z);
       hud.setMarks({ ...tg, p: tgP }, rvP, Math.hypot(s.x - ROVER.x, s.z - ROVER.z) < D.lookMaxM,

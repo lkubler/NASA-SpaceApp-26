@@ -7,6 +7,7 @@ import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.j
 import { getTerrainScene, sceneToThree } from '../../core/terrainScene.js';
 import { RADIO, ROVER, CANDIDATES, radioShadowMask, roverField } from '../../core/index.js';
 import { steepWallLines } from './steepBorder.js';
+import { createBeacon } from './beacon.js';
 import { DISPLAY as D } from './display.js';
 import { createSky, skyFog, sunDirection } from './sky.js';
 
@@ -38,6 +39,9 @@ export function createScene3d(host, t, opts = {}) {
   // Built once; the fade with distance runs in the shader (no per-frame work)
   const cues = [steepWall(t, opts.keepOpen), radioDots(t)].filter(Boolean);
   for (const c of cues) scene.add(c);
+  // the target beacon (beacon.js): its colour is the accent, its haze the scene's (pass the same colour and density as the fog)
+  const beacon = createBeacon(t, { color: ACCENT, fogColor: haze.color, fogDensity: haze.density });
+  scene.add(beacon.group);
   // the rover: NASA's Space Exploration Vehicle model (public/models/sev.glb), loaded in the background; the
   // simple box model stands in until it is there and stays if it fails to load
   const rover = new THREE.Group();
@@ -132,6 +136,7 @@ export function createScene3d(host, t, opts = {}) {
       setOpacity(sev, k);
       if (k >= 1) { sevFade = null; rover.remove(box); setOpacity(sev, 1); }
     }
+    beacon.update(cam, renderer);
     firstFrame = false;
     renderer.render(scene, cam);
   }
@@ -143,6 +148,7 @@ export function createScene3d(host, t, opts = {}) {
     for (const b of Object.values(bands)) { b.geometry.dispose(); b.material.dispose(); }
     patch.geometry.dispose(); patch.material.dispose();
     for (const c of cues) { c.geometry.dispose(); c.material.dispose(); }
+    beacon.dispose();
     disposeTree(box);
     if (sev) disposeTree(sev);
     shadow.geometry.dispose(); shadow.material.dispose();
@@ -151,7 +157,7 @@ export function createScene3d(host, t, opts = {}) {
     renderer.domElement.remove();
   }
 
-  return { renderer, scene, cam, loadTerrain, setBand, placeRover, setPose, project, viewDir, render, dispose, resize, cues };
+  return { renderer, scene, cam, loadTerrain, setBand, placeRover, setPose, project, viewDir, render, dispose, resize, cues, beacon };
 }
 
 // ---------- ground cues: edge of the closed area (steep) and of the radio shadow ----------

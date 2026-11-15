@@ -11,6 +11,8 @@ export const DISPLAY = {
   relogM: 8,              // walk log: the same warning again within this distance counts as the same one
   offPathM: 6,            // "Off the path": farther than this from the planned route
   edgeBandM: 4,           // "Edge of the site": closer than this to the edge of the mapped square
+  warnHoldS: 2,           // a warning shows as long as its cause lasts and this long after it ends (spec: at least about 2 s); a cause flickering at its limit never blinks it (holdset.js)
+  warnFadeS: 0.3,         // ... and fades in and out over this time (the large warning and its chips)
   aheadHoldS: 1.2,        // keep the walking direction this long after the visitor stops
   homeTurnM: 1.5,         // "heads home": the way home got this much shorter since the warning
   atTargetM: 2.5,         // close enough to take the sample
@@ -132,6 +134,19 @@ export const DISPLAY = {
   steepFillAlpha: 0.3,    // ... translucent fill at the foot, fading to nothing at the top (assumption)
   steepStripeM: 0.6,      // ... faint vertical stripes this far apart, drifting slowly along the wall ... (assumption)
   steepStripeMS: 0.12,    // ... at this speed in metres per second (assumption)
+  // target beacon (beacon.js): a thin beam of light at the current target with a soft ring on the ground; all assumption (display choices)
+  beaconHeightM: 40,      // ... beam height above the ground, fading out towards the top, so it shows across the whole site
+  beaconBelowM: 0.3,      // ... the beam reaches this far below the walk grid, so it never floats where the Access Mars mesh lies lower
+  beaconCoreM: 0.05,      // ... clear core: half width in metres ...
+  beaconCorePx: 2,        // ... and at least this many drawing-buffer pixels wide, so it stays crisp far away
+  beaconGlowM: 0.35,      // ... translucent glow: half width in metres (grows with distance with the core)
+  beaconGlowAlpha: 0.38,  // ... glow strength beside the core
+  beaconRingLineM: 0.05,  // ground ring: clear line, half width in metres (radius = atTargetM, the distance at which a sample can be taken)
+  beaconRingGlowM: 0.3,   // ... soft glow around the line, half width in metres
+  beaconRingLiftM: 0.07,  // ... lifted this far above the walk grid, like the radio dots
+  beaconFadeFullM: 9,     // seen from this far or farther: full strength; fading out when closer ...
+  beaconFadeGoneM: 5,     // ... gone at this distance (spec: fades out within about 5 m), so it never covers the sample spot
+  beaconFogShare: 0.5,    // far away the beam takes this share of the scene's haze colour (so it stays visible across the site)
   radioDotSpacingM: 0.6,  // radio shadow: one dot per this many metres of the shadow edge (assumption)
   radioDotRadiusM: 0.07,  // ... dot radius on the ground (assumption)
   radioDotLiftM: 0.07,    // ... lifted this far above the walk grid, like the route band (assumption)

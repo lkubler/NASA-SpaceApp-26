@@ -6,6 +6,7 @@ import {
   bodyReadings, outsideTempC, fractions, fullLevels, timeLeft, spotSeconds, spotLabel,
 } from '../../core/index.js';
 import { ALERTS } from './sim.js';
+import { createHoldSet } from './holdset.js';
 import { DISPLAY as D } from './display.js';
 import frameUrl from './helmet-frame.webp';
 import { GROUND_TAG } from '../../core/groundColor.js';
@@ -30,6 +31,7 @@ const RESERVE_TAG = { label: 'model', moon: true, text: RULES.walkBackRateFactor
 const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the suit model (Pandolf effort equation under Mars gravity): faster walking costs more per metre. ' + ASTRONAUT.fastPaceFactor.text, source: { title: 'Suit model (src/core/suit.js)', url: '', where: '' } };
 const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Suit model (src/core/suit.js), planner (src/core/planner.js)', url: '', where: '' } };
 const STEEP_CUE_TAG = MODEL_TAG(`A low border along the edge of ground steeper than ${RULES.slopeMaxDeg.value}° (closed to the route), shown within about ${D.cueFadeMaxM} m of you. Outline smoothed for display; the warnings use the planner's exact slope test on the 0.5 m walk grid.`);
+const BEACON_CUE_TAG = MODEL_TAG(`A thin beam of light and a ring on the ground at your current target (the next sample spot, then the rover), visible across the whole site and fading out within about ${D.beaconFadeGoneM} m so it does not cover the spot. Position from the walk grid, drawn for orientation.`);
 const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your eye to the rover antenna), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);
 const SKY_TAG = MODEL_TAG('The day sky: a butterscotch gradient (dusty at the horizon, darker overhead) with one small sun, drawn after the colours of Curiosity\'s daytime sky photos at Gale crater (Sources page). The sun stands at a fixed place, the same direction that lights the rover. Display choice, not a measured sky.');
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
@@ -42,8 +44,9 @@ export function createHud(el) {
   const groundMark = h('div.walk-groundmark.mono',
     h('div', h('span.walk-cue.walk-cue--steep'), `Over ${RULES.slopeMaxDeg.value}° `, tag(STEEP_CUE_TAG)),
     h('div', h('span.walk-cue.walk-cue--radio'), 'Radio shadow edge ', tag(RADIO_CUE_TAG)),
-    h('div', 'Ground colour ', tag(GROUND_TAG)),
-    h('div', 'Sky ', tag(SKY_TAG)));
+      h('div', h('span.walk-cue.walk-cue--beacon'), 'Target beacon ', tag(BEACON_CUE_TAG)),
+      h('div', 'Ground colour ', tag(GROUND_TAG)),
+      h('div', 'Sky ', tag(SKY_TAG)));
 
   // compass
   const compassCv = h('canvas.walk-compass__cv');
@@ -97,7 +100,9 @@ export function createHud(el) {
     h('div.walk-reserve__main', resVal, resLeft), resSub, resBar);
 
   // centre: alert, reticle, look card, prompt
-  const alertEl = h('div.walk-alert');
+  const alertChipsEl = h('div.walk-alert__chips');
+  const alertEl = h('div.walk-alert', alertChipsEl);
+  alertEl.style.setProperty('--warn-fade', `${D.warnFadeS}s`);
   const reticle = h('div.walk-reticle');
   const lookCard = h('div.walk-look');
   const prompt = h('div.walk-prompt');
@@ -268,7 +273,24 @@ export function createHud(el) {
   }
 
   // ---------- per-frame text ----------
-  let lastAlert = '', lastAlertMain = '', lastPrompt = '', lastLook = '';
+  let lastPrompt = '', lastLook = '';
+  const alertHold = createHoldSet({ holdS: D.warnHoldS, fadeS: D.warnFadeS });
+  const ALERT_ORDER = Object.keys(ALERTS);
+  const alertParts = {};                   // id -> last detail text of that warning
+  const alertBoxes = new Map(), alertChips = new Map(); // id -> { el, on, offAt, ... }
+  /** Fade the entries in `want` in (created once), the others out; remove them once faded. */
+  function syncAlerts(map, want, nowS, create) {
+    for (const id of want) {
+      let e = map.get(id);
+      if (!e) { e = create(id); e.on = false; e.offAt = 0; map.set(id, e); e.el.classList.add('is-off'); void e.el.offsetWidth; }
+      if (!e.on) { e.on = true; e.el.classList.remove('is-off'); }
+    }
+    for (const [id, e] of map) {
+      if (want.has(id)) continue;
+      if (e.on) { e.on = false; e.offAt = nowS; e.el.classList.add('is-off'); }
+      else if (nowS - e.offAt > D.warnFadeS + 0.1) { e.el.remove(); map.delete(id); }
+    }
+  }
   function update(sim, headingDeg) {
     const { s, log } = sim;
     task.classList.toggle('is-done', !!log.sample);
@@ -307,29 +329,39 @@ export function createHud(el) {
     mVals.radio.className = 'walk-row__v mono ' + (s.radio ? 'tone-accent' : 'tone-advisory');
     mVals.demo.textContent = `${DEMO.timeFactor.value}${DEMO.timeFactor.unit}`;
 
-    // alerts: the most important one large; every other active one stays visible as a small chip beside it
+    // alerts: the most important one large; every other active one stays visible as a small chip beside it.
+    // What shows is decided by holdset.js (a warning stays while its cause lasts and a while after, and flickering
+    // causes do not blink it); each box and chip is built once and only fades in and out (CSS opacity), so it is
+    // never re-created or re-animated while its warning stays. Only its numbers change.
     const ids = s.modal ? [] : (s.alerts || (s.alert ? [s.alert] : []));
-    const id = ids[0] || null, rest = ids.slice(1);
-    const parts = id ? alertDetail(id, s) : [];
-    const key = id ? id + parts.filter((x) => typeof x === 'string').join('') + '|' + rest.join(',') : '';
-    if (key !== lastAlert) {
-      const sameMain = id && lastAlertMain === id + parts.filter((x) => typeof x === 'string').join('');
-      lastAlert = key;
-      lastAlertMain = id ? id + parts.filter((x) => typeof x === 'string').join('') : '';
-      alertEl.replaceChildren();
-      if (id) {
-        const A = ALERTS[id];
-        const box = h(`div.alert.alert--${A.level}.walk-alert__box`,
-          h('div.walk-alert__lvl.mono', A.level), h('div.alert__title', A.title), h('div.alert__text', parts.map((x) => (typeof x === 'string' ? x : tag(x.tag)))));
-        // only a new large warning slides in; a chip coming or going does not replay it
-        if (sameMain) box.classList.add('is-still');
-        alertEl.append(box);
-        if (rest.length) {
-          alertEl.append(h('div.walk-alert__chips', rest.map((r) => h(`div.walk-alert__chip.is-${ALERTS[r].level}`,
-            h('span.walk-alert__dot'), h('span', ALERTS[r].title)))));
-        }
-      }
+    if (s.modal) alertHold.reset();
+    const nowS = performance.now() / 1000;
+    const present = alertHold.update(nowS, ids);
+    for (const id of ids) alertParts[id] = alertDetail(id, s); // inactive (held) warnings keep their last text
+    const shown = ALERT_ORDER.filter((id) => present.some((p) => p.id === id && p.on));
+    const main = shown[0] || null;
+    const wantBox = new Set(main ? [main] : []), wantChip = new Set(shown.slice(1));
+    syncAlerts(alertBoxes, wantBox, nowS, (id) => {
+      const A = ALERTS[id];
+      const text = h('div.alert__text');
+      const el = h(`div.alert.alert--${A.level}.walk-alert__box`, h('div.walk-alert__lvl.mono', A.level), h('div.alert__title', A.title), text);
+      alertEl.prepend(el);
+      return { el, text, key: null };
+    });
+    syncAlerts(alertChips, wantChip, nowS, (id) => {
+      const A = ALERTS[id];
+      const el = h(`div.walk-alert__chip.is-${A.level}`, h('span.walk-alert__dot'), h('span', A.title));
+      alertChipsEl.append(el);
+      return { el };
+    });
+    if (main) {
+      const parts = alertParts[main], key = parts.filter((x) => typeof x === 'string').join('');
+      const e = alertBoxes.get(main);
+      if (e.key !== key) { e.key = key; e.text.replaceChildren(...parts.map((x) => (typeof x === 'string' ? document.createTextNode(x) : tag(x.tag)))); }
     }
+    // chips keep the order of importance without moving the ones that stay
+    const chipEls = ALERT_ORDER.filter((id) => alertChips.has(id)).map((id) => alertChips.get(id).el);
+    if (chipEls.some((el, i) => alertChipsEl.children[i] !== el)) alertChipsEl.append(...chipEls);
 
     // prompt
     let p = '';
@@ -393,7 +425,7 @@ export function createHud(el) {
   // ---------- look-at card ----------
   function setLook(look) {
     // one thing at a time in the centre: no look-at card while a warning, a prompt or a modal is shown
-    if (modal.classList.contains('is-on') || alertEl.firstChild || prompt.classList.contains('is-on')) look = null;
+    if (modal.classList.contains('is-on') || alertBoxes.size || alertChips.size || prompt.classList.contains('is-on')) look = null;
     const key = look ? look.title + look.size : '';
     if (key === lastLook) return;
     lastLook = key;
@@ -430,8 +462,8 @@ export function createHud(el) {
   }
   /** The warning area: the large warning and its chips together, or null. */
   function warnArea() {
-    if (!alertEl.firstChild) return null;
-    const rs = [...alertEl.children].map((c) => c.getBoundingClientRect());
+    if (!alertBoxes.size && !alertChips.size) return null;
+    const rs = [...[...alertBoxes.values(), ...alertChips.values()].map((e) => e.el)].map((c) => c.getBoundingClientRect());
     return { left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) };
   }
   let lastRoverTxt = '', lastTgtTxt = '';
