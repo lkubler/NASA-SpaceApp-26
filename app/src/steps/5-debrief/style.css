@@ -132,3 +132,6 @@
 .step--debrief .dbf__loop { margin: 0.2em 0 0.6em; }
 .step--debrief .dbf__loopreq { font-size: var(--fs-small); color: var(--text); }
 .step--debrief .dbf__looptext { margin: 0.25em 0 0; font-family: var(--font-display); font-weight: 600; font-size: var(--fs-title); color: #fff; }
+.step--debrief .dbf__nowrap { white-space: nowrap; }
+/* the report line fits on one line at 1920 x 1080 (it wrapped "18 / min." at the card title size) */
+.step--debrief .dbf__looptext { font-size: clamp(14px, 1.7vh, 18px); }

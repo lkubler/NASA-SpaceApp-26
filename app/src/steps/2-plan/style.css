@@ -258,3 +258,7 @@
 .step--plan .plan-sw--waypoint { width: 0.55em; height: 0.55em; border-radius: 50%; background: #fff; border: 1px solid #000; margin: 0 0.37em; }
 .step--plan .plan-leg-icon--via { width: 0.45em; height: 0.45em; border-radius: 50%; background: #fff; margin-left: 0.15em; }
 .step--plan .plan-legs .row.plan-via { padding: 0.05em 0; font-size: var(--fs-tag); }
+.step--plan .plan-legs .row.plan-via .row__label { color: var(--text-2); }
+/* many stops and waypoints: the leg list scrolls in its own area, so the totals and "Confirm route" stay in view */
+.step--plan .plan-legs { flex: 0 1 auto; min-height: 4em; overflow-y: auto; overscroll-behavior: contain; }
+.step--plan .plan-cards, .step--plan .plan-totals { flex-shrink: 0; }

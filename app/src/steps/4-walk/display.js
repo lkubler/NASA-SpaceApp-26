@@ -44,7 +44,6 @@ export const DISPLAY = {
   sunDiscSoftDeg: 0.7,        // soft edge and close glow of the disc, in degrees beyond its radius (assumption)
   sunDiscColor: 0xfff6e0,     // the disc itself, a warm white
   skyRadiusM: 5200,           // the dome follows the eye; larger than the skyline mesh (about 4 km) and inside the camera's far plane (6 km)
-  lockDriftEvents: 2,     // the cursor moved this many times under the pointer lock: the lock does not hold it, free look instead
   lockOffsetPx: 150,      // ... or this many movementX events in a row, all the same way and each at least lockOffsetPx:
   lockOffsetEvents: 8,    //     offsets from the lock point, not steps (assumption: no real hand moves 1200 px in 8 events)
   lockPendingMs: 1000,    // after a lock request, the cursor's own way does not turn the view until locked or refused, at most this long

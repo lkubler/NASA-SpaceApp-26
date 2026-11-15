@@ -90,6 +90,36 @@ function brokenOf(walk, plan) {
   return out;
 }
 const brokenName = (b) => b.name + (b.count > 1 ? ` (${b.count}×)` : b.carried ? ' (in the plan)' : '');
+
+/**
+ * An info marker never wraps onto a line of its own: the word before it (or the value element before it)
+ * and the marker go into one span that does not break (.dbf__nowrap).
+ */
+function glueMarkers(container) {
+  for (const b of container.querySelectorAll('.vlabel')) {
+    const par = b.parentElement;
+    // only running text: not the map (it keeps its own text nodes), not flex or grid rows (they do not wrap words)
+    if (!par || par.classList.contains('dbf__nowrap') || b.closest('.dbf__side')) continue;
+    const disp = getComputedStyle(par).display;
+    if (disp.includes('flex') || disp.includes('grid')) continue;
+    par.normalize(); // "text", " " side by side become one text node
+    const p = b.previousSibling;
+    if (!p || p.nodeType !== 3 || !/\s$/.test(p.data)) continue;
+    const span = document.createElement('span');
+    span.className = 'dbf__nowrap';
+    if (!p.data.trim()) {
+      const prev = p.previousSibling;
+      if (!prev || prev.nodeType !== 1) continue;
+      prev.before(span);
+      span.append(prev, p, b);
+    } else {
+      const m = /(\S+)\s+$/.exec(p.data);
+      p.data = p.data.slice(0, m.index);
+      p.after(span);
+      span.append(m[1] + ' ', b);
+    }
+  }
+}
 function spotName(id) { return (id && spotLabel(id)) || id || NO_DATA; }
 // the map opens framed on the walk (its "reset" view): margin around it, at most this zoom (view layout only)
 const HOME_MAX_ZOOM = 3, HOME_MARGIN = 0.18, MARKER_SIZE = 1.25, FOCUS_ZOOM = 2.5;
@@ -333,6 +363,7 @@ export default {
         h('div.dbf__foot-left', h('div.dbf__foot-title', 'Rules on the walk'), checks),
         btn),
     ));
+    glueMarkers(el);
     // x-transitions: entry order of the main blocks (styles/frame.css [data-enter])
     [['.dbf__main > .headline', 1], ['.dbf__nums', 2], ['.dbf__lower', 3], ['.dbf__side', 3], ['.dbf__foot', 4]]
       .forEach(([q, k]) => { const b = el.querySelector(q); if (b) b.dataset.enter = String(k); });
@@ -402,7 +433,8 @@ function reportCard(ctx, { sample, walk, outcome, sampled = null }) {
     sendBtn.disabled = true;
     sendBtn.textContent = 'Report sent';
     const at = walk && num(walk.tS) ? `Sent ${lmst(walk.tS)} local Mars time. ` : '';
-    status.replaceChildren(h('span', `${at || 'Sent. '}On its way: ${delay.value} ${delay.unit} one-way signal delay `), labelTag(delay));
+    status.replaceChildren(`${at || 'Sent. '}On its way: ${delay.value} ${delay.unit} one-way signal delay `, labelTag(delay));
+    glueMarkers(status);
     status.classList.add('fade-in');
   });
 
@@ -438,6 +470,7 @@ function reportCard(ctx, { sample, walk, outcome, sampled = null }) {
         h('div.dbf__cap', h('span.muted', 'Photo '), caption, ' ', h('span.muted', p.credit || ''), ' ',
           labelTag({ label: 'real', text: `${p.title || ''}${p.camera ? ', ' + p.camera : ''}. Raw image from NASA’s Curiosity rover.`, source: { title: p.credit || 'NASA/JPL-Caltech', url: p.source_url || p.page || '', where: p.file_id || '' } })),
       );
+      glueMarkers(textBox);
     });
   }
 
@@ -447,8 +480,8 @@ function reportCard(ctx, { sample, walk, outcome, sampled = null }) {
   const loop = req ? h('div.dbf__loop',
     h('div.dbf__loopreq', h('span.muted', 'Request '), req.title),
     h('p.dbf__looptext', sample
-      ? `${doneWord}. Your report reaches Earth in ${delay.value} min.`
-      : `Not done this time. Earth will hear it in ${delay.value} min.`)) : null;
+      ? `${doneWord}. Your report reaches Earth in `
+      : 'Not done this time. Earth will hear it in ', h('span.dbf__nowrap', `${delay.value} min.`))) : null;
 
   return h(sample ? 'div.dbf__report' : 'div.dbf__report.dbf__report--empty',
     h('div.dbf__sec', 'Report to Earth'),

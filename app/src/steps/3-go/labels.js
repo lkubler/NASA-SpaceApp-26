@@ -7,7 +7,7 @@ const demo = () => `${DEMO.timeFactor.value}${DEMO.timeFactor.unit}`;
 export const L = {
   distance: {
     label: 'model', src: 'WALK_TARGETS', where: 'grid method',
-    text: 'Length of the planned round trip on foot, measured along the route over the HiRISE-based terrain of the walk square.',
+    text: 'Length of the planned round trip on foot, measured along the route over the Access Mars terrain of the walk square.',
   },
   duration: {
     label: 'model', src: 'CON', where: ASTRONAUT.paceMS.where,

@@ -7,7 +7,7 @@ export const GROUND_RAMP = { dark: [74, 42, 23], light: [214, 142, 94] };
 /** The one honest note about that colour, for the Sources page and the labels where the visitor meets it. */
 export const GROUND_NOTE = 'About half of the walk square has only greyscale imagery in Access Mars. There the ground is tinted with a plain Mars colour of our own choosing, shaded by the terrain heights: the colour is ours, not NASA’s.';
 /** Label for that ground colour (maps and helmet view). */
-export const GROUND_TAG = { label: 'model', text: GROUND_NOTE, source: { title: 'Our display colour (src/core/groundColor.js) over the Access Mars terrain', url: '', where: '' } };
+export const GROUND_TAG = { label: 'model', text: GROUND_NOTE, source: { title: 'Our display colour over the Access Mars terrain', url: '', where: '' } };
 
 /**
  * How the ground of the walk is calmed (core/groundLook.js). Display settings of our own, not data: where
@@ -29,4 +29,4 @@ export const GROUND_LOOK = {
 
 /** The walk's ground fill (core/groundLook.js): where the camera image is grey or stretched, the ground is filled in the colour of the real photo around it. */
 export const GROUND_FILL_NOTE = 'In the walk, ground without a clear camera image (grey imagery, or a photo stretched over steep ground) is filled with the colour and brightness of the real photo around it, and a fine grain is added near you: our display work, not NASA data.';
-export const GROUND_FILL_TAG = { label: 'model', text: GROUND_FILL_NOTE, source: { title: 'Our display code (src/core/groundLook.js) over the Access Mars terrain textures', url: '', where: '' } };
+export const GROUND_FILL_TAG = { label: 'model', text: GROUND_FILL_NOTE, source: { title: 'Our display code over the Access Mars terrain textures', url: '', where: '' } };

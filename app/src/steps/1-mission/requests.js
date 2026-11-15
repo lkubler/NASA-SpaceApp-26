@@ -21,7 +21,7 @@ export const REQUESTS = [
     whySource: {
       title: 'NASA, PIA21043 "Farewell to Murray Buttes" caption; Banham et al. 2021, JGR Planets, doi 10.1029/2020JE006554',
       url: 'https://science.nasa.gov/resource/farewell-to-murray-buttes-image-3/',
-      where: 'research/research-requests.md §1 and §5.3',
+      where: 'team research notes',
     },
     photoId: 'crossbedding_PIA21042',
     candidateIds: SPOTS,
@@ -38,7 +38,7 @@ export const REQUESTS = [
     whySource: {
       title: 'NASA JPL, "NASA Mars Rover Moves Onward After Marias Pass Studies" (19 Aug 2015); "NASA Scientists Discover Unexpected Mineral on Mars" (2016)',
       url: 'https://www.jpl.nasa.gov/news/nasa-scientists-discover-unexpected-mineral-on-mars/',
-      where: 'research/research-requests.md §4',
+      where: 'team research notes',
     },
     photo: { src: 'data/missions/marias_PIA20174.jpg', caption: 'Marias Pass, contact of pale mudstone and darker sandstone', meta: 'Curiosity Mastcam, PIA20174', credit: 'NASA/JPL-Caltech/MSSS', url: 'https://images.nasa.gov/details/PIA20174' },
   },
@@ -52,7 +52,7 @@ export const REQUESTS = [
     whySource: {
       title: 'NASA JPL, "NASA’s Curiosity Rover Team Confirms Ancient Lakes on Mars" (8 Oct 2015); PIA19039 Pahrump Hills walkabout',
       url: 'https://www.jpl.nasa.gov/news/nasas-curiosity-rover-team-confirms-ancient-lakes-on-mars/',
-      where: 'research/research-requests.md §4',
+      where: 'team research notes',
     },
     photo: { src: 'data/missions/pahrump_PIA18476.jpg', caption: 'Layered rock at Pahrump Hills, the base of Mount Sharp', meta: 'Curiosity Mastcam, PIA18476', credit: 'NASA/JPL-Caltech/MSSS', url: 'https://images.nasa.gov/details/PIA18476' },
   },

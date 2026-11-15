@@ -18,7 +18,7 @@ const BASE_KM = 8;
 
 export const EXTRA_TAGS = {
   drive: { label: 'simulated', text: `The rover drive from the base at Bradbury Landing (${BASE_KM} km north-east) is drawn on a way over the terrain that keeps the slope rule. It is a picture only: it does not count into time, distance or reserve yet.`, source: { title: 'Curiosity waypoints (MSL_waypoints.json), NASA/JPL-Caltech', url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json' } },
-  relay: { label: 'simulated', text: 'A radio relay that shrinks the radio shadow. Placing and moving it comes in a later version; the marker shows where it could stand (high ground), nothing is calculated from it yet.', source: { title: 'PROPOSAL.md, later steps (placing a device)', url: '' } },
+  relay: { label: 'simulated', text: 'A radio relay that shrinks the radio shadow. Placing and moving it comes in a later version; the marker shows where it could stand (high ground), nothing is calculated from it yet.', source: { title: 'The team’s proposal, later steps (placing a device)', url: '' } },
   zone: { label: 'model', text: 'The area of this excursion: a frame around the candidate spots and the rover, measured on the walk grid.', source: { title: 'Our walk grid (Access Mars Murray Buttes)', url: '' } },
   effort: { label: 'simulated', text: `The route on foot coloured by the slope under each step, from flat (easy) to ${RULES.slopeMaxDeg.value}° (hard). A stand-in for the walking effort, which comes in a later version.`, source: { title: 'Slope grid of the walk terrain', url: '' } },
 };
