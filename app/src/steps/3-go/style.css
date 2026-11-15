@@ -66,7 +66,16 @@
 .step--go .map-path--broken { stroke-width: 5; stroke-dasharray: 0.1 4; }
 .step--go .map-path--rover { fill: none; stroke: #ececec; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.92; }
 .step--go .plan-zone-dim { display: none; } /* the map shows the zone only */
-.step--go .plan-zone-corner { fill: none; stroke: rgba(255, 255, 255, 0.85); stroke-width: 1.6; }
+.step--go .plan-zone-corner, .step--go .plan-zone-label { display: none; } /* the zone's name sits above the map (go-frame__label) */
+.step--go .go-frame__label { font-size: var(--fs-small); color: var(--text); margin: 0 0 0.45em 0.1em; display: flex; align-items: center; gap: 0.3em; }
+/* the ground fades out towards the map's edges; route, markers, scale bar and north sign stay sharp */
+.step--go .go__map .map { border-radius: 0; background: transparent; }
+.step--go .go__map .map__canvas {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  mask-composite: intersect;
+}
 .step--go .plan-zone-label circle { display: none; }
 .step--go .plan-zone-label .map-marker__label { text-anchor: start; transform: translate(5px, 2px); fill: #fff; font-weight: 500; } /* inside the frame: the map ends at the zone's edge */
 .step--go .go-handover circle:first-child { r: 3.6; fill: #000; stroke: #fff; stroke-width: 1.2; }

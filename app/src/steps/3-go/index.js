@@ -141,7 +141,7 @@ export default {
     const relayAt = relayPointOf(terrain, zone, [...cands.map((c) => c.candidate), ...ACCESS_MARS_POINTS]);
     // the map shows the EVA zone only: its frame takes the zone's shape, so no darkened ground around it
     map.el.style.aspectRatio = `${Math.max(1, Math.min(1.8, (zone.x1 - zone.x0) / (zone.z1 - zone.z0))).toFixed(3)} / 1`;
-    map.setHome([{ x: zone.x0, z: zone.z0 }, { x: zone.x1, z: zone.z1 }], { margin: 0.05, maxK: 3, square: false }); // a little ground beyond the zone, so markers at its edge stay whole
+    map.setHome([{ x: zone.x0, z: zone.z0 }, { x: zone.x1, z: zone.z1 }], { margin: 0.12, maxK: 3, square: false }); // ground beyond the zone, so stops at its edge stay clear of the faded border
     let groundDone = false, drawn = false;
     const revealWhenReady = () => { if (groundDone && drawn) map.reveal(); };
     const cv = map.canvas.getContext('2d');
@@ -191,7 +191,12 @@ export default {
       h('span', sw('stop'), several ? 'Stops' : 'Stop'),
       h('span', sw('relay'), 'Relay ', labelTag(EXTRA_TAGS.relay)),
       h('span', sw('steep'), 'Too steep ', labelTag(S)));
-    const mapBox = h('section.go__map', { 'data-enter': 3 }, map.el, mapLegend);
+    // the zone's name above the map; the map's ground fades out towards its edges
+    const zoneW = Math.round(zone.x1 - zone.x0), zoneH = Math.round(zone.z1 - zone.z0);
+    const frame = h('div.go-frame',
+      h('div.go-frame__label', `EVA zone · ${zoneW} × ${zoneH} m `, labelTag(EXTRA_TAGS.zone)),
+      map.el);
+    const mapBox = h('section.go__map', { 'data-enter': 3 }, frame, mapLegend);
 
     // --- height profile, the longest radio shadow named in a chip over it
     const radio = plan.checks.find((c) => c.id === 'radio');
