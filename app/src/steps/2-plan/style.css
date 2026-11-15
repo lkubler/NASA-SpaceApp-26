@@ -108,6 +108,9 @@
    their space is kept, so nothing shifts */
 .step--plan .plan-legs { position: relative; }
 .step--plan .plan-legs.is-round .row { position: relative; padding-left: 1.4em; padding-right: 28px; } /* both sides kept for handle and ×: every value lines up */
+/* on-foot time as its calculation: real time × factor = suit time; the calculation is quiet, the result keeps the value style */
+.step--plan .plan-calc { color: var(--text-2); }
+.step--plan .plan-calc .vlabel { margin: 0 0 0 0.3em; }
 .step--plan .plan-stop__k { color: var(--text-2); font-family: var(--font-text); font-size: var(--fs-small); }
 .step--plan .plan-grip, .step--plan .plan-x {
   display: inline-grid; place-items: center; padding: 0; border: 0; background: none; color: #7d838b;

@@ -5,9 +5,9 @@
 // to PLANNER.maxStops; a click on a chosen spot removes it; the list reorders (up / down) or clears.
 import './style.css';
 import { h, s, splitLayout, headline, card, pillButton, mapPanel, legend, marker, row, bigNumber, alertBox, labelTag,
-  textLink, fmtDuration, fmtDistance, fmtDeg } from '../../ui/index.js';
+  textLink, fmtDuration, fmtDistance, fmtDeg, fmtRealTime } from '../../ui/index.js';
 import { planAllCandidates, planRound, planNumbers, stopOrdinal, MAX_STOPS, waypointAllowed, waypointsFor, legKeysOf, PLANNER, ROVER, ACCESS_MARS_POINTS, RULES,
-  DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA, sourceOf, spotNumber, getRelay, setRelay, relayAllowed, withRelay, onRelayChange } from '../../core/index.js';
+  DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA, sourceOf, spotNumber, demoFactor, getRelay, setRelay, relayAllowed, withRelay, onRelayChange } from '../../core/index.js';
 import { paintGround, composeGround, hatchPattern, dotPattern } from './ground.js';
 import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
 import { GROUND_TAG } from '../../core/groundColor.js';
@@ -26,11 +26,10 @@ const L = {
   spot: { label: 'model', text: 'Position derived from the terrain: a reachable spot at the foot of a butte wall. No Curiosity target lies in this square.', source: { title: DOCS.WALK_TARGETS.title, url: DOCS.WALK_TARGETS.url } },
   point: { label: 'real', text: 'A point of interest of the Access Mars app, with its original text. Not a sample spot.', source: { title: ACCESS_MARS.name, url: ACCESS_MARS.url } },
   distance: { label: 'model', text: 'Length of the route calculated in your browser on the terrain grid: the fastest way that keeps every rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
-  time: { label: 'model', text: 'Route length at the planning pace, plus the fixed work at the spot; in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
+  time: { label: 'model', text: `Suit time: the real walking time at the planning pace × ${DEMO.timeFactor.value} (demo time), plus the fixed work at the spot.`, source: sourceOf(ASTRONAUT.paceMS), moon: true },
   reserve: { label: 'model', moon: true, text: `Time left in the suit when back at the rover, if the crew walks the plan. The way home counts at a ${Math.round((RULES.walkBackRateFactor.value - 1) * 100)} % higher work rate. Set by the consumable that runs out first.`, source: sourceOf(SUIT.designW) },
   slope: { label: 'model', text: 'Steepest ground on the route, from the slope grid of the terrain.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
   waypoint: { label: 'model', text: 'A point you set that the route must pass. No sample and no work there; the legs on either side are planned again by the same rules.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
-  leg: { label: 'model', text: 'One leg of the round: length of the fastest way that keeps every rule, and its walking time at the planning pace, in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
 };
 
 const SPOT_WORK = () => fmtDuration(DEMO.spotWorkMin.value * 60);
@@ -140,7 +139,7 @@ export default {
       relayMove, relayRemove);
     const legs = h('div.plan-legs');
     const totals = h('div.plan-totals', { 'data-enter': 2 });
-    const demo = h('div.plan-demo', 'Demo time: clock and suit run ', String(DEMO.timeFactor.value), DEMO.timeFactor.unit, ' faster ', labelTag(DEMO.timeFactor));
+    const demo = h('div.plan-demo', 'Demo time: real walking time × ', String(DEMO.timeFactor.value), ' = suit time ', labelTag(DEMO.timeFactor));
     const btn = pillButton({ text: 'Confirm route', onClick: () => ctx.next(), disabled: !ctx.state.route });
     const req = ctx.state.request;
     // the goal is set by the request from step 1; this step only plans the route to it
@@ -519,7 +518,7 @@ export default {
             clearLink()));
         } else if (lg.kind === 'foot') {
           const lp = P.legPlans[(i - 1) / 2];
-          out.push(...footRows(lg, lp, L.leg));
+          out.push(...footRows(lg, lp));
         } else {
           const k = lg.order - 1, id = ids[k];
           const grip = h('button.plan-grip', { type: 'button', 'aria-label': `Reorder ${nameOf(id)}`, title: 'Drag to reorder (or ↑ ↓)', 'data-ctl': `${id}-grip`,
@@ -601,10 +600,16 @@ export default {
      * The rows of one leg on foot: one row, or with waypoints one row per part and a small unnamed point
      * between them (specs/x-waypoints.md "Panel").
      */
-    function footRows(lg, lp, tag) {
+    function footRows(lg, lp) {
       const tone = lp && !lp.keepsRules ? 'warning' : null;
-      // a part shorter than 1 m or 1 min reads "< 1 m" / "< 1 min", not "0 m · 0 min" (display only)
-      const foot = (m, sec) => row('On foot', `${m < 1 ? '< 1 m' : fmtDistance(m)} · ${sec < 60 ? '< 1 min' : fmtDuration(sec)}`, { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tag, tone });
+      const F = demoFactor();
+      // the time as its calculation: real walking time (shown suit time / factor) × demo factor = suit time, e.g.
+      // "14 m · 25 s × 76 = 32 min"; the pace and the factor each carry their label (display only)
+      // a part shorter than 1 m or 1 min reads "< 1 m" / "< 1 min", not "0 m · 0 min", without the calculation
+      const foot = (m, sec) => row('On foot', sec < 60
+        ? `${m < 1 ? '< 1 m' : fmtDistance(m)} · < 1 min`
+        : [`${fmtDistance(m)} `, h('span.plan-calc', '· ', fmtRealTime(sec / F), labelTag(ASTRONAUT.paceMS), ` × ${F}`, labelTag(DEMO.timeFactor), ' = '), fmtDuration(sec)],
+      { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tone });
       if (!lp || !lp.parts) return [foot(lg.distanceM, lg.seconds)];
       const out = [];
       lp.parts.forEach((pt, j) => {
@@ -669,8 +674,7 @@ export default {
         legRows.forEach((lg, i) => {
           const lead = h(`span.plan-leg-icon.plan-leg-icon--${lg.kind}`);
           let value = '', tag = null;
-          if (P && lg.kind === 'foot') { value = `${fmtDistance(lg.distanceM)} · ${fmtDuration(lg.seconds)}`; tag = L.time; }
-          else if (P && lg.kind === 'spot') { value = [h('span.plan-stop__k', 'sampling '), fmtDuration(lg.seconds)]; tag = DEMO.spotWorkMin; }
+          if (P && lg.kind === 'spot') { value = [h('span.plan-stop__k', 'sampling '), fmtDuration(lg.seconds)]; tag = DEMO.spotWorkMin; }
           else if (!P && lg.kind !== 'rover') value = '–';
           if (lg.kind === 'rover') {
             // with waypoints, "Clear" removes them and the stop
@@ -681,7 +685,7 @@ export default {
             if (i === 0) legs.append(relayRow());
             return;
           }
-          if (P && lg.kind === 'foot') { legs.append(...footRows(lg, P.legPlans[(i - 1) / 2], tag)); return; }
+          if (P && lg.kind === 'foot') { legs.append(...footRows(lg, P.legPlans[(i - 1) / 2])); return; }
           legs.append(row(lg.name, value, { lead, tag }));
         });
       }

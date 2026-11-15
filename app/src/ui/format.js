@@ -10,6 +10,13 @@ export function fmtDuration(seconds, { approx = false } = {}) {
   return (approx ? '≈ ' : '') + (neg && (h || m) ? '−' : '') + txt; // never "−0 min"
 }
 
+/** A short real time in whole seconds: 25 -> "25 s"; 72 -> "1 min 12 s"; 120 -> "2 min". */
+export function fmtRealTime(seconds) {
+  if (!isFinite(seconds)) return '–';
+  const s = Math.max(0, Math.round(seconds)), m = Math.floor(s / 60), r = s % 60;
+  return m ? (r ? `${m} min ${r} s` : `${m} min`) : `${s} s`;
+}
+
 /** Clock "00:42:10". */
 export function fmtClock(seconds) {
   const s = Math.max(0, Math.floor(seconds));
