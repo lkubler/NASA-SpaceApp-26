@@ -6,12 +6,13 @@
 import './style.css';
 import { h, s, splitLayout, headline, card, pillButton, mapPanel, legend, marker, row, bigNumber, alertBox, labelTag,
   textLink, fmtDuration, fmtDistance, fmtDeg } from '../../ui/index.js';
-import { planAllCandidates, planRound, planNumbers, stopOrdinal, MAX_STOPS, PLANNER, ROVER, ACCESS_MARS_POINTS, RULES,
+import { planAllCandidates, planRound, planNumbers, stopOrdinal, MAX_STOPS, waypointAllowed, waypointsFor, legKeysOf, PLANNER, ROVER, ACCESS_MARS_POINTS, RULES,
   DEMO, HOME, ASTRONAUT, SUIT, DOCS, DATA, sourceOf, spotNumber } from '../../core/index.js';
 import { paintGround, composeGround, hatchPattern, dotPattern } from './ground.js';
 import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
 import { GROUND_TAG } from '../../core/groundColor.js';
 import { EXTRA_TAGS, zoneOf, relayPointOf, roverDriveOf, drawEffort, drawZone, planLegend } from './extras.js';
+import { waypointEditor, parseWaypoints } from './waypoints.js';
 
 let root = null;
 let cleanup = [];
@@ -28,6 +29,7 @@ const L = {
   time: { label: 'model', text: 'Route length at NASA\'s planning pace, plus the fixed work at the spot; in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
   reserve: { label: 'model', moon: true, text: `Time left in the suit when back at the rover, if the crew walks the plan. The way home counts at a ${Math.round((RULES.walkBackRateFactor.value - 1) * 100)} % higher work rate. Set by the consumable that runs out first.`, source: sourceOf(SUIT.designW) },
   slope: { label: 'model', text: 'Steepest ground on the route, from the slope grid of the terrain.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
+  waypoint: { label: 'model', text: 'A point you set that the route must pass. No sample and no work there; the legs on either side are planned again by the same rules.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
   leg: { label: 'model', text: 'One leg of the round: length of the fastest way that keeps every rule, and its walking time at NASA\'s planning pace, in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
 };
 
@@ -103,7 +105,7 @@ export default {
     const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => later('Comparing with and without the relay comes in a later version.') }, 'Compare without relay');
     const leg = planLegend({
       route: [['rover-line', 'Rover drive'], ['foot', 'On foot'], ['handover', 'Handover to foot']],
-      places: [['marker', ['Candidate spot ', labelTag(L.spot)]], ['selected', 'Chosen stop'], ['cheapest', 'Cheapest'],
+      places: [['marker', ['Candidate spot ', labelTag(L.spot)]], ['selected', 'Chosen stop'], ['waypoint', ['Waypoint ', labelTag(L.waypoint)]], ['cheapest', 'Cheapest'],
         ['point', ['Access Mars point ', labelTag(L.point)]], ['relay', ['Radio relay ', labelTag(EXTRA_TAGS.relay)]], ['zone', ['EVA zone ', labelTag(EXTRA_TAGS.zone)]]],
       layers: [
         { key: 'steep', swatch: 'steep', name: 'Too steep to walk', note: `> ${RULES.slopeMaxDeg.value}°`, on: true, tag: L.steep },
@@ -210,12 +212,16 @@ export default {
     const candOf = (id) => cands.find((x) => x.candidate.id === id) || null;
     const stopIds = () => (ctx.state.stops && ctx.state.stops.length ? [...ctx.state.stops] : ctx.state.spotId ? [ctx.state.spotId] : []);
     // one stop: the candidate's own route and numbers, exactly as before; several: planned leg by leg (cached)
+    // waypoints (specs/x-waypoints.md): kept per leg; only those of legs the round still has count
     const rounds = new Map();
-    const roundOf = (ids) => {
-      if (ids.length === 1) { const c = candOf(ids[0]); return { route: c.route, plan: c.plan }; }
-      const key = ids.join('>');
+    const curWps = () => ctx.state.waypoints || {};
+    const roundOf = (ids, wpsAll = curWps()) => {
+      const wps = waypointsFor(ids, wpsAll);
+      if (ids.length === 1 && !wps) { const c = candOf(ids[0]); return { route: c.route, plan: c.plan }; }
+      const key = ids.join('>') + (wps ? JSON.stringify(wps) : '');
       if (!rounds.has(key)) {
-        const route = planRound(terrain, ids.map((id) => candOf(id).candidate));
+        if (rounds.size > 200) rounds.delete(rounds.keys().next().value); // cache size only
+        const route = planRound(terrain, ids.map((id) => candOf(id).candidate), wps);
         rounds.set(key, { route, plan: planNumbers(terrain, route) });
       }
       return rounds.get(key);
@@ -232,9 +238,26 @@ export default {
     }
     const setStops = (ids) => {
       notice = null;
-      if (!ids.length) ctx.set({ stops: [], spotId: null, route: null, plan: null });
-      else { const r = roundOf(ids); ctx.set({ stops: ids, spotId: ids[0], route: r.route, plan: r.plan }); }
+      editor.deselect();
+      // the waypoints of legs the new round no longer has are dropped; "Clear" (no stops) drops them all
+      const wps = waypointsFor(ids, curWps()) || {};
+      if (!ids.length) ctx.set({ stops: [], waypoints: {}, spotId: null, route: null, plan: null });
+      else { const r = roundOf(ids, wps); ctx.set({ stops: ids, waypoints: wps, spotId: ids[0], route: r.route, plan: r.plan }); }
       render();
+    };
+    /** New waypoints for the current round: the legs are planned again; the route is redrawn without the draw-in. */
+    const setWaypoints = (wps) => {
+      const ids = stopIds();
+      if (!ids.length) return;
+      const t0 = performance.now();
+      const keep = waypointsFor(ids, wps) || {};
+      const r = roundOf(ids, keep);
+      ctx.set({ waypoints: keep, route: r.route, plan: r.plan });
+      const planMs = performance.now() - t0;
+      quietDraw = true;
+      render();
+      // dev and test inspection only (like window.__state)
+      if (typeof window !== 'undefined') window.__planTiming = { planMs, totalMs: performance.now() - t0, waypoints: Object.values(keep).reduce((a, l) => a + l.length, 0) };
     };
     /** A click on a spot: add it as the next stop, or remove it if it is chosen. */
     const toggle = (id) => {
@@ -301,18 +324,31 @@ export default {
     };
 
     let drawnPlan; // the route last drawn: a newly chosen one draws in along its path (x-transitions), not a redraw
+    let quietDraw = false; // a waypoint edit: the route changes in place, no draw-in on every release
+    let driveMemo = null;
+    const editor = waypointEditor({
+      map, terrain, isAllowed: (x, z) => waypointAllowed(terrain, x, z),
+      getRoute: () => ctx.state.route, getIds: stopIds, getWaypoints: curWps,
+      onChange: (wps) => setWaypoints(wps), onStart: () => { pinned = null; tip.hidden = true; },
+      onSelect: () => drawMap(),
+    });
+    cleanup.push(() => editor.destroy());
     function drawMap() {
       ['areas', 'routes', 'markers', 'top'].forEach((n) => map.clearLayer(n));
       const ids = stopIds();
       const sel = ids.length ? { plan: ctx.state.plan } : null;
-      const fresh = drawnPlan !== undefined && sel && sel.plan && sel.plan !== drawnPlan;
+      const fresh = !quietDraw && drawnPlan !== undefined && sel && sel.plan && sel.plan !== drawnPlan;
+      quietDraw = false;
       drawnPlan = (sel && sel.plan) || null;
 
       // EVA zone (look only): darker ground outside, corner brackets, its size
       drawZone(map, terrain, zone);
       // rover drive from the base (look only): a white line from the map edge towards the base to the rover
       const vb = visibleBox(), p0 = map.unproject(vb.x0, vb.y1), p1 = map.unproject(vb.x1, vb.y0);
-      const drive = roverDriveOf(terrain, { x0: p0.x, x1: p1.x, z0: p0.z, z1: p1.z });
+      // the same visible box gives the same drive: planned once per box, not on every redraw (a waypoint drag redraws often)
+      const boxKey = [p0.x, p1.x, p0.z, p1.z].map((v) => v.toFixed(2)).join(' ');
+      if (!driveMemo || driveMemo.key !== boxKey) driveMemo = { key: boxKey, drive: roverDriveOf(terrain, { x0: p0.x, x1: p1.x, z0: p0.z, z1: p1.z }) };
+      const drive = driveMemo.drive;
       // the base itself is 8 km away and never drawn: the drive just runs off the map edge towards it
       if (drive) map.path(drive.points, { style: 'rover' });
       // radio relay (look only)
@@ -335,6 +371,8 @@ export default {
           if (!b.where || b.id === 'slope') continue;
           map.addMarker(b.where.x, b.where.z, { kind: 'dot', label: b.name, layer: 'top' }).classList.add('plan-broken');
         }
+        // the route line can be dragged: a drag on it makes a waypoint there (above the route, below the markers)
+        editor.drawHits();
       }
 
       // the rover: where the crew hands over from the drive to foot
@@ -410,6 +448,8 @@ export default {
       for (const g of selGs) map.layer('top').append(g);
       const top = map.layer('top');
       for (const el of [...top.querySelectorAll('.map-path--broken')]) top.append(el);
+      // the waypoints on top of everything, so each can be grabbed and removed
+      if (sel && sel.plan) editor.drawWaypoints();
     }
 
     function renderHint() {
@@ -419,9 +459,9 @@ export default {
       let text;
       if (notice) text = notice;
       else if (!ids.length) text = 'Click a spot on the map to plan the route there and back.';
-      else if (ids.length === 1) text = `Click spots to add stops (up to ${MAX_STOPS}) or remove them.`;
-      else if (ids.length < MAX_STOPS) text = `Click a spot for a ${stopOrdinal(ids.length + 1)} stop. ↑ ↓ change the order, × removes.`;
-      else text = `${MAX_STOPS} stops, the most per excursion. ↑ ↓ change the order, × removes.`;
+      else if (ids.length === 1) text = `Click spots to add stops (up to ${MAX_STOPS}). Drag the route to shape it.`;
+      else if (ids.length < MAX_STOPS) text = `Click a spot for a ${stopOrdinal(ids.length + 1)} stop. ↑ ↓ change the order. Drag the route to shape it.`;
+      else text = `${MAX_STOPS} stops, the most per excursion. ↑ ↓ change the order. Drag the route to shape it.`;
       hint.textContent = text;
     }
 
@@ -446,11 +486,10 @@ export default {
         } else if (lg.kind === 'rover') {
           // the way to clear sits at the end of the list, on the last row
           out.push(h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--handover')), h('span.row__label', 'Back at the rover'),
-            h('span.plan-clear', textLink('Clear all stops', () => { setStops([]); hint.focus(); }))));
+            clearLink()));
         } else if (lg.kind === 'foot') {
           const lp = P.legPlans[(i - 1) / 2];
-          out.push(row('On foot', `${fmtDistance(lg.distanceM)} · ${fmtDuration(lg.seconds)}`,
-            { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tag: L.leg, tone: lp && !lp.keepsRules ? 'warning' : null }));
+          out.push(...footRows(lg, lp, L.leg));
         } else {
           const k = lg.order - 1, id = ids[k];
           out.push(h('div.row.plan-stop',
@@ -462,6 +501,24 @@ export default {
               ctl('↓', `Move ${numberOf(id)} later`, keep(`${id}-down`, () => move(k, 1)), k === ids.length - 1, `${id}-down`),
               ctl('×', `Remove ${numberOf(id)} from the route`, keep('x', () => setStops(ids.filter((x) => x !== id))), false, `${id}-x`))));
         }
+      });
+      return out;
+    }
+
+    /** "Clear": removes all stops and waypoints. */
+    const clearLink = () => h('span.plan-clear', textLink('Clear', () => { setStops([]); hint.focus(); }));
+    /**
+     * The rows of one leg on foot: one row, or with waypoints one row per part and a small unnamed point
+     * between them (specs/x-waypoints.md "Panel").
+     */
+    function footRows(lg, lp, tag) {
+      const tone = lp && !lp.keepsRules ? 'warning' : null;
+      const foot = (m, sec) => row('On foot', `${fmtDistance(m)} · ${fmtDuration(sec)}`, { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tag, tone });
+      if (!lp || !lp.parts) return [foot(lg.distanceM, lg.seconds)];
+      const out = [];
+      lp.parts.forEach((pt, j) => {
+        if (j) out.push(h('div.row.plan-via', { 'aria-label': 'Waypoint' }, h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--via')), h('span.row__label', labelTag(L.waypoint))));
+        out.push(foot(pt.distanceM, pt.seconds));
       });
       return out;
     }
@@ -525,10 +582,15 @@ export default {
           else if (P && lg.kind === 'spot') { value = fmtDuration(lg.seconds); tag = DEMO.spotWorkMin; }
           else if (!P && lg.kind !== 'rover') value = '–';
           if (lg.kind === 'rover') {
-            legs.append(row(i === 0 ? 'Handover' : 'Back at the rover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }));
+            // with waypoints, "Clear" removes them and the stop
+            const wpsSet = i > 0 && P && waypointsFor(ids, curWps());
+            legs.append(wpsSet
+              ? h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--handover')), h('span.row__label', 'Back at the rover'), clearLink())
+              : row(i === 0 ? 'Handover' : 'Back at the rover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }));
             if (i === 0) legs.append(relayRow());
             return;
           }
+          if (P && lg.kind === 'foot') { legs.append(...footRows(lg, P.legPlans[(i - 1) / 2], tag)); return; }
           legs.append(row(lg.name, value, { lead, tag }));
         });
       }
@@ -556,7 +618,7 @@ export default {
 
     // keep a previous choice (back from Go / no-go) in step with the fresh candidate list
     const kept = stopIds();
-    if (kept.some((id) => !candOf(id))) ctx.set({ stops: [], spotId: null, route: null, plan: null });
+    if (kept.some((id) => !candOf(id))) ctx.set({ stops: [], waypoints: {}, spotId: null, route: null, plan: null });
     else if (kept.length && !(ctx.state.stops && ctx.state.stops.length)) ctx.set({ stops: kept });
     // first visit: the spot that fits the request (requests.js spotId) is the first stop; the crew may change it
     if (!stopIds().length && req && req.spotId && candOf(req.spotId)) {
@@ -578,12 +640,14 @@ export default {
     const terrain = await getTerrain();
     const candidates = planAllCandidates(terrain);
     const ids = (params.get('stops') || '').split(',').filter((id) => candidates.some((x) => x.candidate.id === id)).slice(0, PLANNER.maxStops.value);
-    if (ids.length > 1) {
-      const route = planRound(terrain, ids.map((id) => candidates.find((x) => x.candidate.id === id).candidate));
-      return { candidates, stops: ids, spotId: ids[0], route, plan: planNumbers(terrain, route) };
+    const pick = ids.length ? ids : [(candidates.find((x) => x.candidate.id === (params.get('spot') || 'F3')) || candidates[0]).candidate.id];
+    // &waypoints=0:x,z;1:x,z (specs/x-waypoints.md "Dev jump"): leg index, scene metres
+    const wps = waypointsFor(pick, parseWaypoints(params.get('waypoints'), legKeysOf(pick), (x, z) => waypointAllowed(terrain, x, z)));
+    if (ids.length > 1 || wps) {
+      const route = planRound(terrain, pick.map((id) => candidates.find((x) => x.candidate.id === id).candidate), wps);
+      return { candidates, stops: pick, waypoints: wps || {}, spotId: pick[0], route, plan: planNumbers(terrain, route) };
     }
-    const id = ids[0] || params.get('spot') || 'F3';
-    const c = candidates.find((x) => x.candidate.id === id) || candidates[0];
-    return { candidates, stops: [c.candidate.id], spotId: c.candidate.id, route: c.route, plan: c.plan };
+    const c = candidates.find((x) => x.candidate.id === pick[0]);
+    return { candidates, stops: [c.candidate.id], waypoints: {}, spotId: c.candidate.id, route: c.route, plan: c.plan };
   },
 };

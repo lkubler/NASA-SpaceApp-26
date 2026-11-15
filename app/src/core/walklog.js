@@ -30,7 +30,52 @@ export function initStops(log, route) {
   if (!log.stops || !log.stops.length) {
     log.stops = stopsOf(route).map((st, k) => ({ id: st.id || null, name: st.name || '', order: k + 1, x: st.x, z: st.z, sampled: false, tS: null, skipped: false }));
   }
+  // waypoints of the plan (specs/x-waypoints.md), only when it has any: { leg, x, z, passed } in route order
+  if (route && route.waypoints && !log.via) {
+    log.via = route.waypoints.flatMap((wps, leg) => wps.map((w) => ({ leg, x: w.x, z: w.z, passed: false })));
+  }
   return log.stops;
+}
+
+/**
+ * The places still ahead for the reserve on return: the remaining stops (remainingStops) with the waypoints
+ * of the plan not passed yet between them (entries { x, z, pass: true }). A waypoint counts only on a leg the
+ * crew still walks as planned: the leg to the next stop (when the stop before it is done), a leg between two
+ * remaining stops in plan order, and the way home after the last stop; none after "Turn back now".
+ * Without waypoints: exactly remainingStops(log).
+ */
+export function remainingWay(log) {
+  const stops = remainingStops(log);
+  if (!log.via || !log.via.length) return stops;
+  const N = log.stops.length;
+  const viaOf = (leg) => log.via.filter((w) => w.leg === leg && !w.passed).map((w) => ({ x: w.x, z: w.z, pass: true }));
+  if (log.phase !== 'out') return !log.turnedBack && log.stops[N - 1] && log.stops[N - 1].sampled ? viaOf(N) : [];
+  const out = [];
+  stops.forEach((st, j) => {
+    const L = log.stops.indexOf(st);
+    const prevOk = j === 0 ? (L === 0 || log.stops[L - 1].sampled) : log.stops.indexOf(stops[j - 1]) === L - 1;
+    if (prevOk) out.push(...viaOf(L));
+    out.push(st);
+  });
+  const lastL = stops.length ? log.stops.indexOf(stops[stops.length - 1]) : -1;
+  if (lastL === N - 1) out.push(...viaOf(N));
+  return out;
+}
+
+/**
+ * Mark the waypoints ahead passed that the crew stands at (within radiusM, or in the same grid cell); a
+ * waypoint passed also passes the earlier ones of its leg (the crew cut the corner).
+ */
+export function passVia(log, terrain, x, z, radiusM = 0) {
+  if (!log.via || !log.via.length) return;
+  const cell = terrain.indexOf(x, z);
+  const ahead = new Set(remainingWay(log).filter((p) => p.pass).map((p) => `${p.x},${p.z}`));
+  log.via.forEach((w, i) => {
+    if (w.passed || !ahead.has(`${w.x},${w.z}`)) return;
+    if (Math.hypot(w.x - x, w.z - z) <= radiusM || terrain.indexOf(w.x, w.z) === cell) {
+      for (let j = 0; j <= i; j++) if (log.via[j].leg === w.leg) log.via[j].passed = true;
+    }
+  });
 }
 
 /** The stops still ahead (not sampled, not skipped), in plan order, for reserveFrom; [] on the way home. */
@@ -68,7 +113,7 @@ export function logMove(log, terrain, { from, to, dtS, workW, radio, spot, stops
   log.doseMSv = doseMSv(log.tS);
   if (!radio) log.radioShadowS += dtS;
   // the stops still ahead (a round); without log.stops: the one spot given, as before
-  const ahead = stops || (log.stops && log.stops.length ? remainingStops(log) : null);
+  const ahead = stops || (log.stops && log.stops.length ? remainingWay(log) : null);
   const r = reserveFrom(terrain, log.levels, { x: to.x, z: to.z, phase: log.phase, spot, stops: ahead || undefined });
   if (!log.minReserve || r.seconds < log.minReserve.seconds) {
     log.minReserve = { seconds: r.seconds, limiting: r.limiting, name: r.name, x: to.x, z: to.z, tS: log.tS };
@@ -111,6 +156,7 @@ export function simulateWalk(terrain, route) {
     for (let k = 1; k < cells.length; k++) {
       const st = stepCost(terrain, cells[k - 1], cells[k]);
       const a = terrain.pointOf(cells[k - 1]), b = terrain.pointOf(cells[k]);
+      passVia(log, terrain, b.x, b.z);
       logMove(log, terrain, { from: a, to: b, dtS: st.seconds, workW: workRate(st.slopeDeg), radio: shadow[cells[k]] === 0 });
     }
     if (li < legs.length - 1) {

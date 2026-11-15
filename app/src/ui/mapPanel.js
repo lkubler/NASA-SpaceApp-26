@@ -25,6 +25,8 @@ const NICE_M = [1, 2, 5, 10, 20, 50, 100];
 // route drawing (drawIn): length of the draw, width of the uncovering stroke in grid cells (covers every route style)
 const DRAW_MS = 600, DRAW_MASK_W = 8;
 let drawSeq = 0;
+/** Pointer travel (CSS px) before a press counts as a drag, not a click (shared with the steps that drag on a map). */
+export const MAP_DRAG_PX = DRAG_PX;
 
 /**
  * @param {Terrain} terrain  from core/terrain.js getTerrain()
