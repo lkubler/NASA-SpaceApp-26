@@ -51,7 +51,7 @@ Pandolf is a load-carriage equation measured on Earth; the factor scales it to M
 
 <sub>Same route without and with the relay (yellow square): time without radio drops from 3 h 14 to 0 min.</sub>
 
-## What makes it different
+## Design principles
 
 - **Rules first.** Every limit comes from a published document: slope, excursion length, way-home margin, time to shelter in a solar storm. The planner, the checklist and the helmet read the same rules.
 - **Every value is labelled.** Each number on screen carries *real* (measured or published), *model* (our calculation), *simulated* (placeholder) or *assumption*, with its source.
@@ -72,7 +72,7 @@ Pandolf is a load-carriage equation measured on Earth; the factor scales it to M
 
 Twelve datasets reach the app; two carry decisions (Access Mars and HiRISE). The full inventory with every value, label and source is in [`docs/data-use.md`](docs/data-use.md), and on the Sources page of the app.
 
-## Honest limits
+## Limits
 
 - **Demo time.** The site is 128 m wide, so suit time runs 76× faster than walking time (an assumption, shown on screen). Distances are real. The reserve and the storm rule bind only because of this factor; the 2 km / 3.5 km distance limits never do.
 - **Slopes come from the Curiosity reconstruction**, which is smoother than HiRISE (ground over 20°: 18.1 % against 18.7 %). HiRISE only cross-checks; it does not close ground or change the route. The two models are aligned to about 2 m.
