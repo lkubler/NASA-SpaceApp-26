@@ -232,6 +232,7 @@ export default {
     el.append(h(`div.go${broken ? '.is-broken' : ''}`, intro, mapBox, profBox, bottom));
     requestAnimationFrame(() => prof.resize());
     map.reveal();
+    ctx.flipIn(map.el); // x-transitions: from Plan the map moves here from its large place on the left
     const onResize = () => prof.resize();
     window.addEventListener('resize', onResize);
     offResize = () => window.removeEventListener('resize', onResize);

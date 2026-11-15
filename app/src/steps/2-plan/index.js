@@ -108,6 +108,7 @@ export default {
       { kind: 'shadow', text: ['Radio shadow ', labelTag(L.shadow)] },
     ], ['Terrain: Access Mars ', labelTag(L.terrain), ' · ground colour ', labelTag(GROUND_TAG)]);
     Lay.map.append(map.el, leg);
+    ctx.flipIn(map.el); // x-transitions: back from Go / no-go the map moves here from its small place
 
     // ----- panel -----
     const cards = h('div.plan-cards', { 'data-enter': 2 });

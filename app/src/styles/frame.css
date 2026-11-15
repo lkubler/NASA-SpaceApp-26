@@ -118,6 +118,19 @@
 .stage__black { position: absolute; inset: 0; z-index: 3; background: #000; pointer-events: none; }
 .stage__black.is-in { animation: fade-in 300ms ease-in both; }
 .stage__black.is-out { animation: fade-out 300ms ease-out both; }
+/* Plan <-> Go / no-go: the rest fades around the map, which moves on its own (frame/shell.js flipIn) */
+.step--out.step--flip, .step--out.step--flip.step--back { animation: fade-out 200ms ease-out both; }
+.step--in.step--flip, .step--in.step--flip.step--back { --t-in: 0ms; animation: fade-in 220ms ease-out backwards; }
+.step--in.step--flip [data-enter] { animation-name: enter-fade; }
+.step--in.step--flip [data-enter="3"] { animation: none; }
+@keyframes enter-fade { from { opacity: 0; } to { opacity: 1; } }
+/* Mission -> Plan: the crater view and its markers zoom slightly towards Murray Buttes (transform only) while the
+   page fades; the Plan page fades in under it, no movement (--zoom-at is set by frame/shell.js) */
+.step--out.step--zoom { animation: fade-out 340ms ease-in-out both; }
+.step--out.step--zoom .m1-view, .step--out.step--zoom .m1-overlay { transform-origin: var(--zoom-at, 50% 50%); animation: crater-zoom 360ms cubic-bezier(0.4, 0, 0.6, 1) both; }
+.step--in.step--zoom { --t-in: 80ms; animation: fade-in 300ms ease-out var(--t-in) backwards; }
+.step--in.step--zoom [data-enter] { animation-name: enter-fade; }
+@keyframes crater-zoom { from { transform: none; } to { transform: scale(1.08); } }
 @keyframes step-out-fwd { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-16px); } }
 @keyframes step-out-back { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(16px); } }
 @keyframes step-in-fwd { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
@@ -131,13 +144,23 @@
 .step--in [data-enter="3"] { --enter-i: 2; }
 .step--in [data-enter="4"] { --enter-i: 3; }
 .step--in [data-enter="5"] { --enter-i: 4; }
+/* Debrief: the planned / actual rows one after the other once their block is in (18 ms apart, from the 6th on
+   together; ends inside the transition so the layer class never cuts one short) */
+.step--in .dbf__table tbody tr { animation: enter-row 120ms ease-out backwards; animation-delay: calc(var(--t-in) + 80ms + var(--row-i, 5) * 18ms); }
+.step--in .dbf__table tbody tr:nth-child(1) { --row-i: 0; }
+.step--in .dbf__table tbody tr:nth-child(2) { --row-i: 1; }
+.step--in .dbf__table tbody tr:nth-child(3) { --row-i: 2; }
+.step--in .dbf__table tbody tr:nth-child(4) { --row-i: 3; }
+.step--in .dbf__table tbody tr:nth-child(5) { --row-i: 4; }
+@keyframes enter-row { from { opacity: 0; transform: translateX(6px); } to { opacity: 1; transform: none; } }
 @keyframes enter-block-fwd { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 @keyframes enter-block-back { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   .step--out, .step--out.step--back, .step--walk.step--out { animation: fade-out 150ms linear both; }
+  .step--out .m1-view, .step--out .m1-overlay { animation: none; }
   .step--in, .step--in.step--back, .step--walk.step--in { animation: fade-in 150ms linear backwards; }
   .step--mission.step--in { animation: none; }
-  .step--in [data-enter] { animation: none; }
+  .step--in [data-enter], .step--in .dbf__table tbody tr { animation: none; }
   .stepbar__marker { transition: none; }
 }

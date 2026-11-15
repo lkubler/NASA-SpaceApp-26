@@ -49,7 +49,12 @@ walk has the intro. A step change during a transition finishes the running one a
 slides to the active step. Sources slides in from the right over a dimmed page. Reduced motion: a 150 ms fade,
 no movement, no stagger, no drawing. Inside the pages: a newly chosen route draws along its path on the Plan map
 (`mapPanel.drawIn`, 0.6 s, not on pan / zoom / redraw); Go / no-go ticks its rule checks in one after the other
-and draws its profile once. Test hook: `<html data-step-transition="slide|black|fade">` while a transition runs.
+and draws its profile once. Test hook: `<html data-step-transition="slide|black|fade|zoom|flip">` while a transition runs.
+Extras (each only when its pieces are on screen, else the shared slide): Mission -> Plan (`zoom`) scales the crater
+view and its markers 1.08x about the Murray Buttes marker (transform, 0.36 s) while the page fades and Plan fades in
+without movement. Plan <-> Go / no-go (`flip`) fades the rest in place and moves the new map from the old map's
+rectangle to its own (`ctx.flipIn(map.el)`, position and size by transform, 0.4 s; both directions). Debrief: the
+planned / actual table rows come in 18 ms apart (CSS only). Reduced motion: none of these, a plain fade.
 
 ## Walk keys
 Mouse look in every browser: a click captures the mouse (pointer lock), then moving it turns the view, no button
