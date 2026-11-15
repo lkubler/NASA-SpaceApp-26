@@ -137,8 +137,8 @@ for (const run of runs) {
     for (const b of await page.locator('.go__nums .bignum').all()) {
       goTxt[(await b.locator('.bignum__label').innerText()).replace(/\s*(model|real|assumption|simulated)( · lunar rule)?$/, '').trim()] = await b.locator('.bignum__value').innerText();
     }
-    const radioLine = await page.locator('.gocaution', { hasText: 'Radio shadow' }).first().innerText();
-    goTxt.radio = (/longest ([^\n]*?)\s*model/.exec(radioLine) || [])[1] || null;
+    const radioV = await page.locator('.gocaution .gorow__line .gorow__v').first().innerText();
+    goTxt.radio = radioV.replace(/\s*(model|real|assumption|simulated)\s*$/, '').trim() || null;
     console.log('  go', JSON.stringify(goTxt));
     if (goTxt.Distance !== planTxt.dist) fail(run, `distance Plan ${planTxt.dist} vs Go ${goTxt.Distance}`);
     if (goTxt.Duration !== planTxt.total) fail(run, `time Plan ${planTxt.total} vs Go ${goTxt.Duration}`);
@@ -310,13 +310,11 @@ for (const run of runs) {
     const mins = (d) => { const m = /(?:(\d+) h )?(\d+)(?: min)?/.exec(d || ''); return m ? (+(m[1] || 0)) * 60 + +m[2] : NaN; };
     if (goTxt.radio && mins(goTxt.radio) > mins(row('Time in radio shadow')[1])) fail(run, `Go longest radio shadow ${goTxt.radio} exceeds the planned total ${row('Time in radio shadow')[1]}`);
     const head = await text('.step--debrief .headline');
-    if (head !== 'Back home.') fail(run, `debrief headline "${head}"`);
+    if (head !== 'Back at base.') fail(run, `debrief headline "${head}"`);
     const ws = (await S()).walk;
     const slopeBroken = ws.brokenRules.filter((b) => b.id === 'slope').length;
     if (slopeBroken) fail(run, `walk along the plan logged ${slopeBroken} broken slope rule(s) at ${ws.brokenRules.map((b) => `${b.x.toFixed(1)},${b.z.toFixed(1)}`).join(' ')}`);
     console.log('  warnings', JSON.stringify(ws.warnings.map((w) => `${w.text}@${w.x.toFixed(1)},${w.z.toFixed(1)}`)));
-    await page.click('.dbf__send');
-    await shot('debrief-report-sent');
     await page.click('.dbf__foot .pill');
 
     // ---------- New mission ----------
@@ -362,8 +360,8 @@ for (const run of runs) {
     await page.waitForSelector('.dbf__table');
     await page.waitForTimeout(500);
     await shot('second-debrief-ended');
-    const brokenEnded = await page.locator('.dbf__checks .check--broken').allInnerTexts();
-    if (brokenEnded.length) fail(run, `mission ended early with esc shows broken rules: ${brokenEnded.join(' | ')}`);
+    const ledeEnded = await text('.step--debrief .lede');
+    if (/\bbroke\b/i.test(ledeEnded)) fail(run, `mission ended early with esc names broken rules: ${ledeEnded}`);
   } catch (e) {
     fail(run, `${e.message.split('\n')[0]} (at step ${await step().catch(() => '?')})`);
     await page.screenshot({ path: out + 'error.jpg', type: 'jpeg', quality: 70 }).catch(() => {});

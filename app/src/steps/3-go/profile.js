@@ -7,11 +7,12 @@ const W = 1000; // SVG units across; height is set from the element's size
 
 /**
  * @param {PlanNumbers} plan
- * @param {{ spotName?: string, stops?: { sM: number, label: string }[] }} o  stops: every stop with its name;
- *   without it the one spot (plan.spotAt) named spotName
+ * @param {{ spotName?: string, stops?: { sM: number, label: string }[], shadowLabel?: Node|string }} o  stops: every
+ *   stop with its label; without it the one spot (plan.spotAt) named spotName; shadowLabel: the chip over the
+ *   longest radio shadow (default 'Radio shadow')
  * @returns {{ el, focus(where|null, text, range?), resize() }}
  */
-export function heightProfile(plan, { spotName, stops }) {
+export function heightProfile(plan, { spotName, stops, shadowLabel = 'Radio shadow' }) {
   const stopMarks = stops || [{ sM: plan.spotAt.sM, label: spotName }];
   const pts = plan.profile;
   const total = pts[pts.length - 1].sM || 1;
@@ -42,7 +43,7 @@ export function heightProfile(plan, { spotName, stops }) {
   lab(total, 'Rover', '', 'end');
   if (shadowRanges.length) {
     const r = shadowRanges.reduce((a, b) => (b[1] - b[0] > a[1] - a[0] ? b : a));
-    marks.append(h('span.goprof__shadowlabel', { style: { left: pct((r[0] + r[1]) / 2) } }, 'Radio shadow'));
+    marks.append(h('span.goprof__shadowlabel', { style: { left: pct((r[0] + r[1]) / 2) } }, shadowLabel));
   }
 
   let focusState = null;

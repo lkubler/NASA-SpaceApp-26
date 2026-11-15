@@ -83,8 +83,8 @@ export default {
     // too steep (hatched) and radio shadow (dotted) are drawn by the shared map at screen size, so they
     // stay right at every zoom; the ground under them is this step's own render
     // fade: ground, hatching and markers appear together once the ground is painted and the markers drawn
-    // the map stays where it opens (on the EVA zone): no dragging, no reset; + and − still zoom about its centre
-    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true, movable: false, resetButton: false });
+    // the map stays where it opens (on the EVA zone): no dragging, no zooming, no buttons for it
+    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true, movable: false, resetButton: false, zoomButtons: false });
     let groundDone = false, drawnOnce = false;
     const revealWhenReady = () => { if (groundDone && drawnOnce) map.reveal(); };
     const tip = h('div.plan-tip', { hidden: true });
@@ -144,7 +144,11 @@ export default {
     const hint = h('div.plan-hint', { role: 'status', 'aria-live': 'polite', tabindex: '-1' });
     const head = headline('Plan your mission.');
     head.dataset.enter = '1';
+    /** Screen-reader message (reorder / remove). */
+    const live = h('div.plan-sr', { 'aria-live': 'polite', role: 'status' });
+    const announce = (msg) => { live.textContent = ''; requestAnimationFrame(() => { live.textContent = msg; }); };
     Lay.panel.append(reqBox, head, hint, cards, relayCard, legs, h('div.plan-spacer'), totals, demo);
+    Lay.panel.append(live);
     Lay.action.append(btn);
 
     cards.append(card({ title: 'Calculating routes…', sub: 'Fastest route to every spot that keeps every rule.' }));
@@ -274,7 +278,6 @@ export default {
       }
       setStops([...ids, id]);
     };
-    const move = (k, d) => { const ids = stopIds(); [ids[k], ids[k + d]] = [ids[k + d], ids[k]]; setStops(ids); };
 
     const pointTip = (p) => [
       h('div.plan-tip__title', p.name, ' ', labelTag(L.point)),
@@ -460,24 +463,30 @@ export default {
       if (notice) text = notice;
       else if (!ids.length) text = 'Click a spot on the map to plan the route there and back.';
       else if (ids.length === 1) text = `Click spots to add stops (up to ${MAX_STOPS}). Drag the route to shape it.`;
-      else if (ids.length < MAX_STOPS) text = `Click a spot for a ${stopOrdinal(ids.length + 1)} stop. ↑ ↓ change the order. Drag the route to shape it.`;
-      else text = `${MAX_STOPS} stops, the most per excursion. ↑ ↓ change the order. Drag the route to shape it.`;
+      else if (ids.length < MAX_STOPS) text = `Click a spot for a ${stopOrdinal(ids.length + 1)} stop. Drag a stop to reorder.`;
+      else text = `${MAX_STOPS} stops, the most per excursion. Drag a stop to reorder.`;
       hint.textContent = text;
     }
 
-    /** The list of a round with several stops: every leg with distance and time, every stop with up / down / remove. */
+    /**
+     * The list of a round with several stops: every leg with distance and time. A stop row shows a drag handle
+     * (reorder) and × (remove) on hover or focus; the handle also moves the stop with ↑ / ↓. Only stop rows move.
+     */
     function stopList(P, ids) {
-      const ctl = (sym, label, onClick, disabled, key, aria = label) => {
-        const b = h('button.plan-ctl', { type: 'button', 'aria-label': aria, title: label, 'data-ctl': key }, sym);
-        b.disabled = disabled;
-        b.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
-        return b;
-      };
-      // after a click in the list the list is drawn anew: keep the keyboard focus on the same control
-      const keep = (key, fn) => () => {
-        fn();
-        const b = legs.querySelector(`[data-ctl="${key}"]:not(:disabled)`) || legs.querySelector('.plan-ctl:not(:disabled)') || hint;
+      // after a change the list is drawn anew: the keyboard focus goes back to the same control
+      const refocus = (key) => {
+        const b = legs.querySelector(`[data-ctl="${key}"]`) || hint;
         b.focus();
+      };
+      const nameOf = (id) => (candOf(id) && candOf(id).candidate.name) || numberOf(id);
+      const reorder = (from, to, key) => {
+        if (to < 0 || to >= ids.length || to === from) return;
+        const next = [...ids];
+        const [id] = next.splice(from, 1);
+        next.splice(to, 0, id);
+        setStops(next);
+        announce(`${nameOf(id)} moved to ${stopOrdinal(to + 1)}`);
+        if (key) refocus(key);
       };
       const out = [];
       P.legs.forEach((lg, i) => {
@@ -492,19 +501,79 @@ export default {
           out.push(...footRows(lg, lp, L.leg));
         } else {
           const k = lg.order - 1, id = ids[k];
-          out.push(h('div.row.plan-stop',
+          const grip = h('button.plan-grip', { type: 'button', 'aria-label': `Reorder ${nameOf(id)}`, title: 'Drag to reorder (or ↑ ↓)', 'data-ctl': `${id}-grip`,
+            html: '<svg viewBox="0 0 10 16" width="0.7em" height="1.1em" aria-hidden="true"><g fill="currentColor"><circle cx="2.5" cy="3" r="1.4"/><circle cx="7.5" cy="3" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13" r="1.4"/><circle cx="7.5" cy="13" r="1.4"/></g></svg>' });
+          const x = h('button.plan-x', { type: 'button', 'aria-label': `Remove ${nameOf(id)}`, title: 'Remove stop', 'data-ctl': `${id}-x` }, '×');
+          const r = h('div.row.plan-stop', { 'data-stop': String(k) },
+            grip,
             h('span.plan-stop__ord.mono', stopOrdinal(lg.order)),
             h('span.row__label.plan-stop__name', marker(numberOf(id), { selected: true }), h('span.plan-stop__text', lg.name)),
-            h('span.row__value.mono', fmtDuration(lg.seconds), ' ', labelTag(DEMO.spotWorkMin)),
-            h('span.plan-stop__ctl',
-              ctl('↑', 'Move earlier', keep(`${id}-up`, () => move(k, -1)), k === 0, `${id}-up`, `Move earlier: ${numberOf(id)}`),
-              ctl('↓', 'Move later', keep(`${id}-down`, () => move(k, 1)), k === ids.length - 1, `${id}-down`, `Move later: ${numberOf(id)}`),
-              ctl('×', 'Remove stop', keep('x', () => setStops(ids.filter((x) => x !== id))), false, `${id}-x`, `Remove stop: ${numberOf(id)}`))));
+            // the work at the stop (taking the sample), named so it does not read as a walk
+            h('span.row__value.mono', h('span.plan-stop__k', 'sampling '), fmtDuration(lg.seconds), ' ', labelTag(DEMO.spotWorkMin)),
+            x);
+          x.addEventListener('click', (e) => {
+            e.stopPropagation();
+            setStops(ids.filter((v) => v !== id));
+            announce(`${nameOf(id)} removed`);
+            const next = legs.querySelector('.plan-x') || hint;
+            next.focus();
+          });
+          grip.addEventListener('keydown', (e) => {
+            if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+            e.preventDefault();
+            reorder(k, k + (e.key === 'ArrowUp' ? -1 : 1), `${id}-grip`);
+          });
+          grip.addEventListener('pointerdown', (e) => dragStop(e, r, k, (to) => reorder(k, to, null)));
+          out.push(r);
         }
       });
       return out;
     }
 
+    /**
+     * Drag a stop row by its handle: the row follows the pointer, a cyan line shows where it would go; on
+     * release the stops are reordered (onDrop(newIndex)), or nothing changes when it lands where it was.
+     */
+    function dragStop(e, rowEl, from, onDrop) {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const grip = e.currentTarget;
+      grip.setPointerCapture(e.pointerId);
+      const rows = [...legs.querySelectorAll('.plan-stop')];
+      const line = h('div.plan-dropline');
+      legs.append(line);
+      const box = () => legs.getBoundingClientRect();
+      const y0 = e.clientY;
+      let to = from;
+      rowEl.classList.add('is-dragging');
+      legs.classList.add('is-sorting');
+      const move = (ev) => {
+        rowEl.style.transform = `translateY(${ev.clientY - y0}px)`;
+        // large drop zones: each stop owns the list from halfway to the stop above to halfway to the stop below
+        // (the legs on foot between them included); the dragged stop takes the place of the stop under the pointer
+        const cs = rows.map((r) => { const q = r.getBoundingClientRect(); return q.top + q.height / 2; });
+        to = 0;
+        for (let i = 0; i < cs.length - 1; i++) if (ev.clientY > (cs[i] + cs[i + 1]) / 2) to = i + 1;
+        rows.forEach((r, i) => r.classList.toggle('is-target', i === to && to !== from));
+        const tb = rows[to].getBoundingClientRect();
+        line.style.top = `${(to > from ? tb.bottom + 1 : tb.top - 3) - box().top + legs.scrollTop}px`;
+        line.classList.toggle('is-on', to !== from);
+      };
+      const end = () => {
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', end);
+        grip.removeEventListener('pointercancel', end);
+        rowEl.classList.remove('is-dragging');
+        rows.forEach((r) => r.classList.remove('is-target'));
+        legs.classList.remove('is-sorting');
+        rowEl.style.transform = '';
+        line.remove();
+        if (to !== from) onDrop(to);
+      };
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', end);
+      grip.addEventListener('pointercancel', end);
+    }
     /** "Clear": removes all stops and waypoints. */
     const clearLink = () => h('span.plan-clear', textLink('Clear', () => { setStops([]); hint.focus(); }));
     /**
@@ -580,7 +649,7 @@ export default {
           const lead = h(`span.plan-leg-icon.plan-leg-icon--${lg.kind}`);
           let value = '', tag = null;
           if (P && lg.kind === 'foot') { value = `${fmtDistance(lg.distanceM)} · ${fmtDuration(lg.seconds)}`; tag = L.time; }
-          else if (P && lg.kind === 'spot') { value = fmtDuration(lg.seconds); tag = DEMO.spotWorkMin; }
+          else if (P && lg.kind === 'spot') { value = [h('span.plan-stop__k', 'sampling '), fmtDuration(lg.seconds)]; tag = DEMO.spotWorkMin; }
           else if (!P && lg.kind !== 'rover') value = '–';
           if (lg.kind === 'rover') {
             // with waypoints, "Clear" removes them and the stop

@@ -1,41 +1,106 @@
-/* Styles of step 3-go only. Prefix classes with .step--go. Layout as docs/mockups/03-route-overview.png:
-   headline and numbers top left, small map top right, height profile across, checks and button at the bottom. */
+/* Styles of step 3-go only. Prefix classes with .step--go. Layout from the team's Go / no-go design (Sun 15.11.):
+   left headline, five numbers and the route checklist; right the map, the height profile and the main button. */
 
 .step--go .go {
   position: absolute; inset: 0; display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(280px, 30vw, 580px);
-  grid-template-rows: auto minmax(64px, 1fr) auto;
-  column-gap: calc(var(--gutter) * 0.9); row-gap: calc(var(--gap) * 0.9);
+  grid-template-columns: minmax(0, 1fr) clamp(340px, 37vw, 620px);
+  column-gap: calc(var(--gutter) * 1.1);
   padding: calc(var(--header-h) * 1.05) var(--gutter) calc(var(--gutter) * 0.75);
 }
-.step--go .go__intro { grid-column: 1; grid-row: 1; min-width: 0; }
-.step--go .go__map { grid-column: 2; grid-row: 1; min-width: 0; align-self: start; }
-.step--go .go__profile { grid-column: 1 / -1; grid-row: 2; min-height: 0; }
-.step--go .go__bottom { grid-column: 1 / -1; grid-row: 3; }
+.step--go .go__left { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: calc(var(--gap) * 1.4); overflow: auto; }
+.step--go .go__right { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: calc(var(--gap) * 0.9); }
+.step--go .go__profile { flex: 1 1 auto; min-height: 120px; }
 
 /* intro */
 .step--go .lede { max-width: 62ch; }
 .step--go .go__demo { white-space: nowrap; color: var(--text-2); }
 .step--go .go__nums {
-  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: clamp(20px, 2.4vw, 48px);
-  row-gap: calc(var(--gap) * 0.8); margin-top: calc(var(--gap) * 1.3); max-width: 920px;
+  display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: clamp(14px, 1.6vw, 32px);
+  margin-top: calc(var(--gap) * 1.3);
 }
-.step--go .bignum { padding-top: 0.8em; }
-.step--go .bignum.tone-warning .bignum__value { color: var(--warning); }
-.step--go .bignum__label { color: var(--text-2); }
+.step--go .bignum { padding-top: 0.8em; border-top: 1px solid var(--line); min-width: 0; }
+.step--go .bignum__value { white-space: nowrap; }
+.step--go .bignum.tone-warning .bignum__value, .step--go .bignum.tone-warning .bignum__sub { color: var(--warning); }
+.step--go .bignum.tone-caution .bignum__value, .step--go .bignum.tone-caution .bignum__sub { color: var(--caution); }
+.step--go .bignum__label { color: var(--text-2); white-space: nowrap; }
+.step--go .bignum__sub { margin-top: 0.45em; font-size: var(--fs-tag); color: var(--text-2); }
+.step--go .go__nums .bignum__value { font-size: clamp(20px, 2.15vw, 46px); }
+.step--go .go__nums .bignum__label { font-size: var(--fs-small); overflow: hidden; text-overflow: ellipsis; }
 
-/* small map */
-.step--go .go__map .map { width: min(100%, 34vh); margin-left: auto; }
-.step--go .go__map .map.go-map--wide { width: 100%; aspect-ratio: 1.6 / 1; }
-.step--go .go__map .map__canvas { object-fit: cover; }
-.step--go .go__map .legend { gap: 0.4em 1.1em; margin-top: 0.7em; }
-.step--go .sw--go-shadow { background: radial-gradient(circle, var(--accent) 1.6px, transparent 2px) 0 50% / 0.37em 100% repeat-x; opacity: 0.45; }
-.step--go .sw--go-broken { background: radial-gradient(circle, var(--warning) 1.8px, transparent 2.2px) 0 50% / 0.37em 100% repeat-x; }
+/* route checklist: rows with icon, name and note, "value / limit" and a bar for how much of the limit is used */
+.step--go .go__checkshead { display: flex; align-items: baseline; gap: 0.8em; flex-wrap: wrap; margin-bottom: 0.5em; }
+.step--go .go__checkstitle { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); color: var(--text); }
+.step--go .go__summary { font-size: var(--fs-small); color: var(--text-2); }
+.step--go .go.is-broken .go__summary { color: var(--warning); }
+.step--go .go__rulechecks { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.step--go .gorow {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(11em, 16em); align-items: center; column-gap: 1em;
+  width: 100%; text-align: left; padding: clamp(0.55em, 1.6vh, 1.1em) 0.6em; border-bottom: 1px solid var(--line); border-radius: 0;
+  transition: background var(--fade), box-shadow var(--fade);
+}
+.step--go button.gorow:hover { background: rgba(255, 255, 255, 0.03); }
+.step--go .gorow.is-active { background: var(--surface); box-shadow: inset 2px 0 0 currentColor; }
+.step--go .gorow--ok { color: var(--accent); }
+.step--go .gorow--caution { color: var(--caution); }
+.step--go .gorow--broken { color: var(--warning); }
+.step--go .gorow__icon { display: inline-flex; font-size: 1.05em; }
+.step--go .gorow__text { display: flex; flex-direction: column; gap: 0.2em; min-width: 0; }
+.step--go .gocheck__name { color: var(--text); font-size: var(--fs-text); font-weight: 500; }
+.step--go .gorow--broken .gocheck__name { color: var(--warning); font-weight: 600; }
+.step--go .gorow__note { font-size: var(--fs-small); color: var(--text-2); }
+.step--go .gorow--broken .gorow__note { color: var(--warning); }
+.step--go .gorow__vals { display: flex; flex-direction: column; gap: 0.5em; min-width: 0; }
+.step--go .gorow__line { font-family: var(--font-mono); font-size: var(--fs-mono); color: var(--text); white-space: nowrap; }
+.step--go .gorow--caution .gorow__line > .gorow__v:first-child { color: var(--caution); }
+.step--go .gorow--broken .gorow__line > .gorow__v:first-child { color: var(--warning); }
+.step--go .gorow__sep, .step--go .gorow__line > .gorow__v + .gorow__sep + .gorow__v { color: var(--text-2); }
+.step--go .gorow__v .vlabel { font-size: 0.92em; }
+.step--go .gorow__bar { display: block; height: 3px; width: 100%; max-width: 10em; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden; }
+.step--go .gorow__fill { display: block; height: 100%; background: currentColor; border-radius: 2px; }
+
+/* map: the plan's look (zone, rover drive, relay, handover), the round on foot as a solid cyan line */
+.step--go .go__map .map { width: 100%; aspect-ratio: 1.3 / 1; max-height: 52vh; } /* aspect set from the zone */
+.step--go .go__map .map__canvas { filter: brightness(0.86) saturate(0.95); }
+.step--go .map-path--foot { stroke-dasharray: none; stroke-width: 3; }
+.step--go .map-path--shadow { stroke-dasharray: none; stroke-width: 3; opacity: 0.5; }
+.step--go .map-path--broken { stroke-width: 5; stroke-dasharray: 0.1 4; }
+.step--go .map-path--rover { fill: none; stroke: #ececec; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.92; }
+.step--go .plan-zone-dim { display: none; } /* the map shows the zone only */
+.step--go .plan-zone-corner, .step--go .plan-zone-label { display: none; } /* the zone's name sits above the map (go-frame__label) */
+.step--go .go-frame__label { font-size: var(--fs-small); color: var(--text); margin: 0 0 0.45em 0.1em; display: flex; align-items: center; gap: 0.3em; }
+/* the ground fades out towards the map's edges; route, markers, scale bar and north sign stay sharp */
+.step--go .go__map .map { border-radius: 0; background: transparent; }
+.step--go .go__map .map__canvas {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 9%, #000 91%, transparent), linear-gradient(to bottom, transparent, #000 10%, #000 90%, transparent);
+  mask-composite: intersect;
+}
+.step--go .plan-zone-label circle { display: none; }
+.step--go .plan-zone-label .map-marker__label { text-anchor: start; transform: translate(5px, 2px); fill: #fff; font-weight: 500; } /* inside the frame: the map ends at the zone's edge */
+.step--go .go-handover circle:first-child { r: 3.6; fill: #000; stroke: #fff; stroke-width: 1.2; }
+.step--go .go-handover__dot { fill: var(--accent); }
+.step--go .go-handover .map-marker__label { fill: #fff; }
+.step--go .go-relay rect { fill: #f6c945; stroke: #000; stroke-width: 0.8; }
+.step--go .go-relay .map-marker__label { fill: #f6c945; }
+.step--go .go-legend { display: flex; flex-wrap: wrap; gap: 0.4em 1.2em; margin-top: 0.8em; font-size: var(--fs-small); color: var(--text-2); }
+.step--go .go-legend > span { display: inline-flex; align-items: center; gap: 0.45em; white-space: nowrap; }
+.step--go .go-sw { display: inline-block; flex: none; }
+.step--go .go-sw--rover { width: 1em; height: 2px; background: #ececec; }
+.step--go .go-sw--foot { width: 1em; height: 3px; border-radius: 2px; background: var(--accent); }
+.step--go .go-sw--handover { width: 0.6em; height: 0.6em; border-radius: 50%; border: 1.5px solid #fff; }
+.step--go .go-sw--stop { width: 0.6em; height: 0.6em; border-radius: 50%; background: var(--accent); }
+.step--go .go-sw--relay { width: 0.6em; height: 0.6em; background: #f6c945; }
+.step--go .go-sw--steep { width: 0.8em; height: 0.6em; border: 1.5px solid rgba(232, 84, 72, 0.95); border-radius: 2px; }
 .step--go .go-map__ring { color: var(--accent); }
 .step--go .go-map__ring circle:first-child { fill: none; stroke: currentColor; stroke-width: 1.2; filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.8)); }
 .step--go .go-map__ring circle:last-child { fill: currentColor; }
 .step--go .map-path.go-map__hl { stroke: currentColor; stroke-dasharray: none; stroke-width: 5; opacity: 0.85; }
 .step--go .tone-accent { color: var(--accent); }
+
+/* main button, bottom right */
+.step--go .go__action { display: flex; align-items: center; justify-content: flex-end; gap: 1.6em; padding-bottom: 0.2em; }
+.step--go .go__action .pill { min-width: clamp(260px, 22vw, 380px); }
 
 /* height profile */
 .step--go .goprof { height: 100%; display: flex; flex-direction: column; }
@@ -50,9 +115,9 @@
 .step--go .goprof__focusrange { fill: currentColor; opacity: 0.14; }
 .step--go .goprof__marks { position: absolute; inset: 0; pointer-events: none; }
 .step--go .goprof__shadowlabel {
-  position: absolute; top: 0; transform: translate(-50%, -35%); font-family: var(--font-mono); font-size: var(--fs-tag);
-  color: var(--text); white-space: nowrap; background: var(--bg, #000); padding: 0.15em 0.6em; border-radius: 6px;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+  position: absolute; top: 0; transform: translate(-50%, -50%); font-size: var(--fs-small); pointer-events: auto;
+  color: var(--text); white-space: nowrap; background: var(--bg, #000); padding: 0.3em 0.8em; border-radius: 999px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 .step--go .goprof.has-focus .goprof__shadowlabel { opacity: 0.35; }
 .step--go .goprof__dot {
@@ -75,80 +140,19 @@
 .step--go .go-order rect { fill: #000; stroke: var(--accent); stroke-width: 0.8; }
 .step--go .go-order text { fill: var(--accent); font: 700 4.4px var(--font-mono); }
 
-/* bottom: checks and main button */
-.step--go .go__bottom {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; column-gap: calc(var(--gutter) * 0.8);
-  border-top: 1px solid var(--line); padding-top: calc(var(--gap) * 0.9);
-}
-.step--go .go__checks { min-width: 0; display: flex; flex-direction: column; gap: 0.5em; }
-.step--go .go__checkshead { display: flex; align-items: baseline; gap: 1em; flex-wrap: wrap; font-size: var(--fs-small); }
-.step--go .go__checkstitle { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); color: var(--text); }
-.step--go .go.is-broken .go__checkstitle { color: var(--warning); }
-.step--go .go__rulechecks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4em; align-items: start; }
-.step--go .gocheck {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 0.25em; text-align: left; min-width: 0;
-  padding: 0.45em 0.6em; border: 1px solid transparent; border-radius: 10px; transition: border-color var(--fade), background var(--fade);
-}
-.step--go button.gocheck:hover { border-color: var(--line-strong); }
-.step--go .gocheck.is-active { border-color: currentColor; background: var(--surface); }
-.step--go .gocheck--ok { color: var(--accent); }
-.step--go .gocheck--caution { color: var(--caution); }
-.step--go .gocheck--broken { color: var(--warning); }
-/* icon on the first line of the title, even when the title wraps: same line box height for both */
-.step--go .gocheck__head { display: inline-flex; align-items: flex-start; gap: 0.55em; font-size: var(--fs-text); line-height: 1.35; }
-.step--go .gocheck__head .check__icon { margin-top: 0.21875em; } /* (1.35 - 1) / 2 of the title size, in the icon's 0.8em */
-.step--go .gocheck__name { color: var(--text); font-weight: 500; }
-.step--go .gocheck--broken .gocheck__name { color: var(--warning); font-weight: 600; }
-.step--go .gocheck__why { font-size: var(--fs-small); color: var(--warning); }
-.step--go .gocheck__vals { display: flex; flex-direction: column; gap: 0.05em; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-2); }
-.step--go .gocheck__v { line-height: 1.5; }
-/* no left padding: a tag that wraps onto its own line starts flush with the value above */
-.step--go .gocheck__v .vlabel { font-size: 0.92em; padding: 0 0.25em 0 0; }
-.step--go .go__suit { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4em 1.6em; font-size: var(--fs-small); padding-left: 0.6em; }
-.step--go .gosuit { display: inline-flex; align-items: center; gap: 0.55em; color: var(--text); }
-.step--go .gosuit .check__icon { color: var(--accent); }
-.step--go .go__action { display: flex; align-items: center; gap: 1.6em; padding-bottom: 0.2em; }
-.step--go .go__action .pill { min-width: clamp(260px, 22vw, 380px); }
-.step--go .map-path--broken { stroke-width: 5; stroke-dasharray: 0.1 4; }
-.step--go .go__crew { margin-top: 0.5em; padding-left: 0.6em; font-size: var(--fs-tag); color: var(--text-2); }
-.step--go .go__crew i { font-style: normal; }
-
-/* radio shadow: its own "Caution" line below the rule row; not a rule, so not a check card */
-.step--go .gocaution {
-  display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.3em 0.9em; text-align: left; width: 100%;
-  padding: 0.45em 0.8em 0.45em 0.7em; border-left: 3px solid var(--caution); border-radius: 0 8px 8px 0;
-  background: rgba(246, 201, 69, 0.07); font-size: var(--fs-small); color: var(--text-2);
-  transition: background var(--fade), box-shadow var(--fade);
-}
-.step--go button.gocaution:hover { background: rgba(246, 201, 69, 0.13); }
-.step--go .gocaution.is-active { background: rgba(246, 201, 69, 0.16); box-shadow: inset 0 0 0 1px rgba(246, 201, 69, 0.55); }
-.step--go .gocaution__tag {
-  font-family: var(--font-mono); font-size: var(--fs-tag); font-weight: 700;
-  color: var(--caution);
-}
-.step--go .gocaution__name { color: var(--text); font-weight: 500; }
-.step--go .gocaution__v { font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--caution); }
-.step--go .gocaution__v .vlabel { font-size: 0.92em; }
-.step--go .gocaution__note { color: var(--text-2); }
-.step--go .gocaution__show { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-tag); color: var(--text-2); text-decoration: underline; text-underline-offset: 3px; }
-.step--go .gocaution.is-none { border-left-color: var(--line-strong); background: transparent; }
-.step--go .gocaution.is-none .gocaution__tag, .step--go .gocaution.is-none .gocaution__v { color: var(--text-3); }
-
-/* x-transitions (specs/x-transitions.md): the rule checks tick in one after the other (the caution line last);
-   the profile line draws from left to right once, when the page opens (a redraw on resize or a clicked check
-   does not repeat it: the svg element stays, only its content is redrawn) */
-.step--go .go__rulechecks > .gocheck, .step--go .go__checks > .gocaution { animation: go-tick-in 220ms ease-out backwards; animation-delay: calc(300ms + var(--tick, 0) * 90ms); }
-.step--go .go__rulechecks > .gocheck .check__icon { animation: go-tick-icon 260ms cubic-bezier(0.3, 1.6, 0.5, 1) backwards; animation-delay: calc(360ms + var(--tick, 0) * 90ms); }
+/* x-transitions (specs/x-transitions.md): the checklist rows tick in one after the other; the profile line
+   draws from left to right once, when the page opens (a redraw on resize or a clicked check does not repeat it:
+   the svg element stays, only its content is redrawn) */
+.step--go .go__rulechecks > .gorow { animation: go-tick-in 220ms ease-out backwards; animation-delay: calc(300ms + var(--tick, 0) * 90ms); }
+.step--go .go__rulechecks > .gorow .gorow__icon { animation: go-tick-icon 260ms cubic-bezier(0.3, 1.6, 0.5, 1) backwards; animation-delay: calc(360ms + var(--tick, 0) * 90ms); }
 .step--go .go__rulechecks > :nth-child(2) { --tick: 1; }
 .step--go .go__rulechecks > :nth-child(3) { --tick: 2; }
 .step--go .go__rulechecks > :nth-child(4) { --tick: 3; }
 .step--go .go__rulechecks > :nth-child(5) { --tick: 4; }
-.step--go .go__checks > .gocaution { --tick: 4; }
 .step--go .goprof__svg { animation: go-prof-draw 600ms cubic-bezier(0.4, 0, 0.2, 1) 300ms backwards; }
 @keyframes go-tick-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes go-tick-icon { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: none; } }
 @keyframes go-prof-draw { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
 @media (prefers-reduced-motion: reduce) {
-  .step--go .go__rulechecks > .gocheck, .step--go .go__checks > .gocaution,
-  .step--go .go__rulechecks > .gocheck .check__icon, .step--go .goprof__svg { animation: none; }
+  .step--go .go__rulechecks > .gorow, .step--go .go__rulechecks > .gorow .gorow__icon, .step--go .goprof__svg { animation: none; }
 }
