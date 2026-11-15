@@ -18,10 +18,10 @@ function v(value, unit, label, src, where, text, extra = {}) {
 
 export const RULES = {
   slopeMaxDeg: v(20, '°', 'real', 'CON', '§4.2.1.3 Suit Mobility, p.38; §7.2.14.1, p.103',
-    'The design slope of NASA’s Artemis suit: walking up, down and across slopes of up to 20°. Steeper ground is closed to the route.',
+    'The design slope of the Artemis suit: walking up, down and across slopes of up to 20°. Steeper ground is closed to the route.',
     { moon: true }),
   distancePlanM: v(2000, 'm', 'real', 'CON', '§4.2.1.3.1, p.40',
-    'Planning distance on foot from the safe haven: up to 2 km radial from the lander, from NASA’s lunar planning.',
+    'Planning distance on foot from the safe haven: up to 2 km radial from the lander, from lunar planning.',
     { moon: true }),
   distanceLimitM: v(3500, 'm', 'real', 'OGI', 'slide 9',
     'Limit on foot: a one-hour walk back at the Apollo walk-back speed of 2.2 mph, about 3.5 km.',
@@ -40,17 +40,17 @@ export const RULES = {
 
 export const ASTRONAUT = {
   bodyMassKg: v(82, 'kg', 'real', 'OGI', 'slides 2 and 6',
-    'Body mass of the average crew member in NASA’s Mars suit sizing (50th percentile male).'),
+    'Body mass of the average crew member in the Mars suit sizing (50th percentile male).'),
   loadKg: v(23, 'kg', 'real', 'OGI', 'slide 7',
-    'Tools and samples carried: 50 lbm, the carry mass in NASA’s Mars suit sizing.'),
+    'Tools and samples carried: 50 lbm, the carry mass in the Mars suit sizing.'),
   suitMassKg: v(104, 'kg', 'real', 'OGI', 'slides 8 and 12',
-    'Maximum mass of a Mars suit in NASA’s Mars suit study (backpack 62 kg, suit 42 kg).'),
+    'Maximum mass of a Mars suit in the Mars suit mass study (backpack 62 kg, suit 42 kg).'),
   marsG: v(3.71, 'm/s²', 'real', 'MARSFACT', 'surface gravity',
     'Gravity on the surface of Mars. Weights and walking effort use it.'),
   earthG: v(9.81, 'm/s²', 'real', 'MARSFACT', 'Earth standard gravity, for scaling',
     'Earth gravity, used to scale an Earth-measured effort equation to Mars.'),
   paceMS: v(2000 / 3600, 'm/s', 'real', 'CON', '§4.2.1.3.1.1, p.40',
-    'Planning pace on foot: about 2 km/h over level ground, from NASA’s lunar planning.',
+    'Planning pace on foot: about 2 km/h over level ground, from lunar planning.',
     { moon: true }),
   fastPaceFactor: v(1.5, '×', 'assumption', 'NONE', 'Walk: Shift held',
     'Fast walk (Shift held in the Walk): this many times the planning pace, about 3 km/h. The work rate at that speed comes from the effort equation (model), so the suit is used faster per metre.'),
@@ -70,7 +70,7 @@ export const WORK = {
     'Terrain coefficient of the effort equation for loose, uneven ground. No value for Mars regolith exists.'),
   // Pandolf load-carriage equation coefficients (KIM: MP = 1.5 W + 2.0 (W+L)(L/W)^2 + eta (W+L)(1.5 V^2 + 0.35 V G))
   pandolf: v({ basal: 1.5, load: 2.0, speed: 1.5, grade: 0.35 }, '', 'model', 'KIM', 'equation 1',
-    'The effort equation NASA JSC uses for traverse workload (Pandolf). Slope, load and pace change the work rate around the Apollo value.'),
+    'The effort equation used for traverse workload planning (Pandolf). Slope, load and pace change the work rate around the Apollo value.'),
 };
 
 // The four consumables. Oxygen, CO2 removal and cooling water are used in proportion to the
@@ -84,16 +84,16 @@ const WATER_KG = 5.2, WATER_USE_KG_H = 0.44, WATER_USE_AT_W = 273;
 
 export const SUIT = {
   designW: v(DESIGN_W, 'W', 'real', 'SCH', 'slide 8',
-    'NASA’s Mars backpack is sized for an average work rate of 350 W.'),
+    'The Mars backpack is sized for an average work rate of 350 W.'),
   designH: v(DESIGN_H, 'h', 'real', 'SCH', 'slides 7-8',
-    'NASA’s Mars backpack study sizes the primary supply for 2, 4, 6 or 8 hours; we use 8 hours.'),
+    'The Mars backpack study sizes the primary supply for 2, 4, 6 or 8 hours; we use 8 hours.'),
   consumables: {
     oxygen: v(DESIGN_W * DESIGN_H * 3600, 'J', 'model', 'SCH', 'slides 7-8',
       'Oxygen for 8 hours at 350 W. It is used faster when the work rate is higher.', { name: 'Oxygen', kind: 'energy' }),
     co2: v(DESIGN_W * DESIGN_H * 3600, 'J', 'model', 'SCH', 'slides 7-8',
       'CO2 removal for 8 hours at 350 W. It is used up in step with breathing, like oxygen.', { name: 'CO2 removal', kind: 'energy' }),
     water: v(WATER_KG * WATER_USE_AT_W * 3600 / WATER_USE_KG_H, 'J', 'assumption', 'EVR', 'Table 1 (use rate); capacity from Apollo -7 backpack, unconfirmed',
-      'Cooling water: 5.2 kg as in the Apollo 15-17 backpack, used at the measured Apollo rate. The capacity is not confirmed by a NASA document.',
+      'Cooling water: 5.2 kg as in the Apollo 15-17 backpack, used at the measured Apollo rate. The capacity is not confirmed by a source document.',
       { name: 'Cooling water', kind: 'energy', moon: true }),
     battery: v(DESIGN_H * 3600, 's', 'model', 'CAR', 'p.49; duration from SCH slides 7-8',
       'Battery for 8 hours. Its use depends on time, not on effort.', { name: 'Battery', kind: 'time' }),
@@ -121,7 +121,7 @@ export const ENVIRONMENT = {
   signalDelayMinMin: v(4, 'min', 'real', 'NEEMO', 'p.2', 'The shortest one-way signal delay between Earth and Mars.'),
   signalDelayMaxMin: v(22, 'min', 'real', 'NEEMO', 'p.2', 'The longest one-way signal delay between Earth and Mars.'),
   signalDelayNowMin: v(18, 'min', 'assumption', 'MCBRAYER', 'abstract and pdf p.10 (15-20 min while the crew is at Mars)',
-    'One-way signal delay on the day of this mission, chosen inside the range NASA expects while a crew is at Mars.'),
+    'One-way signal delay on the day of this mission, chosen inside the expected range while a crew is at Mars.'),
 };
 
 export const DEMO = {

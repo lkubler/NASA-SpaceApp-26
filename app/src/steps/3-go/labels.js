@@ -11,7 +11,7 @@ export const L = {
   },
   duration: {
     label: 'model', src: 'CON', where: ASTRONAUT.paceMS.where,
-    text: `Walking time at NASA’s planning pace, corrected for slope, plus ${DEMO.spotWorkMin.value} ${DEMO.spotWorkMin.unit} of work at the spot (at every stop of a round). Shown in demo time (${demo()}).`,
+    text: `Walking time at the planning pace, corrected for slope, plus ${DEMO.spotWorkMin.value} ${DEMO.spotWorkMin.unit} of work at the spot (at every stop of a round). Shown in demo time (${demo()}).`,
     moon: true,
   },
   steepest: {

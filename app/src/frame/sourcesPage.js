@@ -29,7 +29,7 @@ export function sourcesPage(onClose) {
         h('h1.headline.headline--normal', 'Sources.'),
         h('button.sources__close', { type: 'button', onclick: onClose }, 'Close'),
       ),
-      h('p.lede', 'Every place, number and image in this mission, and where it comes from. Each value on screen carries a label: real (NASA data or a NASA document), model (calculated by us), simulated (a placeholder) or assumption (our choice, or not confirmed by a NASA document).'),
+      h('p.lede', 'Every place, number and image in this mission, and where it comes from. Each value on screen carries a label: real (mission data or a source document), model (calculated by us), simulated (a placeholder) or assumption (our choice, or not confirmed by a source document).'),
 
       h('h2', 'Data'),
       h('div.sources__list', DATA.map((d) => h('div.sources__item',

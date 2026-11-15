@@ -98,7 +98,7 @@ export default {
         h('div.m1-intro__action', begin));
       const globe = h('div.m1-globe', { 'aria-hidden': 'true' });
       const skyCredit = h('div.m1-intro__credit.mono', h('span.m1-credit__k', 'Sources'), 'Mars: NASA/JPL-Caltech 3D model ',
-        labelTag({ label: 'real', text: 'NASA’s 3D model of Mars, with a surface texture from spacecraft imagery. Shown as a backdrop; it turns slowly.', source: { title: 'NASA Science, Planet Mars, 3D Model — NASA/JPL-Caltech', url: 'https://science.nasa.gov/resource/planet-mars-3d-model/' } }),
+        labelTag({ label: 'real', text: 'A 3D model of Mars, with a surface texture from spacecraft imagery. Shown as a backdrop; it turns slowly.', source: { title: 'NASA Science, Planet Mars, 3D Model — NASA/JPL-Caltech', url: 'https://science.nasa.gov/resource/planet-mars-3d-model/' } }),
         h('span.m1-credit__sep', '·'), h('span', 'Stars: NASA/Goddard SVS Deep Star Maps 2020 '),
         labelTag({ label: 'real', text: 'The star field is a real sky map built from the Hipparcos-2, Tycho-2 and Gaia DR2 star catalogs, centred on the core of the Milky Way.', source: { title: 'NASA/Goddard Space Flight Center Scientific Visualization Studio, Deep Star Maps 2020 (Gaia DR2: ESA/Gaia/DPAC)', url: 'https://svs.gsfc.nasa.gov/4851' } }));
       // star sky first (fades in once decoded), then the planet (fades in once its model is on the GPU)
@@ -183,7 +183,7 @@ export default {
       credit.append(
         h('span.m1-credit__k', 'Sources'),
         h('span', 'Gale crater: HRSC (ESA Mars Express), NASA 3D model '),
-        labelTag({ label: 'real', text: `Elevation of Gale crater from NASA's printable 3D model, made from stereo images of the HRSC camera on ESA's Mars Express; ${Math.round(meta.width_km)} × ${Math.round(meta.height_km)} km, ${Math.round(meta.km_per_pixel * 1000)} m per pixel. We placed it on the map and converted it to metres by fitting it to MOLA laser altimetry (correlation ${meta.fit.r}). Surface colour from the same NASA Mars 3D model as the opening globe (low resolution, about 6 pixels per degree). Site positions from Curiosity's drive path; Mount Sharp is the highest point of the central mound in this grid.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
+        labelTag({ label: 'real', text: `Elevation of Gale crater from a printable 3D model, made from stereo images of the HRSC camera on ESA's Mars Express; ${Math.round(meta.width_km)} × ${Math.round(meta.height_km)} km, ${Math.round(meta.km_per_pixel * 1000)} m per pixel. We placed it on the map and converted it to metres by fitting it to MOLA laser altimetry (correlation ${meta.fit.r}). Surface colour from the same Mars 3D model as the opening globe (low resolution, about 6 pixels per degree). Site positions from Curiosity's drive path; Mount Sharp is the highest point of the central mound in this grid.`, source: { title: meta.source.title + ' — ' + meta.source.credit, url: meta.source.url } }),
         h('span.m1-credit__sep', '·'),
         h('span', `Height ×${VERTICAL_EXAGGERATION} `),
         labelTag(DEMO.craterHeightFactor),

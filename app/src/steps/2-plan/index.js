@@ -21,16 +21,16 @@ let cleanup = [];
 const ACCESS_MARS = DATA[0];
 const L = {
   terrain: { label: 'real', text: 'The site from above: the Access Mars 3D terrain of Murray Buttes, built from Curiosity images. It is the same ground you walk in step 4.', source: { title: ACCESS_MARS.name, url: ACCESS_MARS.url } },
-  steep: { label: 'model', text: `Ground steeper than ${RULES.slopeMaxDeg.value}° on the slope grid of the same terrain. NASA's suit is built for ${RULES.slopeMaxDeg.value}° at most, so routes do not cross it.`, source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
+  steep: { label: 'model', text: `Ground steeper than ${RULES.slopeMaxDeg.value}° on the slope grid of the same terrain. The suit is built for ${RULES.slopeMaxDeg.value}° at most, so routes do not cross it.`, source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
   shadow: { label: 'model', text: 'Ground without a straight line of sight to the rover antenna at eye height. Geometry only, no radio physics. A caution, not a rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
   spot: { label: 'model', text: 'Position derived from the terrain: a reachable spot at the foot of a butte wall. No Curiosity target lies in this square.', source: { title: DOCS.WALK_TARGETS.title, url: DOCS.WALK_TARGETS.url } },
   point: { label: 'real', text: 'A point of interest of the Access Mars app, with its original text. Not a sample spot.', source: { title: ACCESS_MARS.name, url: ACCESS_MARS.url } },
   distance: { label: 'model', text: 'Length of the route calculated in your browser on the terrain grid: the fastest way that keeps every rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
-  time: { label: 'model', text: 'Route length at NASA\'s planning pace, plus the fixed work at the spot; in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
+  time: { label: 'model', text: 'Route length at the planning pace, plus the fixed work at the spot; in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
   reserve: { label: 'model', moon: true, text: `Time left in the suit when back at the rover, if the crew walks the plan. The way home counts at a ${Math.round((RULES.walkBackRateFactor.value - 1) * 100)} % higher work rate. Set by the consumable that runs out first.`, source: sourceOf(SUIT.designW) },
   slope: { label: 'model', text: 'Steepest ground on the route, from the slope grid of the terrain.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
   waypoint: { label: 'model', text: 'A point you set that the route must pass. No sample and no work there; the legs on either side are planned again by the same rules.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
-  leg: { label: 'model', text: 'One leg of the round: length of the fastest way that keeps every rule, and its walking time at NASA\'s planning pace, in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
+  leg: { label: 'model', text: 'One leg of the round: length of the fastest way that keeps every rule, and its walking time at the planning pace, in demo time.', source: sourceOf(ASTRONAUT.paceMS), moon: true },
 };
 
 const SPOT_WORK = () => fmtDuration(DEMO.spotWorkMin.value * 60);

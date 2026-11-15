@@ -29,7 +29,7 @@ const dist = (m) => (num(m) ? fmtDistance(m) : NO_DATA);
 const T = {
   planDistance: { label: 'model', src: 'WALK_TERRAIN', text: 'Length of the planned round trip, measured on the 0.5 m terrain grid built from Curiosity images.' },
   walkDistance: { label: 'model', src: 'WALK_TERRAIN', text: 'Distance you walked, measured on the same terrain grid.' },
-  planTime: { label: 'model', src: 'CON', where: '§4.2.1.3.1.1, p.40', text: 'Planned time outside: walking at NASA’s planning pace plus the work at the spot, in suit time.', moon: true },
+  planTime: { label: 'model', src: 'CON', where: '§4.2.1.3.1.1, p.40', text: 'Planned time outside: walking at the planning pace plus the work at the spot, in suit time.', moon: true },
   walkTime: { label: 'model', src: 'CON', where: '§4.2.1.3.1.1, p.40', text: 'Time outside on your walk, by the suit clock.' },
   planReserve: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'Reserve on return in the plan: time left in the suit at the rover, with the way home counted at the walk-back work rate.', moon: true },
   walkReserve: { label: 'model', src: 'SCH', where: 'slides 7-8', text: 'Time left in the suit when you reached the rover, from the suit model and your walk.' },
@@ -39,7 +39,7 @@ const T = {
   spot: { label: 'model', src: 'WALK_TARGETS', text: 'Sample spot at the foot of a butte; its position is derived from the terrain.' },
   stops: { label: 'model', src: 'WALK_TARGETS', text: 'The planned stops of this round in visiting order: sample spots at the foot of the buttes, positions derived from the terrain. Taken: a sample at that stop; skipped: left out by "Turn back now"; not taken: not visited or passed without a sample.' },
   samples: { label: 'model', src: 'WALK_TERRAIN', text: 'Samples taken on your walk, one per planned stop; the request counts as done with at least one sample and the rover reached.' },
-  warnings: { label: 'model', src: 'WALK_TERRAIN', text: 'Warnings the helmet raised during the walk from the NASA rules; where = distance from the rover and time into the excursion.' },
+  warnings: { label: 'model', src: 'WALK_TERRAIN', text: 'Warnings the helmet raised during the walk from the rules; where = distance from the rover and time into the excursion.' },
   suitEmpty: { label: 'simulated', src: 'NONE', text: 'The suit ran out before the rover. The walk ended there; this is a simulation.' },
   where: { label: 'model', src: 'WALK_TERRAIN', text: 'Where it happened: straight-line distance and direction from the rover on the 0.5 m terrain grid, and the suit time into the excursion (demo time).' },
   ended: { label: 'model', src: 'WALK_TERRAIN', text: 'You ended the mission with esc before reaching the rover; where = the point you stopped, measured on the terrain grid.' },
@@ -468,7 +468,7 @@ function reportCard(ctx, { sample, walk, outcome, sampled = null }) {
       photoBox.append(h('img', { src, alt: p.title || 'Curiosity photo', loading: 'lazy' }));
       textBox.append(
         h('div.dbf__cap', h('span.muted', 'Photo '), caption, ' ', h('span.muted', p.credit || ''), ' ',
-          labelTag({ label: 'real', text: `${p.title || ''}${p.camera ? ', ' + p.camera : ''}. Raw image from NASA’s Curiosity rover.`, source: { title: p.credit || 'NASA/JPL-Caltech', url: p.source_url || p.page || '', where: p.file_id || '' } })),
+          labelTag({ label: 'real', text: `${p.title || ''}${p.camera ? ', ' + p.camera : ''}. Raw image from the Curiosity rover.`, source: { title: p.credit || 'NASA/JPL-Caltech', url: p.source_url || p.page || '', where: p.file_id || '' } })),
       );
       glueMarkers(textBox);
     });

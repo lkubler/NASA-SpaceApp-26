@@ -101,11 +101,11 @@ export default {
       head,
       lede(several
         ? (broken
-          ? `The best round, rover → ${seq} → rover, breaks ${plural(broken, 'NASA rule')}. Every other limit is checked below.`
-          : `On foot from the rover to ${seq} and back, checked against every NASA rule.`)
+          ? `The best round, rover → ${seq} → rover, breaks ${plural(broken, 'rule')}. Every other limit is checked below.`
+          : `On foot from the rover to ${seq} and back, checked against every rule.`)
         : broken
-          ? `The best route to ${spotName.toLowerCase()} breaks ${plural(broken, 'NASA rule')}. Every other limit is checked below.`
-          : `Rover to ${spotName.toLowerCase()} on foot and back, checked against every NASA rule.`,
+          ? `The best route to ${spotName.toLowerCase()} breaks ${plural(broken, 'rule')}. Every other limit is checked below.`
+          : `Rover to ${spotName.toLowerCase()} on foot and back, checked against every rule.`,
       h('span.go__demo', ' Demo time ', h('span.mono', `${L.demo.value}${L.demo.unit}`), ' ', labelTag(L.demo))),
       h('div.go__nums', { 'data-enter': 2 },
         bigNumber({ label: 'Distance', value: fmtDistance(plan.distanceM), tag: L.distance }),
