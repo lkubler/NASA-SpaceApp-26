@@ -1,5 +1,5 @@
-// Step 1 Mission (specs/1-mission.md): opening, Gale crater in 3D, the three sites, the two requests
-// from Earth, choosing one. Writes state.request (app/README.md).
+// Step 1 Mission (specs/1-mission.md): opening, Gale crater in 3D, the three sites, the missions
+// (one per site), choosing one. Writes state.request (app/README.md).
 import './style.css';
 import { h, headline, lede, pillButton, labelTag, LOCK_SVG } from '../../ui/index.js';
 import { ENVIRONMENT, DEMO } from '../../core/values.js';
@@ -7,6 +7,7 @@ import { REQUESTS } from './requests.js';
 import { loadGale, craterView, VERTICAL_EXAGGERATION } from './crater.js';
 import { planetView } from './planet.js';
 import { prepareGround } from '../2-plan/ground.js';
+import { REPO_URL } from '../../frame/project.js';
 
 const PHOTO_BASE = 'data/murray/photos/';
 // opening -> crater transition: globe zoom (ms), crater fly-in (ms), Gale's share of the screen width at the handoff
@@ -109,7 +110,11 @@ export default {
       });
       const skyFirst = Promise.race([skyLoaded, new Promise((r) => setTimeout(r, SKY_FIRST_MS))]);
       intro.prepend(sky, globe);
-      intro.append(skyCredit);
+      // the team's code: a star in the sky that is a link, with its name next to it
+      const repo = h('a.m1-repo', { href: REPO_URL, target: '_blank', rel: 'noopener', 'aria-label': 'Our code on GitHub (opens in a new tab)' },
+        h('span.m1-repo__ring', { 'aria-hidden': 'true' }), h('span.m1-repo__star', { 'aria-hidden': 'true' }),
+        h('span.m1-repo__text', h('span.m1-repo__k.mono', 'Source code'), h('span.m1-repo__v', 'Our code on GitHub ↗')));
+      intro.append(skyCredit, repo);
       el.append(intro);
       const planet = planetView(globe, { after: skyFirst });
       let planetGone = false;
@@ -255,7 +260,7 @@ export default {
         h('span.m1-base__beam'), h('span.m1-base__core'),
         h('div.m1-base__label',
           h('span.m1-base__name', 'Base'),
-          h('span.m1-base__where.mono', `${base.name} · ${meta.drive.km} km drive`))));
+          h('span.m1-base__where.mono', base.name))));
     }
 
     // --- missions panel: one mission per site
@@ -264,7 +269,7 @@ export default {
       const sentAt = (ctx.state.request && ctx.state.request.sentAt) || Date.now() - DELAY.value * 60000;
       reqs = REQUESTS.map((r) => toRequest(r, credits, sentAt));
       btn = pillButton({ text: 'Plan this mission', arrow: true, onClick: () => goPlan(), disabled: !ctx.state.request });
-      const list = h('div.m1-reqs', { role: 'radiogroup', 'aria-label': 'Missions from Earth' });
+      const list = h('div.m1-reqs', { role: 'radiogroup', 'aria-label': 'Missions' });
       for (const r of reqs) {
         const c = requestCard(r);
         cardEls.set(r.id, c);
@@ -289,7 +294,7 @@ export default {
           h('div.m1-req__site', siteName(r.site), r.locked ? h('span.m1-req__soon', 'Soon') : null, done ? h('span.m1-req__done', 'Done') : null),
           h('div.m1-req__title', r.title),
           h('p.m1-req__why', r.why)),
-        h('span.m1-req__info', labelTag({ label: 'real', text: 'The scientific question is real; the message from Earth is part of the story.', source: r.whySource })),
+        h('span.m1-req__info', labelTag({ label: 'real', text: "The scientific question is real, from Curiosity's research. Sending a crew to sample it is our scenario.", source: r.whySource })),
         r.locked ? null : h('span.m1-req__check', { 'aria-hidden': 'true' }));
       el.addEventListener('mouseenter', () => hot(r.id, true));
       el.addEventListener('mouseleave', () => hot(r.id, false));

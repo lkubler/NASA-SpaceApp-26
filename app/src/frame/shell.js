@@ -21,10 +21,13 @@ const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(pre
 
 export function startShell(root, { startStep = 1 } = {}) {
   const stage = h('main.stage');
-  // the active step's marker slides along the bar; the items are built once and only change their state
+  // the step bar as a route line: the steps are waypoints on a line, the part already walked is cyan (like
+  // the route on the map) and the current step's glowing marker slides along it; built once, only the state changes
   const barMarker = h('span.stepbar__marker', { 'aria-hidden': 'true' });
+  const barTrack = h('span.stepbar__track', { 'aria-hidden': 'true' });
+  const barFill = h('span.stepbar__fill', { 'aria-hidden': 'true' });
   const barList = h('div.stepbar__list');
-  const bar = h('nav.stepbar', { 'aria-label': 'Mission steps' }, barList, barMarker);
+  const bar = h('nav.stepbar', { 'aria-label': 'Mission steps' }, barTrack, barFill, barList, barMarker);
   const sourcesBtn = h('button.header__sources.mono', { type: 'button', onclick: () => openSources() }, 'Sources');
   const header = h('header.header',
     h('div.header__left', h('div.header__name.mono', `[${PROJECT_NAME}]`), bar),
@@ -232,25 +235,27 @@ export function startShell(root, { startStep = 1 } = {}) {
   // step bar: items built once; each render only updates their state and moves the marker
   const barItems = STEPS.map((m, k) => {
     const n = k + 1;
-    const b = h('button.stepbar__item', { type: 'button' }, h('span.stepbar__n', String(n)), h('span.stepbar__t', m.title));
+    const b = h('button.stepbar__item', { type: 'button' }, h('span.stepbar__n', { 'aria-hidden': 'true' }), h('span.stepbar__t', m.title));
     b.addEventListener('click', () => { b.blur(); goto(n); }); // blur: walk keys (Enter) must not re-click it
     barList.append(b);
-    if (n < STEPS.length) barList.append(h('span.stepbar__sep', '—'));
     return b;
   });
   let markerAt = '';
   function placeMarker() {
-    const b = barItems[state.step - 1];
-    const dot = b && b.querySelector('.stepbar__n');
+    // dot centres in the bar (the items are not positioned, so offsets are relative to the bar)
+    const centre = (k) => { const d = barItems[k].querySelector('.stepbar__n'); return { x: d.offsetLeft + d.offsetWidth / 2, y: d.offsetTop + d.offsetHeight / 2, w: d.offsetWidth }; };
+    const dot = barItems[state.step - 1] && barItems[state.step - 1].querySelector('.stepbar__n');
     if (!dot || !dot.offsetWidth) return;
-    const at = `${dot.offsetLeft}|${dot.offsetTop}|${dot.offsetWidth}`;
+    const a = centre(0), c = centre(state.step - 1), z = centre(barItems.length - 1);
+    const at = `${a.x}|${c.x}|${c.y}|${z.x}`;
     if (at === markerAt) return;
     const first = !markerAt;
     markerAt = at;
-    if (first) barMarker.classList.add('is-still');
-    barMarker.style.width = barMarker.style.height = `${dot.offsetWidth}px`;
-    barMarker.style.transform = `translate(${dot.offsetLeft}px, ${dot.offsetTop}px)`;
-    if (first) requestAnimationFrame(() => requestAnimationFrame(() => barMarker.classList.remove('is-still')));
+    if (first) for (const e of [barMarker, barFill]) e.classList.add('is-still');
+    barTrack.style.cssText = `left:${a.x}px;top:${a.y}px;width:${z.x - a.x}px`;
+    barFill.style.cssText = `left:${a.x}px;top:${a.y}px;width:${c.x - a.x}px`;
+    barMarker.style.transform = `translate(${c.x}px, ${c.y}px)`;
+    if (first) requestAnimationFrame(() => requestAnimationFrame(() => { for (const e of [barMarker, barFill]) e.classList.remove('is-still'); }));
   }
   function renderBar() {
     barItems.forEach((b, k) => {

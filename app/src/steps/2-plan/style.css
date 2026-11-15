@@ -200,11 +200,10 @@
 .step--plan .plan-layer__eye .eye-off { display: none; }
 .step--plan .plan-layer.is-off > :not(.plan-layer__eye) { opacity: 0.4; }
 .step--plan .plan-layer.is-off .eye-off { display: inline; }
-.step--plan .plan-compare {
-  align-self: flex-start; margin-left: 2.6em; padding: 0.22em 0.8em; border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
-  background: none; color: var(--text-2); font: inherit; font-size: var(--fs-tag); cursor: pointer;
-}
-.step--plan .plan-compare:hover { color: var(--text); border-color: var(--text-2); }
+/* a layer that can not be shown yet (Compare without relay, before a relay is placed): greyed out, eye inactive */
+.step--plan .plan-layer.is-disabled > * { opacity: 0.3; }
+.step--plan .plan-layer.is-disabled .plan-layer__eye { cursor: default; background: none; }
+.step--plan .plan-layer.is-disabled { cursor: help; }
 
 /* relay card: yellow mark, Move button */
 .step--plan .plan-relay { align-items: center; }
@@ -218,7 +217,6 @@
 /* leg icons for the drive and the handover */
 .step--plan .plan-leg-icon--handover { width: 0.75em; height: 0.75em; border-radius: 50%; border: 1.5px solid #fff; }
 .step--plan .plan-leg-icon--drive { width: 2px; height: 1.1em; background: #ececec; margin: 0 0.35em; }
-.step--plan .plan-leg-icon--relay { width: 0.75em; height: 0.75em; background: #f6c945; }
 
 /* the panel holds card, relay, legs and the four totals without scrolling */
 .step--plan .plan-totals .bignum__value { font-size: clamp(20px, 3vh, 34px); }
@@ -297,4 +295,21 @@
 .step--plan .plan-relay__remove { margin-left: 0.4em; color: var(--text-2); }
 .step--plan .plan-relay__move.is-on { border-color: #f6c945; color: #f6c945; }
 .step--plan .map.is-placing, .step--plan .map.is-placing * { cursor: crosshair; }
-.step--plan .plan-compare:disabled { opacity: 0.45; cursor: default; }
+
+/* hover note of a disabled map layer (extras.js): top right of the cursor, styled like the label popups.
+   It hangs on <body>, so it is not prefixed with .step--plan */
+.plan-hoverpop {
+  position: fixed; z-index: 100; pointer-events: none; white-space: nowrap;
+  background: #101012; border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  padding: 0.6em 1em; font-size: var(--fs-small); color: var(--text);
+}
+
+/* Compare clicked before a relay is placed: the relay card glows twice in the relay yellow */
+@keyframes plan-nudge {
+  0% { border-color: #f6c945; box-shadow: 0 0 0 0 rgba(246, 201, 69, 0.55); }
+  50% { box-shadow: 0 0 0 9px rgba(246, 201, 69, 0); }
+  51% { box-shadow: 0 0 0 0 rgba(246, 201, 69, 0.55); }
+  100% { border-color: #f6c945; box-shadow: 0 0 0 9px rgba(246, 201, 69, 0); }
+}
+.step--plan .plan-relay.is-nudge { border-color: #f6c945; animation: plan-nudge 1100ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .step--plan .plan-relay.is-nudge { animation-duration: 1ms; } }

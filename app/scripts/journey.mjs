@@ -113,7 +113,7 @@ for (const run of runs) {
       const badges = await page.locator('.step--plan .plan-order text').allInnerTexts();
       if (badges.length !== cfg.stops.length) fail(run, `order badges ${badges}`);
       const legRows = await page.locator('.step--plan .plan-legs .row').count();
-      if (legRows !== 2 * cfg.stops.length + 6) fail(run, `leg list has ${legRows} rows`);
+      if (legRows !== 2 * cfg.stops.length + 5) fail(run, `leg list has ${legRows} rows`);
       await shot(`plan-${cfg.stops.length}-stops`);
     }
     const planTxt = {

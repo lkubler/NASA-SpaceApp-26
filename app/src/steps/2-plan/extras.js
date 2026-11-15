@@ -14,12 +14,13 @@ import { ROVER, RULES, RADIO } from '../../core/index.js';
 // sols 1446-1452; research/data-sites.md), so the rover comes in from the north-east
 const BASE_BEARING_DEG = 39;
 const BASE_KM = 8;
+const CURIOSITY_DRIVE_KM = 10.1; // Curiosity's drive, sol 3 to 1452 (public/data/gale/gale_hrsc.json drive.km)
 
 export const EXTRA_TAGS = {
-  drive: { label: 'simulated', text: `The rover drive from the base at Bradbury Landing (${BASE_KM} km north-east) is drawn on a way over the terrain that keeps the slope rule. It is a picture only: it does not count into time, distance or reserve yet.`, source: { title: 'Curiosity waypoints, NASA/JPL-Caltech', url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json' } },
-  relay: { label: 'simulated', text: 'A radio relay the crew sets out, placed by you on open ground where it sees the rover. The device is simulated: a mast with an antenna that repeats the link.', source: { title: 'The team’s design', url: '' } },
+  drive: { label: 'simulated', text: `The base at Bradbury Landing, Curiosity's landing site, is ${BASE_KM} km north-east in a straight line; Curiosity drove ${CURIOSITY_DRIVE_KM} km to get here. The rover drive is drawn over terrain that keeps the slope rule. A picture only: it does not count into time, distance or reserve yet.`, source: { title: 'Curiosity waypoints, NASA/JPL-Caltech', url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json' } },
+  relay: { label: 'simulated', text: 'A what-if for planning: a radio relay standing here. You place it on open ground where it sees the rover; radio shadow, routes and numbers are calculated with it, and on the walk it stands there from the start. The device is simulated: a mast with an antenna that repeats the link.', source: { title: 'The team’s design', url: '' } },
   contact: { label: 'model', text: `Contact: a place has contact if it sees the rover, or sees the relay while the relay sees the rover. Line of sight over the terrain grid, antennas at ${RADIO.roverAntennaM.value} m (rover), ${RADIO.relayMastM.value} m (relay, an assumption) and ${RADIO.suitAntennaM.value} m (suit). The method, predicting radio shadow from terrain obstacles, was checked against measurements on Apollo 15.`, source: { title: 'Apollo 15 Mission Report, Supplement 6: Postflight analysis of the EVCS-LM communications link (MSC-05161)', url: 'https://ntrs.nasa.gov/api/citations/19720017533/downloads/19720017533.pdf' } },
-  zone: { label: 'model', text: 'The area of this excursion: a frame around the candidate spots and the rover, measured on the walk grid.', source: { title: 'Our walk grid (Access Mars Murray Buttes)', url: '' } },
+  zone: { label: 'model', text: 'The area of this excursion: a frame around the rover and the candidate spots.', source: { title: 'Our walk grid (Access Mars Murray Buttes)', url: '' } },
   effort: { label: 'simulated', text: `The route on foot coloured by the slope under each step, from flat (easy) to ${RULES.slopeMaxDeg.value}° (hard). A stand-in for the walking effort, which comes in a later version.`, source: { title: 'Slope grid of the walk terrain', url: '' } },
 };
 
@@ -87,31 +88,54 @@ export function drawZone(map, terrain, zone) {
   return { w, h: hgt };
 }
 
+/** One hover note for the legend, top right of the cursor (fixed, so the legend's overflow never cuts it). */
+let pop = null;
+function showPop(text, x, y) {
+  if (!pop) { pop = h('div.plan-hoverpop', { role: 'tooltip' }); document.body.append(pop); }
+  pop.textContent = text;
+  const w = pop.offsetWidth, ph = pop.offsetHeight;
+  pop.style.left = Math.min(window.innerWidth - w - 8, x + 14) + 'px';
+  pop.style.top = Math.max(8, y - ph - 10) + 'px';
+}
+export function hidePop() { if (pop) { pop.remove(); pop = null; } }
+
 /** Eye icon (open / crossed out). */
 const EYE = '<svg viewBox="0 0 20 20" width="1.15em" height="1.15em" aria-hidden="true"><path d="M1.5 10s3.2-5.5 8.5-5.5S18.5 10 18.5 10s-3.2 5.5-8.5 5.5S1.5 10 1.5 10Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="10" cy="10" r="2.6" fill="currentColor"/><path class="eye-off" d="M3 17L17 3" stroke="currentColor" stroke-width="1.6"/></svg>';
 
 /**
- * Legend below the map in three groups. layers: [{ key, swatch, name, note, on, tag, extra }];
- * onToggle(key, on) is called when a layer is shown or hidden.
+ * Legend below the map in three groups. layers: [{ key, swatch, name, note, on, tag, disabled }];
+ * onToggle(key, on) is called when a layer is shown or hidden; onDisabled(key) when a disabled layer's eye is clicked. Each layer gets L.set(on) and L.setDisabled(d)
+ * so the step can change it from outside (a disabled row is greyed out and its eye does nothing).
  */
-export function planLegend({ route, places, layers, onToggle, note }) {
+export function planLegend({ route, places, layers, onToggle, onDisabled, note }) {
   const item = (sw, text) => h('div.plan-lg__item', h(`span.plan-sw.plan-sw--${sw}`), h('span', text));
   const layerRow = (L) => {
     const btn = h('button.plan-layer__eye', { type: 'button', 'aria-pressed': String(L.on), 'aria-label': `${L.on ? 'Hide' : 'Show'} ${L.name}`, html: EYE });
     const row = h(`div.plan-layer${L.on ? '' : '.is-off'}`, h(`span.plan-sw.plan-sw--${L.swatch}`),
       h('span.plan-layer__name', L.name, L.note ? h('span.plan-layer__note', ` ${L.note}`) : null, L.tag ? [' ', labelTag(L.tag)] : null), btn);
+    L.set = (on) => {
+      L.on = on;
+      row.classList.toggle('is-off', !on);
+      btn.setAttribute('aria-pressed', String(on));
+      btn.setAttribute('aria-label', `${on ? 'Hide' : 'Show'} ${L.name}`);
+    };
+    // aria-disabled, not disabled: a click on it still arrives and can point to what is missing
+    L.setDisabled = (d) => { btn.setAttribute('aria-disabled', String(d)); row.classList.toggle('is-disabled', d); if (!d) hidePop(); };
+    // a disabled layer says why on hover: a note top right of the cursor that follows it
+    if (L.disabledHint) {
+      row.addEventListener('mousemove', (e) => { if (row.classList.contains('is-disabled')) showPop(L.disabledHint, e.clientX, e.clientY); });
+      row.addEventListener('mouseleave', hidePop);
+    }
+    L.setDisabled(!!L.disabled);
     btn.addEventListener('click', () => {
-      L.on = !L.on;
-      row.classList.toggle('is-off', !L.on);
-      btn.setAttribute('aria-pressed', String(L.on));
-      btn.setAttribute('aria-label', `${L.on ? 'Hide' : 'Show'} ${L.name}`);
-      onToggle(L.key, L.on);
+      if (row.classList.contains('is-disabled')) { if (onDisabled) onDisabled(L.key); return; }
+      L.set(!L.on); onToggle(L.key, L.on);
     });
-    return [row, L.extra || null];
+    return row;
   };
   return h('div.plan-lg',
     h('div.plan-lg__col', h('div.plan-lg__k', 'Route'), ...route.map(([sw, t]) => item(sw, t))),
     h('div.plan-lg__col', h('div.plan-lg__k', 'Places'), ...places.map(([sw, t]) => item(sw, t))),
-    h('div.plan-lg__col.plan-lg__col--layers', h('div.plan-lg__k', 'Map layers'), ...layers.flatMap(layerRow)),
+    h('div.plan-lg__col.plan-lg__col--layers', h('div.plan-lg__k', 'Map layers'), ...layers.map(layerRow)),
     note ? h('div.plan-lg__note', note) : null);
 }

@@ -11,7 +11,7 @@ import { planAllCandidates, planRound, planNumbers, stopOrdinal, MAX_STOPS, wayp
 import { paintGround, composeGround, hatchPattern, dotPattern } from './ground.js';
 import { BROKEN_TEST_TARGET } from '../3-go/dev/broken.js';
 import { GROUND_TAG } from '../../core/groundColor.js';
-import { EXTRA_TAGS, zoneOf, roverDriveOf, drawEffort, drawZone, planLegend } from './extras.js';
+import { EXTRA_TAGS, zoneOf, roverDriveOf, drawEffort, drawZone, planLegend, hidePop } from './extras.js';
 import { waypointEditor, parseWaypoints } from './waypoints.js';
 
 let root = null;
@@ -22,7 +22,7 @@ const ACCESS_MARS = DATA[0];
 const L = {
   terrain: { label: 'model', text: 'The site from above: the Access Mars 3D terrain of Murray Buttes, reconstructed from rover and orbiter images. It is the same ground you walk on.', source: { title: ACCESS_MARS.name, url: ACCESS_MARS.url } },
   steep: { label: 'model', text: `Ground steeper than ${RULES.slopeMaxDeg.value}° on the slope grid of the same terrain. The suit is built for ${RULES.slopeMaxDeg.value}° at most, so routes do not cross it.`, source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
-  shadow: { label: 'model', text: 'Ground without a straight line of sight to the rover antenna, suit antenna to rover antenna. Geometry only, no radio physics. A caution, not a rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
+  shadow: { label: 'model', text: 'Ground where the suit antenna has no straight line of sight to the rover antenna, nor to the radio relay if one is placed. Geometry only, no radio physics. A caution, not a rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
   spot: { label: 'model', text: 'Position derived from the terrain: a reachable spot at the foot of a butte wall. No Curiosity target lies in this square.', source: { title: DOCS.WALK_TARGETS.title, url: DOCS.WALK_TARGETS.url } },
   point: { label: 'real', text: 'A point of interest of the Access Mars app, with its original text. Not a sample spot.', source: { title: ACCESS_MARS.name, url: ACCESS_MARS.url } },
   distance: { label: 'model', text: 'Length of the route calculated in your browser on the terrain grid: the fastest way that keeps every rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
@@ -103,20 +103,23 @@ export default {
     const show = { steep: true, shadow: true, effort: true };
     // Compare: show the radio shadow and the route's stretches without contact as they are without the relay
     let comparing = false;
-    const compareBtn = h('button.plan-compare', { type: 'button', onclick: () => toggleCompare() }, 'Compare without relay');
-    compareBtn.disabled = true;
+    const compareLayer = { key: 'compare', swatch: 'relay', name: 'Compare without relay', on: false, disabled: true, disabledHint: 'Place a radio relay first' };
     const leg = planLegend({
       route: [['rover-line', 'Rover drive'], ['foot', 'On foot'], ['handover', 'Handover to foot']],
       places: [['marker', ['Candidate spot ', labelTag(L.spot)]], ['selected', 'Chosen stop'], ['waypoint', ['Waypoint ', labelTag(L.waypoint)]], ['cheapest', 'Cheapest'],
-        ['point', ['Access Mars point ', labelTag(L.point)]], ['relay', ['Radio relay ', labelTag(EXTRA_TAGS.relay)]], ['zone', ['EVA zone ', labelTag(EXTRA_TAGS.zone)]]],
+        ['point', ['Access Mars point ', labelTag(L.point)]], ['relay', ['Radio relay ', labelTag(EXTRA_TAGS.relay)]]],
       layers: [
         { key: 'steep', swatch: 'steep', name: 'Too steep to walk', note: `> ${RULES.slopeMaxDeg.value}°`, on: true, tag: L.steep },
-        { key: 'shadow', swatch: 'shadow', name: 'No radio contact', note: '· no contact with the rover', on: true, tag: L.shadow, extra: compareBtn },
+        { key: 'shadow', swatch: 'shadow', name: 'No radio contact', note: '· no contact with the rover', on: true, tag: L.shadow },
         { key: 'effort', swatch: 'effort', name: 'Walking effort', note: 'easy → hard', on: true, tag: EXTRA_TAGS.effort },
+        compareLayer,
       ],
+      // a click on Compare before a relay is placed: the relay card glows, that is where to place one
+      onDisabled: (key) => { if (key === 'compare') nudgeRelay(); },
       onToggle: (key, on) => {
         show[key] = on;
-        if (key === 'steep' || key === 'shadow') map.setLayers({ [key]: on });
+        if (key === 'compare') setCompare(on);
+        else if (key === 'steep' || key === 'shadow') map.setLayers({ [key]: on });
         else drawMap();
       },
     });
@@ -511,7 +514,7 @@ export default {
       const out = [];
       P.legs.forEach((lg, i) => {
         if (lg.kind === 'rover' && i === 0) {
-          out.push(row('Handover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }), relayRow());
+          out.push(row('Handover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }));
         } else if (lg.kind === 'rover') {
           // the way to clear sits at the end of the list, on the last row
           out.push(h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--handover')), h('span.row__label', 'Back at the rover'),
@@ -624,8 +627,6 @@ export default {
       row('Base', 'Bradbury Landing · 8 km', { lead: h('span.plan-leg-icon.plan-leg-icon--rover') }),
       row('Rover', h('span.muted', 'drive, not counted'), { lead: h('span.plan-leg-icon.plan-leg-icon--drive'), tag: EXTRA_TAGS.drive }),
     ];
-    /** The relay in the list: placed or not. */
-    const relayRow = () => row('Relay', h('span.muted', getRelay() ? 'placed' : 'not placed'), { lead: h('span.plan-leg-icon.plan-leg-icon--relay'), tag: EXTRA_TAGS.relay });
 
     function renderPanel() {
       const ids = stopIds();
@@ -682,7 +683,6 @@ export default {
             legs.append(wpsSet
               ? h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--handover')), h('span.row__label', 'Back at the rover'), clearLink())
               : row(i === 0 ? 'Handover' : 'Back at the rover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }));
-            if (i === 0) legs.append(relayRow());
             return;
           }
           if (P && lg.kind === 'foot') { legs.append(...footRows(lg, P.legPlans[(i - 1) / 2])); return; }
@@ -719,8 +719,8 @@ export default {
       relayMove.textContent = placing ? 'Click the map' : rl ? 'Move' : 'Place';
       relayMove.classList.toggle('is-on', placing);
       relayRemove.hidden = !rl;
-      compareBtn.disabled = !rl;
-      compareBtn.textContent = comparing ? 'Back to with relay' : 'Compare without relay';
+      compareLayer.setDisabled(!rl);
+      compareLayer.set(comparing);
       if (rl) {
         const P = ctx.state.plan;
         relaySub.textContent = P ? `Placed · ${fmtDuration(P.radioShadowS || 0)} without radio on this route` : 'Placed · choose a spot to see its effect';
@@ -733,9 +733,15 @@ export default {
       else { notice = 'Click the map to set the relay. It must see the rover and stand on open ground.'; clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = null; renderHint(); }, 5000); renderHint(); }
       renderRelayCard();
     }
-    function toggleCompare() {
-      if (!getRelay()) return;
-      comparing = !comparing;
+    function nudgeRelay() {
+      relayCard.classList.remove('is-nudge');
+      void relayCard.offsetWidth; // restart the animation on a second click
+      relayCard.classList.add('is-nudge');
+    }
+    relayCard.addEventListener('animationend', () => relayCard.classList.remove('is-nudge'));
+    function setCompare(on) {
+      if (!getRelay()) { compareLayer.set(false); return; }
+      comparing = on;
       map.refreshShadow({ withoutRelay: comparing });
       quietDraw = true;
       render();
@@ -797,7 +803,7 @@ export default {
     revealWhenReady();
   },
 
-  unmount() { root = null; cleanup.forEach((f) => f()); cleanup = []; },
+  unmount() { root = null; hidePop(); cleanup.forEach((f) => f()); cleanup = []; },
 
   /**
    * State after this step is finished, for ?step=N. ?spot=F7 picks another candidate; ?stops=F3,F7,F1 a round
