@@ -134,7 +134,8 @@ export default {
         num5({ label: 'Reserve on return', value: fmtDuration(plan.reserveS), tag: L.reserve, tone: plan.reserveS < 0 ? 'warning' : null }, null),
         num5({ label: 'Steepest slope', value: fmtDeg(plan.steepestDeg), tag: L.steepest, tone: slopeTone },
           slope.status === 'broken' ? `over the ${S.value}${S.unit} limit` : slopeTone ? `at the ${S.value}${S.unit} limit` : null),
-        num5({ label: 'Radiation dose', value: fmtMSv(plan.radiationMSv), tag: L.radiation }, null),
+        // the unit smaller, so the number fits its column (it is the longest value of the five)
+        num5({ label: 'Radiation dose', value: fmtMSv(plan.radiationMSv).replace(/ mSv$/, ''), unit: 'mSv', tag: L.radiation }, null),
       ));
 
     // --- map: the plan's EVA zone, rover drive, relay and handover (look only, as in step 2), the round on foot
