@@ -228,5 +228,6 @@ export const TOOLS = [
 export const AI_NOTE = [
   'The idea, its direction and every product decision come from the team.',
   'AI coding agents (Claude Code) did research, wrote the app code, the data preparation scripts and the unit tests under the team’s specs. Code and data written with AI help are noted here and in the project description.',
+  'The intro film before the walk was rendered by scripts that an AI coding agent wrote, from a rover 3D model; it carries a visible “AI-generated” mark in every frame.',
   'The helmet frame image is AI-generated and carries a visible “AI-generated image” mark. No agency logos or mission identifiers appear in generated content.',
 ];
