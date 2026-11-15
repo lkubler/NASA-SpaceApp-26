@@ -122,7 +122,7 @@ export const DATA = [
   {
     name: 'HiRISE elevation model DTEEC_040770_1755_039280_1755_U01 and orthoimage',
     by: 'NASA/JPL/University of Arizona/USGS',
-    use: 'Used in preparation, not shown in the app: to place the walk square in Gale crater and to cross-check the slope grid',
+    use: 'Placed the walk square in Gale crater. In Go / no-go it is a second, independent check of the route: the metres of the route steeper than the slope rule in the 1 m elevation model (slope file of the elevation model; the orthoimage is not shown in the app)',
     licence: 'PDS public data',
     url: 'https://www.uahirise.org/dtm/',
   },

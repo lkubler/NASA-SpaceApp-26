@@ -319,7 +319,7 @@ export function planNumbers(terrain, route) {
       id: 'shelter', name: 'Solar storm: time to shelter', unit: 's', planned: shelter.seconds, limit: shelter.limitS,
       status: shelter.seconds > shelter.limitS ? 'broken' : 'ok',
       where: shelter.at,
-      text: `From here the way back to the rover takes ${Math.round(shelter.seconds / 60)} min; the limit is ${RULES.shelterReturnH.value} h`,
+      text: `${Math.round(shelter.seconds / 60)} min back, limit ${RULES.shelterReturnH.value} h`,
     },
     {
       id: 'radio', name: 'Radio shadow', unit: 's', planned: longest ? longest.seconds : 0, limit: null,

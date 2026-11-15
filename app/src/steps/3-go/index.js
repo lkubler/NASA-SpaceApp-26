@@ -7,6 +7,7 @@ import {
 } from '../../ui/index.js';
 import { ROVER, RULES, ASTRONAUT, spotNumber, stopsOf, stopOrdinal } from '../../core/index.js';
 import { heightProfile, ranges } from './profile.js';
+import { loadHirise, hiriseSlopeOnRoute } from '../../core/datalines.js';
 import { L } from './labels.js';
 import { brokenFixture } from './dev/broken.js';
 import { preloadIntroFilm } from '../../ui/introFilm.js';
@@ -171,6 +172,22 @@ export default {
       return b;
     });
 
+    // slope check against the HiRISE elevation model (specs/x-datalines.md): a caution at most, 0 m reads as ok
+    const hirise = await loadHirise(terrain.meta);
+    if (root !== el) return;
+    let hiriseLine = null;
+    if (hirise) {
+      const hr = hiriseSlopeOnRoute(plan.profile, hirise);
+      const spec = L.hirise(hr.noDataM);
+      const m = hr.steepM > 0 && hr.steepM < 10 ? `${hr.steepM.toFixed(1)} m` : fmtDistance(hr.steepM);
+      const gap = hr.noDataM > 0.5 ? ` ${fmtDistance(hr.noDataM)} of the route has no HiRISE data.` : '';
+      hiriseLine = h(`div.gocaution${hr.steepM > 0 ? '' : '.is-none'}`,
+        h('span.gocaution__tag', hr.steepM > 0 ? 'Caution' : 'Ok'),
+        h('span.gocaution__name', 'Slope in HiRISE'),
+        h('span.gocaution__v', val(hr.steepM > 0 ? `${m} steeper than ${RULES.slopeMaxDeg.value}${RULES.slopeMaxDeg.unit}` : `0 m steeper than ${RULES.slopeMaxDeg.value}${RULES.slopeMaxDeg.unit}`, spec)),
+        h('span.gocaution__note', (hr.steepM > 0 ? 'A second, independent elevation model sees steeper ground. Not a rule: the walk may go on.' : 'A second, independent elevation model agrees with the route.') + gap));
+    }
+
     const radio = plan.checks.find((c) => c.id === 'radio');
     let cautionLine = null;
     if (radio) {
@@ -231,7 +248,7 @@ export default {
       h('div.go__checks', { 'data-enter': 4 },
         h('div.go__checkshead', h('span.go__checkstitle', broken ? `${plural(broken, 'rule')} broken.` : 'Every rule kept.'), h('span.muted', 'Click a check to see where it occurs on the route.')),
         h('div.go__rulechecks', ruleChecks),
-        cautionLine, suitChecks, crew),
+        cautionLine, hiriseLine, suitChecks, crew),
       h('div.go__action', { 'data-enter': 5 }, textLink('Edit route', () => ctx.back()), btn));
 
     el.append(h(`div.go${broken ? '.is-broken' : ''}`, intro, mapBox, profBox, bottom));
