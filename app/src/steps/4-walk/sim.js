@@ -5,7 +5,7 @@ import {
   RULES, WORK, ASTRONAUT, DEMO, ROVER,
   logMove, logPath, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, walkSeconds, hasRadio,
   radioShadowMask, roverField, spotField, isClosedAt, isClosed, findRoute,
-  stopsOf, initStops, remainingWay, passVia, markSampled,
+  stopsOf, initStops, remainingWay, passVia, markSampled, Heap,
 } from '../../core/index.js';
 import { DISPLAY as D } from './display.js';
 
@@ -19,6 +19,8 @@ const DEG = Math.PI / 180;
 export const ALERTS = {
   turnBack: { level: 'warning', title: 'Turn back now' },
   steepUnder: { level: 'warning', title: `Ground over ${RULES.slopeMaxDeg.value}° underfoot` },
+  // specs/x-liveroute.md "Turn back now, the moment": a round longer than the suit allows
+  tooLong: { level: 'caution', title: 'This round is longer than the suit allows' },
   edge: { level: 'caution', title: 'Edge of the site' },
   steepAhead: { level: 'caution', title: 'Steep stretch ahead' },
   radioAhead: { level: 'advisory', title: 'Radio shadow ahead' },
@@ -84,6 +86,12 @@ export function createSim(t, route, log) {
   if (log.distanceM === 0 && log.tS === 0) logPath(log, t, startPath, { shadow });
   s.radio = hasRadio(t, s.x, s.z);
   refreshReserve();
+  // a round longer than the suit allows (reserve below zero right at the start, specs/x-liveroute.md): no
+  // "Turn back now" at the rover; the reserve counts the stops that still fit, and "Turn back now" comes
+  // when going on to the next stop would no longer leave a way home with reserve
+  s.tooLong = !log.sample && log.phase === 'out' && s.reserve.seconds < 0;
+  s.fit = null;
+  if (s.tooLong) refreshReserve();
 
   /** Reserve on return from here: the remaining stops in plan order (walk and work at each), then home. */
   // (and the waypoints of the plan not passed yet, specs/x-waypoints.md; without waypoints: the remaining stops)
@@ -91,20 +99,160 @@ export function createSim(t, route, log) {
   function refreshReserve() {
     s.reserve = reserveHere();
     s.timeLeft = timeLeft(log.levels);
+    applyFit();
+  }
+  /** A round too long for the suit, still on the way out: is it? */
+  function fitting() { return s.tooLong && log.phase === 'out' && !log.turnedBack; }
+  /**
+   * The stops that still fit: the most remaining stops, in plan order, after which the way home still leaves
+   * a reserve (with the waypoints of the plan between them); j = 0 when not even the next one does.
+   */
+  function fitHere() {
+    const way = remainingWay(log);
+    const at = [];
+    way.forEach((p, k) => { if (!p.pass) at.push(k); });
+    const orders = at.map((k) => way[k].order);
+    for (let j = at.length; j >= 1; j--) {
+      const r = reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: 'out', stops: way.slice(0, at[j - 1] + 1) });
+      if (r.seconds > 0) return { j, reserve: r, fit: orders.slice(0, j), out: orders.slice(j) };
+    }
+    return { j: 0, reserve: reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: 'back' }), fit: [], out: orders };
+  }
+  /** On a round too long for the suit: the reserve shown counts the stops that still fit and the way home. */
+  function applyFit() {
+    if (!fitting()) { s.fit = null; return; }
+    s.fit = fitHere();
+    s.reserve = s.fit.reserve;
   }
 
   /** Index (in plan order) of the stop the walk heads for now, or -1: the rover. */
-  function nextStop() { return log.phase === 'out' ? log.stops.findIndex((st) => !st.sampled && !st.skipped) : -1; }
+  // "Turn back now" on (one stop, before its sample): the target is the rover at once, so the display shows
+  // the way back from here (team clarification on specs/x-liveroute.md: low reserve, the way home)
+  function nextStop() {
+    if (log.phase !== 'out' || (s.tb && s.tb.on && !log.sample)) return -1;
+    return log.stops.findIndex((st) => !st.sampled && !st.skipped);
+  }
   /**
-   * The leg shown now (band, minimap, steep ahead): the planned leg to the next stop (or home) when the walk
-   * stands where that leg starts (the rover at the start, the previous stop in plan order after its sample);
-   * otherwise (a stop sampled out of order, a turn back on the way) the fastest rule-keeping way from here,
-   * from the planner's cost field.
+   * The waypoints of the plan still ahead before the current target (specs/x-waypoints.md), in order: those of
+   * the leg to the next stop, or of the way home after the last stop (remainingWay: none after a turn back).
+   */
+  function viaAhead() {
+    const way = remainingWay(log);
+    const k = way.findIndex((p) => !p.pass);
+    return (k < 0 ? way : way.slice(0, k)).filter((p) => p.pass);
+  }
+  const viaField = (w) => spotField(t, { x: w.x, z: w.z });
+  /** Distance from here to a polyline. */
+  function distToLine(L) {
+    let best = Infinity;
+    for (let i = 1; i < L.length; i++) {
+      const p = L[i - 1], q = L[i];
+      const dx = q.x - p.x, dz = q.z - p.z, l2 = dx * dx + dz * dz;
+      const u = l2 ? Math.max(0, Math.min(1, ((s.x - p.x) * dx + (s.z - p.z) * dz) / l2)) : 0;
+      best = Math.min(best, Math.hypot(s.x - (p.x + u * dx), s.z - (p.z + u * dz)));
+    }
+    return best;
+  }
+  /**
+   * The way from here to the current target by the planner's rules (specs/x-liveroute.md): along the cost
+   * fields built at the start, through the waypoints still ahead on this leg. No full search: each field
+   * already holds the next cell towards its place from every cell.
+   */
+  function liveWay(field, vias) {
+    const pts = [{ x: s.x, z: s.z }];
+    let from = { x: s.x, z: s.z };
+    const ends = [...vias.map((w) => ({ f: viaField(w), p: w })), { f: field, p: field.target }];
+    for (const { f, p } of ends) {
+      f.pathFrom(from.x, from.z).forEach((i, j) => {
+        const q = t.pointOf(i);
+        if (j > 0 || Math.hypot(q.x - from.x, q.z - from.z) > 1e-3) pts.push(q);
+      });
+      from = { x: p.x, z: p.z };
+    }
+    const end = field.target;
+    if (pts.length < 2 || Math.hypot(pts.at(-1).x - end.x, pts.at(-1).z - end.z) > 1e-3) pts.push({ x: end.x, z: end.z });
+    return pts;
+  }
+  /**
+   * No way to the target by the rules from here (standing in closed ground, or cut off by it): the shortest
+   * way to the nearest ground from which the rule-keeping way leads on (Dijkstra over the walk grid, local:
+   * it stops at the first such cell).
+   */
+  function escapeWay(field) {
+    const n = t.n, s0 = t.indexOf(s.x, s.z);
+    const ok = (i) => !isClosed(t, i) && field.closedM[i] === 0;
+    const dist = new Map([[s0, 0]]), prev = new Map(), done = new Set();
+    const heap = new Heap(256);
+    heap.push(0, s0);
+    let goal = -1;
+    while (heap.n) {
+      const u = heap.pop(), d = heap.lastKey;
+      if (done.has(u)) continue;
+      done.add(u);
+      if (ok(u)) { goal = u; break; }
+      const uc = u % n, ur = (u / n) | 0;
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        const c = uc + dc, r = ur + dr;
+        if ((!dc && !dr) || c < 0 || r < 0 || c >= n || r >= n) continue;
+        const w = r * n + c, nd = d + t.stepLength(dc, dr);
+        if (nd < (dist.get(w) ?? Infinity)) { dist.set(w, nd); prev.set(w, u); heap.push(nd, w); }
+      }
+    }
+    const cells = [];
+    for (let i = goal; i !== undefined && i !== -1; i = prev.get(i)) { cells.push(i); if (i === s0) break; }
+    return [{ x: s.x, z: s.z }, ...cells.reverse().filter((i) => i !== s0).map((i) => t.pointOf(i))];
+  }
+
+  /**
+   * The leg shown now (band, minimap, steep ahead), specs/x-liveroute.md: the planned leg to the next stop
+   * (or home) while the crew is on it (at its start as before, or on the band; it is left once the crew is
+   * farther than nearBandM from it); otherwise the live route: from here to the target by the planner's
+   * rules, planned again whenever the crew stands in another grid cell; with no rule-keeping way from here,
+   * the shortest way back to allowed ground (warn: true).
    */
   function currentLeg() {
     const k = nextStop();
     const target = k >= 0 ? 'stop' + k : 'rover';
-    if (s.leg && s.leg.target === target) return s.leg;
+    const li = k >= 0 ? k : N;
+    const vias = viaAhead();
+    let planned;
+    if (s.leg && s.leg.target === target && s.leg.planned) planned = distToLine(legs[li]) <= D.nearBandM;
+    else {
+      const from = li === 0 ? null : stops[li - 1];
+      const atStart = li === 0 ? !log.stops.some((st) => st.sampled) && !s.leftRover : Math.hypot(s.x - from.x, s.z - from.z) <= D.legStartM;
+      // at the start as before; back on the band of the planned leg (only on a leg still walked as planned:
+      // the leg to the next stop with the stop before it done, the way home after the last stop)
+      const asPlanned = !log.turnedBack && (li === 0 ? !log.stops.some((st) => st.sampled) : log.stops[li - 1].sampled);
+      planned = atStart || (asPlanned && distToLine(legs[li]) <= D.onRouteM);
+    }
+    if (planned) {
+      if (!(s.leg && s.leg.planned && s.leg.target === target)) {
+        s.leg = { target, key: 'leg' + li, kind: k >= 0 ? 'spot' : 'rover', stop: k, points: legs[li], planned: true, li };
+      }
+      return s.leg;
+    }
+    const cell = t.indexOf(s.x, s.z);
+    const id = `${target}:${cell}:${vias.length}`;
+    if (s.leg && !s.leg.planned && s.leg.id === id) return s.leg;
+    const field = k >= 0 ? stopField[k] : home;
+    const warn = field.at(s.x, s.z).closedM > 0;
+    const points = warn ? escapeWay(field) : liveWay(field, vias);
+    if (points.length < 2) points.push({ x: field.target.x, z: field.target.z });
+    // key: one band per way; the 3D view drops the band before it
+    s.leg = { target, id, key: `live:${id}`, kind: k >= 0 ? 'spot' : 'rover', stop: k, points, planned: false, warn, li };
+    return s.leg;
+  }
+
+  /**
+   * The planned way the warnings measure to, as built before the live route: the planned leg to the next stop
+   * (or home) when the walk stood where that leg starts when the target switched; otherwise (a stop sampled
+   * out of order, a turn back) the fastest rule-keeping way from where the target switched.
+   */
+  let ref = null;
+  function refLeg() {
+    const k = nextStop();
+    const target = k >= 0 ? 'stop' + k : 'rover';
+    if (ref && ref.target === target) return ref;
     const li = k >= 0 ? k : N;
     const from = li === 0 ? null : stops[li - 1];
     const atStart = li === 0 ? !log.stops.some((st) => st.sampled) : Math.hypot(s.x - from.x, s.z - from.z) <= D.legStartM;
@@ -112,14 +260,23 @@ export function createSim(t, route, log) {
     if (atStart) points = legs[li];
     else {
       const field = k >= 0 ? stopField[k] : home;
-      // from here along the cost field; the cell this point stands in is left out when it is here itself
-      const way = field.pathFrom(s.x, s.z).map((i) => t.pointOf(i)).filter((p, k) => k > 0 || Math.hypot(p.x - s.x, p.z - s.z) > 1e-3);
+      const way = field.pathFrom(s.x, s.z).map((i) => t.pointOf(i)).filter((p, j) => j > 0 || Math.hypot(p.x - s.x, p.z - s.z) > 1e-3);
       points = [{ x: s.x, z: s.z }, ...way];
       if (points.length < 2) points.push(k >= 0 ? { x: stops[k].x, z: stops[k].z } : { x: ROVER.x, z: ROVER.z });
     }
-    // key: one band per leg in the 3D view (a way from here gets its own)
-    s.leg = { target, key: atStart ? 'leg' + li : `${target}@${log.tS.toFixed(1)}`, kind: k >= 0 ? 'spot' : 'rover', stop: k, points, planned: atStart };
-    return s.leg;
+    ref = { target, points, planned: atStart };
+    return ref;
+  }
+
+  /** Way still ahead to the current target along the live route: through the waypoints ahead, then the target. */
+  function wayAhead(field) {
+    let from = { x: s.x, z: s.z }, metres = 0, seconds = 0;
+    for (const w of viaAhead()) {
+      const c = viaField(w).at(from.x, from.z);
+      metres += c.metres; seconds += c.seconds; from = w;
+    }
+    const c = field.at(from.x, from.z);
+    return { metres: metres + c.metres, seconds: seconds + c.seconds };
   }
 
   const ground = (x, z) => t.heightAt(x, z);
@@ -268,10 +425,14 @@ export function createSim(t, route, log) {
     return null;
   }
 
-  /** Distance to the planned round (every leg, and the way shown now), and the nearest point on the current leg. */
+  /**
+   * Distance to the planned round (every leg, and the way home fixed at a turn back or a stop out of order:
+   * refLeg), and the nearest point on that leg. "Off the path" and the steep checks measure to it as before;
+   * the live route shown is not part of it (specs/x-liveroute.md).
+   */
   function nearRoute() {
     let best = Infinity, cur = null, bp = null;
-    const lg = currentLeg();
+    const lg = refLeg();
     const all = lg.planned ? legs : [...legs, lg.points];
     const curLeg = lg.planned ? legs.indexOf(lg.points) : all.length - 1;
     all.forEach((L, li) => {
@@ -347,12 +508,16 @@ export function createSim(t, route, log) {
     // a round: the reserve for the remaining stops has run out. The warning means "skip the remaining stops":
     // they are skipped at once and the display shows the way home (target rover, band from here); the
     // warning stays until the crew heads home. One stop: as before (the target switches when they head home)
-    if (N > 1 && log.phase === 'out' && s.reserve.seconds <= 0) {
+    applyFit();
+    // a round too long for the suit: "Turn back now" once not even the next stop fits, never at the rover
+    const tooLongTurn = fitting() && s.fit.j === 0 && s.leftRover;
+    if (tooLongTurn || (N > 1 && !fitting() && log.phase === 'out' && s.reserve.seconds <= 0)) {
       const skipped = log.stops.filter((st) => !st.sampled && !st.skipped);
       skipped.forEach((st) => { st.skipped = true; });
       log.turnedBack = { x: s.x, z: s.z, tS: log.tS, reserveS: s.reserve.seconds, skipped: skipped.map((st) => st.id) };
       log.phase = 'back';
       const roundS = s.reserve.seconds;
+      s.fit = null;
       s.reserve = reserveHere();
       s.tb = { on: true, ref: hm, skip: { reserveS: roundS, stops: skipped.map((st) => ({ order: st.order, id: st.id })) } };
     }
@@ -375,6 +540,7 @@ export function createSim(t, route, log) {
         if (hm - s.tb.ref >= D.homeTurnM) s.tb = { on: true, ref: hm };
       }
     } else s.tb = null;
+    if (fitting()) { cur.tooLong = true; info.tooLong = { fit: s.fit.fit, out: s.fit.out }; }
     if (s.tb && s.tb.on) {
       cur.turnBack = true;
       info.turnBack = s.tb.skip
@@ -448,7 +614,7 @@ export function createSim(t, route, log) {
     spot.tS = log.tS;
     if (first) log.sample.tS = log.tS;
     s.lastSample = k;
-    s.leg = null; // the band and the target follow from the stops left
+    s.leg = null; ref = null; // the band and the target follow from the stops left
     if (!(s.tb && s.tb.skip)) s.tb = null;
     evaluate();
     if (s.timeLeft.seconds <= 0) suitEmpty();
@@ -506,7 +672,8 @@ export function createSim(t, route, log) {
     const lg = currentLeg();
     const k = lg.stop;
     const spotLeg = k >= 0;
-    const c = spotLeg ? stopField[k].at(s.x, s.z) : home.at(s.x, s.z);
+    // along the live route: through the waypoints still ahead on this leg (without any: the field's way)
+    const c = wayAhead(spotLeg ? stopField[k] : home);
     if (!legStart || legStart.key !== lg.target) legStart = { key: lg.target, m: Math.max(c.metres, 1e-6) };
     const base = spotLeg
       ? { kind: 'spot', name: stops[k].name || 'Sample spot', id: stops[k].id || null, x: stops[k].x, z: stops[k].z, order: k + 1 }

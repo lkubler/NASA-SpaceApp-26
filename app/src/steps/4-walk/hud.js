@@ -20,7 +20,8 @@ const fullTime = timeLeft(fullLevels()).seconds;
 // distances shown with the target and on the markers: path distance from here along the fastest way that
 // keeps every rule (the plan's cost field), with its walking time; the sample card names a straight distance
 const DIST_TAG = MODEL_TAG('Straight-line distance measured on the 0.5 m walk grid.');
-const ROUTE_TAG = MODEL_TAG('Path distance from where you stand along the fastest way that keeps every rule, measured on the 0.5 m walk grid, and its walking time from the suit model, in demo time.');
+const ROUTE_TAG = MODEL_TAG('Path distance from where you stand along the route shown: the fastest way that keeps every rule, through the waypoints still ahead, planned again as you move, measured on the 0.5 m walk grid; its walking time from the suit model, in demo time.');
+const ROUTE_CUE_TAG = MODEL_TAG('The band on the ground: the planned route while you walk on it; off it, the fastest way that keeps every rule from where you stand to your current target, planned again as you move, with the planned route as a thin, faint line. Red: no way that keeps the rules from here, the shortest way back to allowed ground.');
 const TIME_TAG = { label: 'model', text: 'Suit time since you left the rover, counted from the rover itself like the plan: walking and work times from the suit model, shown at demo speed. The debrief shows the same clock.', source: { title: 'Our suit model', url: '', where: '' } };
 const SLOPE_TAG = MODEL_TAG('Slope of the ground here, from the 0.5 m walk grid built from the Access Mars terrain.');
 const AHEAD_TAG = MODEL_TAG('Distance ahead in your walking direction, measured on the 0.5 m walk grid.');
@@ -44,6 +45,7 @@ export function createHud(el) {
   const groundMark = h('div.walk-groundmark.mono',
     h('div', h('span.walk-cue.walk-cue--steep'), `Over ${RULES.slopeMaxDeg.value}° `, tag(STEEP_CUE_TAG)),
     h('div', h('span.walk-cue.walk-cue--radio'), 'Radio shadow edge ', tag(RADIO_CUE_TAG)),
+    h('div', h('span.walk-cue.walk-cue--route'), 'Route from here ', tag(ROUTE_CUE_TAG)),
     h('div', h('span.walk-cue.walk-cue--beacon'), 'Target beacon ', tag(BEACON_CUE_TAG)),
     h('div', 'Ground without a clear camera image: filled ', tag(GROUND_FILL_TAG)),
     h('div', 'Sky ', tag(SKY_TAG)));
@@ -212,7 +214,14 @@ export function createHud(el) {
     const lg = sim.leg();
     const planned = sim.route.legs || [sim.route.out, sim.route.back];
     const dots = (L, r) => { for (let i = 0; i < L.length; i += 2) { const [px, py] = toPx(L[i].x, L[i].z); g.beginPath(); g.arc(px, py, r, 0, Math.PI * 2); g.fill(); } };
-    if (planned.length > 2) {
+    if (!lg.planned) {
+      // off the planned leg (specs/x-liveroute.md): the planned round faint, the live route from here bright
+      // (in the warning colour when there is no rule-keeping way from here: the way back to allowed ground)
+      g.fillStyle = 'rgba(79,203,255,0.35)';
+      for (const L of planned) dots(L.points, 0.9 * dpr);
+      g.fillStyle = lg.warn ? '#ff4d4f' : '#4fcbff';
+      dots(lg.points, 1.3 * dpr);
+    } else if (planned.length > 2) {
       g.fillStyle = 'rgba(79,203,255,0.35)';
       for (const L of planned) if (L.points !== lg.points) dots(L.points, 0.9 * dpr);
       g.fillStyle = '#4fcbff';
@@ -221,7 +230,6 @@ export function createHud(el) {
       // one stop: both legs, as before (and a way home from here after a turn back)
       g.fillStyle = '#4fcbff';
       for (const L of planned) dots(L.points, 1.3 * dpr);
-      if (!lg.planned) dots(lg.points, 1.3 * dpr);
     }
     // walked track
     const tr = sim.log.track;
@@ -308,7 +316,9 @@ export function createHud(el) {
     // reserve chip
     const r = s.reserve;
     resVal.textContent = fmtDuration(r.seconds);
-    resSub.textContent = `limited by ${r.name.toLowerCase()}`;
+    // a round too long for the suit (specs/x-liveroute.md): the reserve counts the stops that fit; name those left out
+    const outN = s.fit && s.fit.out.length ? s.fit.out : null;
+    resSub.textContent = `limited by ${r.name.toLowerCase()}` + (outN ? ` · without ${outN.length === 1 ? 'stop' : 'stops'} ${outN.join(', ')}` : '');
     resLeft.textContent = `${fmtDuration(s.timeLeft.seconds)} left`;
     reserve.classList.toggle('is-warning', r.seconds <= 0);
     resBar.firstChild.style.width = `${Math.max(0, Math.min(100, (100 * r.seconds) / fullTime)).toFixed(1)}%`;
@@ -403,11 +413,18 @@ export function createHud(el) {
       return i.viaSpot
         ? ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, ' if you go on to the spot and back. Head for the rover.']
         : ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, '. Head for the rover.'];
+      case 'tooLong': {
+        const list = (n) => (n.length === 1 ? `stop ${n[0]}` : `stops ${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`);
+        const fit = i.fit.length ? `Reserve on return ${fmtDuration(s.reserve.seconds)} ` : 'No stop fits. Reserve on return ';
+        return i.fit.length
+          ? [fit, { tag: RESERVE_TAG }, ` with ${list(i.fit)}; ${list(i.out)} left out.`]
+          : [fit, `${fmtDuration(s.reserve.seconds)} `, { tag: RESERVE_TAG }, ' on the way home.'];
+      }
       case 'steepUnder': return [`${Math.round(i.slopeDeg)}° here `, { tag: SLOPE_TAG },
         i.offRoute ? ', off the checked route.' : ', on the planned route.', ` Rule broken: slope on foot, at most ${lim} `, { tag: RULES.slopeMaxDeg }, '.'];
       case 'edge': return ['The mapped terrain ends here.'];
       case 'steepAhead': return [`Ground over ${lim} `, { tag: RULES.slopeMaxDeg }, ` in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '. Closed to the route.'];
-      case 'offPath': return [`${Math.round(i.m)} m `, { tag: OFF_TAG }, ' from the planned route.'];
+      case 'offPath': return [`${Math.round(i.m)} m `, { tag: OFF_TAG }, ' from the planned route. The route shown leads on from here.'];
       case 'radioAhead': return [`No line of sight to the rover in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '.'];
       default: return [];
     }

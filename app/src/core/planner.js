@@ -48,7 +48,8 @@ export function stepCost(terrain, a, b) {
   return { m, slopeDeg, seconds, energyJ: workRate(slopeDeg) * seconds, closed: isClosed(terrain, a) || isClosed(terrain, b) };
 }
 
-class Heap {
+/** Binary min-heap of (key, cell) pairs (also used by the Walk for its local way back to allowed ground). */
+export class Heap {
   constructor(cap) { this.k = new Float64Array(cap); this.v = new Int32Array(cap); this.n = 0; }
   push(key, val) {
     if (this.n >= this.k.length) {

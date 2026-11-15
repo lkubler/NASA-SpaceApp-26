@@ -59,13 +59,22 @@ export default {
     disposers.push(() => v3.dispose());
     // the route band: the leg to the current target only (the next stop, then the rover); it switches
     // after each sample and when "Turn back now" skips the remaining stops
-    let bandKey = null;
+    // (specs/x-liveroute.md) off the planned leg the band is the live route from here, planned again as the
+    // crew moves: the new band is built and the one before dropped in the same frame (no gap, no flicker);
+    // the planned leg stays as a thin, faint line beside it
+    let bandKey = null, faintKey = null;
     const showBand = () => {
       const lg = sim.leg();
       if (lg.key === bandKey) return;
-      if (bandKey) v3.setBand(bandKey, null, false);
-      v3.setBand(lg.key, lg.points, true);
+      v3.setBand(lg.key, lg.points, true, lg.warn ? 'warn' : '');
+      if (bandKey) { if (bandKey.startsWith('live:')) v3.dropBand(bandKey); else v3.setBand(bandKey, null, false); }
       bandKey = lg.key;
+      const fk = lg.planned ? null : 'plan' + lg.li;
+      if (fk !== faintKey) {
+        if (faintKey) v3.setBand(faintKey, null, false);
+        if (fk) v3.setBand(fk, route.legs ? route.legs[lg.li].points : [route.out, route.back][lg.li].points, true, 'faint');
+        faintKey = fk;
+      }
     };
     showBand();
     v3.placeRover((D.roverHeadingDeg * Math.PI) / 180, D.roverShiftM);
