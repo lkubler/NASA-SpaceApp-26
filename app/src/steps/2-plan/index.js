@@ -548,13 +548,14 @@ export default {
       legs.classList.add('is-sorting');
       const move = (ev) => {
         rowEl.style.transform = `translateY(${ev.clientY - y0}px)`;
-        // the slot whose middle the pointer passed: before the first stop row whose middle lies below it
-        const mids = rows.map((r) => { const b = r.getBoundingClientRect(); return b.top + b.height / 2; });
-        let slot = mids.findIndex((m) => ev.clientY < m);
-        if (slot < 0) slot = rows.length;
-        to = slot > from ? slot - 1 : slot;
-        const ref = slot < rows.length ? rows[slot].getBoundingClientRect().top : rows[rows.length - 1].getBoundingClientRect().bottom;
-        line.style.top = `${ref - box().top + legs.scrollTop - 1}px`;
+        // large drop zones: each stop owns the list from halfway to the stop above to halfway to the stop below
+        // (the legs on foot between them included); the dragged stop takes the place of the stop under the pointer
+        const cs = rows.map((r) => { const q = r.getBoundingClientRect(); return q.top + q.height / 2; });
+        to = 0;
+        for (let i = 0; i < cs.length - 1; i++) if (ev.clientY > (cs[i] + cs[i + 1]) / 2) to = i + 1;
+        rows.forEach((r, i) => r.classList.toggle('is-target', i === to && to !== from));
+        const tb = rows[to].getBoundingClientRect();
+        line.style.top = `${(to > from ? tb.bottom + 1 : tb.top - 3) - box().top + legs.scrollTop}px`;
         line.classList.toggle('is-on', to !== from);
       };
       const end = () => {
@@ -562,6 +563,7 @@ export default {
         grip.removeEventListener('pointerup', end);
         grip.removeEventListener('pointercancel', end);
         rowEl.classList.remove('is-dragging');
+        rows.forEach((r) => r.classList.remove('is-target'));
         legs.classList.remove('is-sorting');
         rowEl.style.transform = '';
         line.remove();
