@@ -2,6 +2,8 @@
 
 For the submission's "Use of Super Intelligence" field and for labeling. One line per use: what, tool, which files.
 
+Note: this log names working files (the team's notes, the specs, review reports, agent rules and some planning files in `research/`). They were removed from the repository before submission to keep it to the product, its data and its sources; the lines are kept as they were written.
+
 - Agent system (Claude Code) used to coordinate research, coding, design, and testing. The idea itself comes from the team (`notes.md`).
 - Research (Claude Code agents triage/scout/data-scout): evaluated the team's ideas, mapped prior art, tested Mars data endpoints. Files: `research/triage.md`, `research/prior-art.md`, `research/data.md`.
 - Jury simulation (Claude Code agent jury): scored the team's idea candidates. File: `research/jury-idea.md`.
@@ -77,3 +79,4 @@ For the submission's "Use of Super Intelligence" field and for labeling. One lin
 - Demo video (Claude Code main session, on a team member's request): app clips recorded with `app/scripts/record.mjs` (new relay clip, calmer turnback clip), cut to 30 s with FFmpeg, captions and end card rendered from HTML; the storyboard is the team's (`pitch.md` section 2). The video file is not committed.
 - Demo video soundtrack (Claude Code main session): music and sound effects synthesized from scratch with an AI-written Python script (numpy, no samples, no third-party audio). Disclosed in the video file's metadata (comment tag) and in the submission text.
 - Sun 15.11., subagent of the main session (Claude Code), on the team's report that the view could not be turned further to the right in the walk: without mouse capture, the view now keeps turning when the cursor leaves the window over its left or right side, until the cursor comes back or the window loses focus; and after the capture check has released the mouse, the next click on the view tries the capture again. Checked with a headless Chromium script; the case with a second monitor was only simulated. Code by the AI agent.
+- Sun 15.11., main session (Claude Code), at the team's request: the pitch draft and an empty placeholder file removed from the repository, and the note at the top of this log added. No change to the app.
