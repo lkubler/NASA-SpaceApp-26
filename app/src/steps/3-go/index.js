@@ -48,6 +48,11 @@ function describe(c, plan) {
       limit: [val(`plan ${RULES.evaPlannedH.value} ${RULES.evaPlannedH.unit}`, RULES.evaPlannedH), val(`limit ${RULES.evaLimitH.value} ${RULES.evaLimitH.unit}`, RULES.evaLimitH)],
       at: `Back at the rover after ${fmtDuration(c.planned)}`,
     };
+    case 'shelter': return {
+      planned: val(`longest ${fmtDuration(c.planned)}`, L.shelter),
+      limit: val(`limit ${fmtDuration(c.limit)}`, RULES.shelterReturnH),
+      at: `Farthest in time from the rover: ${fmtDuration(c.planned)} to get back`,
+    };
     case 'radio': return {
       planned: c.planned > 0 ? val(`longest ${fmtDuration(c.planned)}`, L.shadow) : val('none on the route', L.shadow),
       limit: h('span.gocheck__v.muted', 'a caution, not a rule'),

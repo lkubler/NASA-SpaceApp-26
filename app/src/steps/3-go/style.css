@@ -84,7 +84,7 @@
 .step--go .go__checkshead { display: flex; align-items: baseline; gap: 1em; flex-wrap: wrap; font-size: var(--fs-small); }
 .step--go .go__checkstitle { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-title); color: var(--text); }
 .step--go .go.is-broken .go__checkstitle { color: var(--warning); }
-.step--go .go__rulechecks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.4em; align-items: start; }
+.step--go .go__rulechecks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.4em; align-items: start; }
 .step--go .gocheck {
   display: flex; flex-direction: column; align-items: flex-start; gap: 0.25em; text-align: left; min-width: 0;
   padding: 0.45em 0.6em; border: 1px solid transparent; border-radius: 10px; transition: border-color var(--fade), background var(--fade);

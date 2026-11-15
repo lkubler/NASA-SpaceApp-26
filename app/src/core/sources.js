@@ -43,6 +43,14 @@ export const DOCS = {
     title: 'NASA NSSDCA, Mars Fact Sheet (surface gravity 3.71 m/s²)',
     url: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html',
   },
+  OCHMO: {
+    title: 'NASA OCHMO-TB-020 Rev E, Radiation Protection and Mitigation Technical Brief (NASA-STD-3001 Vol. 1)',
+    url: 'https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf',
+  },
+  HIRISE: {
+    title: 'HiRISE elevation model DTEEC_040770_1755_039280_1755_U01 (NASA/JPL/University of Arizona/USGS)',
+    url: 'https://www.uahirise.org/dtm/',
+  },
   RAD: {
     title: 'Hassler et al. 2014, Curiosity RAD surface radiation (SwRI release: 0.67 mSv per day at Gale)',
     url: 'https://www.swri.org/press-release/swri-scientists-publish-first-radiation-measurements-surface-mars',

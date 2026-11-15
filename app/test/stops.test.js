@@ -21,7 +21,10 @@ describe('several stops', () => {
       expect(Array.from(planRound(t, [c]).back.cells), c.id).toEqual(Array.from(newRoute.back.cells));
       // every field of the old plan numbers, bit for bit (the new ones only add stops, legPlans, stopsS)
       const oldPlan = legacy.planNumbers(t, oldRoute), newPlan = planNumbers(t, newRoute);
-      expect(newPlan, c.id).toMatchObject(oldPlan);
+      // (x-datalines adds the 'shelter' check, so the checks are compared one by one)
+      const { checks: oldChecks, brokenRules: _b, keepsRules: _k, ...oldRest } = oldPlan;
+      expect(newPlan, c.id).toMatchObject(oldRest);
+      for (const oc of oldChecks) expect(newPlan.checks.find((q) => q.id === oc.id), c.id).toMatchObject(oc);
       expect(newPlan.legs, c.id).toEqual(oldPlan.legs);
       // the Walk's reserve from anywhere: spot alone and stops: [spot] give the old value
       for (const p of [ROVER, newRoute.out.points[Math.floor(newRoute.out.points.length / 2)]]) {

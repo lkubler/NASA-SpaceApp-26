@@ -37,6 +37,8 @@ export const RULES = {
     'An excursion is planned for 6 hours.', { moon: true }),
   evaLimitH: v(8, 'h', 'real', 'CON', '§4.1.4, p.29',
     'An excursion lasts at most 8 hours (6 ± 2 h).', { moon: true }),
+  shelterReturnH: v(2, 'h', 'real', 'OCHMO', 'Radiation Protection, EVA paragraph',
+    'Protection from a solar storm during an excursion: it ends within 2 hours with access to shielding. The check counts the time back to the rover; that the rover is the shelter is an assumption.'),
 };
 
 export const ASTRONAUT = {
@@ -115,6 +117,10 @@ export const ENVIRONMENT = {
   airTempK: v([[0, 213.6], [3, 205.9], [5, 206.7], [6, 212.0], [8, 228.8], [10, 246.8], [12, 256.2],
     [14, 272.6], [15, 271.5], [16, 257.6], [18, 238.3], [20, 227.4], [22, 220.7]], 'K', 'real', 'REMS', 'sol 1440, hourly means',
     'Air temperature measured by Curiosity’s weather station at Murray Buttes on sol 1440 (August 2016).'),
+  hiriseCellM: v(1, 'm', 'real', 'HIRISE', 'DTEEC_040770_1755_039280_1755_U01, post spacing',
+    'Spacing of the HiRISE elevation model: one height every 1 to 2 m (this crop: 1.01 m).'),
+  hiriseAlignM: v(2, 'm', 'model', 'HIRISE', 'fit of the walk terrain to the elevation model',
+    'The Access Mars terrain was matched to the HiRISE elevation model by height correlation (0.93). Position error about 2 m (1 sigma), checked against the image edge.'),
   solSeconds: v(88775, 's', 'real', 'MARSFACT', 'length of day 24.6597 h',
     'One Mars solar day, used to advance the local time of day.'),
   evaStartLmstH: v(9, 'h', 'assumption', 'NONE', '',
@@ -174,7 +180,7 @@ const NAMES = {
   RULES: {
     slopeMaxDeg: 'Steepest slope on foot', distancePlanM: 'Planning distance from the rover', distanceLimitM: 'Distance limit on foot',
     walkBackRateFactor: 'Work rate on the way home', secondaryO2H: 'Secondary oxygen', evaPlannedH: 'Planned excursion length',
-    evaLimitH: 'Longest excursion',
+    evaLimitH: 'Longest excursion', shelterReturnH: 'Time back to shelter in a solar storm',
   },
   ASTRONAUT: {
     bodyMassKg: 'Body mass', loadKg: 'Carried load', suitMassKg: 'Suit mass', marsG: 'Mars gravity', earthG: 'Earth gravity',
@@ -188,7 +194,7 @@ const NAMES = {
   RADIO: { eyeHeightM: 'Eye height', roverAntennaM: 'Rover antenna height' },
   ENVIRONMENT: {
     doseMSvPerDay: 'Radiation dose rate at Gale crater', airTempK: 'Air temperature at Murray Buttes', solSeconds: 'Length of a Mars day',
-    evaStartLmstH: 'Excursion start, local Mars time', signalDelayMinMin: 'Shortest signal delay Earth to Mars',
+    evaStartLmstH: 'Excursion start, local Mars time', hiriseCellM: 'HiRISE elevation model spacing', hiriseAlignM: 'Alignment of the walk terrain to HiRISE', signalDelayMinMin: 'Shortest signal delay Earth to Mars',
     signalDelayMaxMin: 'Longest signal delay Earth to Mars', signalDelayNowMin: 'Signal delay on mission day',
   },
   DEMO: { timeFactor: 'Demo time factor', spotWorkMin: 'Work time at the spot', craterHeightFactor: 'Crater height factor (step 1 view)',
