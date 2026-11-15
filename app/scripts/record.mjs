@@ -259,7 +259,7 @@ const CLIPS = {
   },
   // Storyboard 0-4 s: helmet view, the HUD warning lights up
   turnback: {
-    about: 'Helmet view at stop 2 of 3: the crew lingers, TURN BACK NOW appears, they turn and head home',
+    about: 'Helmet view at stop 2 of 3, looking on toward stop 3: the reserve runs down, TURN BACK NOW appears, they turn and head home',
     async run(page, rec) {
       // pass 1 finds how long the crew can wait at stop 2; pass 2 stops a few seconds before that
       const toStop2 = async () => {
@@ -281,14 +281,22 @@ const CLIPS = {
       }
       if (waitS >= 3000) throw new Error('no turn back while waiting at stop 2');
       await toStop2();
-      await page.evaluate((s) => window.__walk.advance(s, true), Math.max(0, waitS - 4));
+      await page.evaluate((s) => window.__walk.advance(s, true), Math.max(0, waitS - 5));
+      // unrecorded, clock held: face along the way to stop 3 (no spinning on camera)
+      const ahead = (await S(page)).route.legs[2].points;
+      for (let g = 0; g < 200; g++) {
+        const e = steerErr(ahead, 0, await info(page));
+        if (Math.abs(e.deg) < 2) break;
+        const key = e.deg > 0 ? 'ArrowRight' : 'ArrowLeft';
+        await page.keyboard.down(key);
+        await page.evaluate((x) => window.__walk.advance(x), Math.min(0.3, Math.abs(e.deg) / 80));
+        await page.keyboard.up(key);
+      }
       await rec.start();
       await page.evaluate(() => window.__walk.hold(false));
-      // look around slowly until the warning comes
-      await page.keyboard.down('ArrowLeft');
+      // the crew stays at stop 2, looking on toward stop 3, while the reserve runs down to the warning
       const t0 = Date.now();
       while ((await info(page)).alert !== 'turnBack' && Date.now() - t0 < 12000) await wait(50);
-      await page.keyboard.up('ArrowLeft');
       await wait(2500);
       const home = await page.evaluate(() => window.__walk.sim.leg().points);
       await liveWalk(page, home, (_i, _f, t) => t > 4, 5);
