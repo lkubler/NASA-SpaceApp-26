@@ -7,3 +7,5 @@ __pycache__/
 .DS_Store
 node_modules/
 dist/
+# Demo clips are rendered locally (app/scripts/record.mjs), not committed
+demo/clips/
