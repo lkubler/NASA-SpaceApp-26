@@ -154,13 +154,14 @@ export function craterView(wrap, { meta, heights, color }) {
   ro.observe(wrap);
   resize();
 
-  /** Shift the scene left by px (to make room for the side panel), with a short slide. */
-  function setShift(px) {
+  /** Shift the scene left by px (to make room for the side panel), with a slide of dur ms. */
+  function setShift(px, dur = 240) {
     shiftTo = px;
     cancelAnimationFrame(anim);
-    const from = shift, t0 = performance.now(), dur = 240;
+    const from = shift, t0 = performance.now();
+    const slow = dur > 240; // a long slide eases in as well, so it starts as gently as it ends
     const step = (t) => {
-      const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      const k = Math.min(1, (t - t0) / dur), e = slow ? (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2) : 1 - Math.pow(1 - k, 3);
       shift = from + (shiftTo - from) * e;
       applyView(); render();
       if (k < 1) anim = requestAnimationFrame(step);

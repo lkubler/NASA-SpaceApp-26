@@ -10,6 +10,8 @@ import { planetView } from './planet.js';
 const PHOTO_BASE = 'data/murray/photos/';
 // opening -> crater transition: globe zoom (ms), crater fly-in (ms), Gale's share of the screen width at the handoff
 const ZOOM_MS = 2600, FLY_MS = 3400, HANDOFF_FILL = 0.11; // speeds meet at the handoff (planet.js, crater.js)
+const SETTLE_AT = 0.72;       // share of the flight after which the panel and markers start to come in
+const SETTLE_SHIFT_MS = 1500; // the scene's slide to the left after the flight, slow to match the camera
 const DELAY = ENVIRONMENT.signalDelayNowMin;
 
 let cleanup = null;
@@ -138,17 +140,30 @@ export default {
         if (!alive) return;
         el.classList.remove('m1--intro');
         el.classList.add('m1--handoff');
+        // the last part of the flight, while the camera slows down: the scene starts its slide to the left,
+        // and the markers, headline and missions fade in one after another, so nothing pops in at the end
+        let settled = false;
+        const settle = () => {
+          if (settled || !alive) return;
+          settled = true;
+          intro.style.pointerEvents = 'none';
+          el.classList.add('m1--settling');
+          el.classList.remove('m1--flying');
+          setTimeout(() => { el.classList.remove('m1--settling'); panel.classList.remove('is-gliding'); }, 3000);
+          openPanel(false, SETTLE_SHIFT_MS);
+        };
         await view.flyIn({
           dur: FLY_MS, fill: HANDOFF_FILL,
           onFrame: (kmPerPx, k) => {
             planet.follow(kmPerPx);
             const f = Math.min(1, Math.max(0, (k - 0.4) / 0.3));
             intro.style.opacity = String(1 - f * f * (3 - 2 * f));
+            if (k >= SETTLE_AT) settle();
           },
         });
         dropPlanet(); intro.remove();
         el.classList.remove('m1--handoff');
-        if (alive) { el.classList.remove('m1--flying'); openPanel(); }
+        settle();
       };
       setTimeout(() => begin.focus(), 50);
     }
@@ -312,13 +327,14 @@ export default {
     }
 
     /** The panel opens once the crater is in place; the scene slides left so the sites sit in the free half. */
-    function openPanel(instant = false) {
+    function openPanel(instant = false, shiftMs = 240) {
       if (panelOpen || !view) return;
       panelOpen = true;
       panel.setAttribute('aria-hidden', 'false');
       if (instant) panel.classList.add('is-fading'); // returning to step 1 with a request: fades in with the crater
+      else panel.classList.toggle('is-gliding', shiftMs > 240); // after the flight: the parts come in one by one
       requestAnimationFrame(() => panel.classList.add('is-open'));
-      view.setShift(panel.offsetWidth / 2);
+      view.setShift(panel.offsetWidth / 2, shiftMs);
     }
 
     // --- crater view
