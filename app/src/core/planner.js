@@ -7,6 +7,7 @@
 
 import { RULES, PLANNER } from './values.js';
 import { workRate, walkSeconds } from './suit.js';
+import { radioShadowMask } from './radio.js';
 
 const NB = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
@@ -84,10 +85,22 @@ export class Heap {
 function penaltyOf(closed) { return closed ? PLANNER.steepPenalty.value : 1; }
 
 /**
- * Fastest route between two scene points.
+ * The cost of a step for the search (specs/x-relay.md "Contact in the route"): real metres, times the
+ * closed-ground penalty (rules first), times the contact weight when the step ends in radio shadow.
+ * Only the search sees this; every number shown is the real distance and time of the chosen route.
+ * `shadow` is the radio shadow mask in force, or null for no weight.
+ */
+function searchCost(st, shadow, cell) {
+  const w = shadow && shadow[cell] ? 1 + PLANNER.contactWeight.value : 1;
+  return st.m * penaltyOf(st.closed) * w;
+}
+
+/**
+ * Fastest route between two scene points; with opts.weighted (default) ground in radio shadow costs a little more.
  * @returns {{ cells: Int32Array, points: {x,y,z}[], keepsRules: boolean, closedM: number }}
  */
-export function findRoute(terrain, from, to) {
+export function findRoute(terrain, from, to, { weighted = true } = {}) {
+  const shadow = weighted ? radioShadowMask(terrain) : null;
   const N = terrain.size, n = terrain.n;
   const s = terrain.indexOf(from.x, from.z), g = terrain.indexOf(to.x, to.z);
   const dist = new Float64Array(N).fill(Infinity);
@@ -107,7 +120,7 @@ export function findRoute(terrain, from, to) {
       const w = r * n + c;
       if (done[w]) continue;
       const st = stepCost(terrain, u, w);
-      const d = dist[u] + st.m * penaltyOf(st.closed);
+      const d = dist[u] + searchCost(st, shadow, w);
       if (d < dist[w]) { dist[w] = d; prev[w] = u; heap.push(d, w); }
     }
   }
@@ -129,7 +142,8 @@ export function findRoute(terrain, from, to) {
  * Arrays per cell: seconds (suit time), energyJ (at normal work rate; the walk-back factor is applied
  * by reserveOnReturn), metres, closedM (metres of closed ground on that way), next (next cell towards the target).
  */
-export function costField(terrain, target) {
+export function costField(terrain, target, { weighted = true } = {}) {
+  const shadow = weighted ? radioShadowMask(terrain) : null;
   const N = terrain.size, n = terrain.n;
   const g = terrain.indexOf(target.x, target.z);
   const key = new Float64Array(N).fill(Infinity);
@@ -149,7 +163,7 @@ export function costField(terrain, target) {
       const u = r * n + c;
       if (done[u]) continue;
       const st = stepCost(terrain, u, v); // walking from u towards the target through v
-      const k = key[v] + st.m * penaltyOf(st.closed);
+      const k = key[v] + searchCost(st, shadow, v);
       if (k < key[u]) {
         key[u] = k; next[u] = v;
         seconds[u] = seconds[v] + st.seconds;

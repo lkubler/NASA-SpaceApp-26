@@ -42,7 +42,7 @@ export function roverDriveOf(terrain, box, inset = 4) {
     const tz = dz > 0 ? (box.z1 - inset - ROVER.z) / dz : dz < 0 ? (box.z0 + inset - ROVER.z) / dz : Infinity;
     const from = { x: ROVER.x + dx * Math.min(tx, tz), z: ROVER.z + dz * Math.min(tx, tz) };
     if (isClosedAt(terrain, from.x, from.z)) continue;
-    const r = findRoute(terrain, from, ROVER);
+    const r = findRoute(terrain, from, ROVER, { weighted: false }); // a drive, not a walk: no contact weight
     if (r.keepsRules) return { from, points: r.points };
     if (!fallback || r.closedM < fallback.closedM) fallback = { from, points: r.points, closedM: r.closedM };
   }

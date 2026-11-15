@@ -5,7 +5,7 @@
 
 import { RULES, WORK, PLANNER } from './values.js';
 import { findRoute, costField, stepCost, isClosed } from './planner.js';
-import { radioShadowMask } from './radio.js';
+import { radioShadowMask, relayKey } from './radio.js';
 import { ROVER, CANDIDATES } from './places.js';
 import { fullLevels, consume, reserveOnReturn, timeLeft, spotSeconds, doseMSv, consumableName } from './suit.js';
 
@@ -18,6 +18,7 @@ export function spotField(terrain, spot) { return fieldTo(terrain, spot.id || sp
 function fieldTo(terrain, key, p) {
   let m = _fields.get(terrain);
   if (!m) { m = new Map(); _fields.set(terrain, m); }
+  key = relayKey() + '|' + key; // the cost fields follow the radio shadow, so they follow the relay
   if (!m.has(key)) m.set(key, costField(terrain, p));
   return m.get(key);
 }
@@ -29,12 +30,12 @@ export const MAX_STOPS = PLANNER.maxStops.value;
 // One leg between two places, cached per terrain when both have an id. findRoute is deterministic, so a
 // cached leg is the same leg: a round reuses the legs the candidates already planned.
 const _legs = new WeakMap();
-function legRoute(terrain, a, b) {
-  const key = a.id && b.id ? `${a.id}>${b.id}` : null;
-  if (!key) return findRoute(terrain, a, b);
+function legRoute(terrain, a, b, weighted = true) {
+  const key = a.id && b.id ? `${a.id}>${b.id}|${relayKey()}|${weighted ? 'w' : 'u'}` : null;
+  if (!key) return findRoute(terrain, a, b, { weighted });
   let m = _legs.get(terrain);
   if (!m) { m = new Map(); _legs.set(terrain, m); }
-  if (!m.has(key)) m.set(key, findRoute(terrain, a, b));
+  if (!m.has(key)) m.set(key, findRoute(terrain, a, b, { weighted }));
   return m.get(key);
 }
 
@@ -85,22 +86,22 @@ export function waypointsFor(ids, waypoints) {
 // moving one waypoint plans only the two parts beside it again.
 const _parts = new WeakMap();
 const PARTS_KEPT = 400; // cache size only (no physical value)
-function partRoute(terrain, a, b) {
+function partRoute(terrain, a, b, weighted = true) {
   let m = _parts.get(terrain);
   if (!m) { m = new Map(); _parts.set(terrain, m); }
-  const key = `${terrain.indexOf(a.x, a.z)}>${terrain.indexOf(b.x, b.z)}`;
+  const key = `${terrain.indexOf(a.x, a.z)}>${terrain.indexOf(b.x, b.z)}|${relayKey()}|${weighted ? 'w' : 'u'}`;
   if (!m.has(key)) {
     if (m.size >= PARTS_KEPT) m.delete(m.keys().next().value);
-    m.set(key, findRoute(terrain, a, b));
+    m.set(key, findRoute(terrain, a, b, { weighted }));
   }
   return m.get(key);
 }
 
 /** One leg from a to b through the waypoints wps: the parts joined; via = each waypoint with its cell index on the leg. */
-function shapedLeg(terrain, a, b, wps) {
+function shapedLeg(terrain, a, b, wps, weighted = true) {
   const ends = [a, ...wps, b];
   const parts = [];
-  for (let k = 0; k + 1 < ends.length; k++) parts.push(partRoute(terrain, ends[k], ends[k + 1]));
+  for (let k = 0; k + 1 < ends.length; k++) parts.push(partRoute(terrain, ends[k], ends[k + 1], weighted));
   const leg = joinPaths(parts);
   let n = 0;
   leg.via = wps.map((w, j) => { n += parts[j].cells.length - (j ? 1 : 0); return { x: w.x, z: w.z, index: n - 1 }; });
@@ -116,12 +117,24 @@ function shapedLeg(terrain, a, b, wps) {
  * @returns {Route} see app/README.md
  */
 export function planRound(terrain, stops, waypoints = null) {
+  const w = buildRound(terrain, stops, waypoints, true);
+  // the contact weight never makes a round break a rule that the round without the weight keeps
+  // (specs/x-relay.md): if the weighted legs differ, the round without the weight is the safe fall-back
+  const sameCells = (a, b) => a.cells.length === b.cells.length && a.cells.every((c, i) => c === b.cells[i]);
+  const u = buildRound(terrain, stops, waypoints, false);
+  if (w.legs.every((l, i) => sameCells(l, u.legs[i]))) return w;
+  const brokenW = planNumbers(terrain, w).brokenRules.map((b) => b.id);
+  const brokenU = new Set(planNumbers(terrain, u).brokenRules.map((b) => b.id));
+  return brokenW.some((id) => !brokenU.has(id)) ? u : w;
+}
+
+function buildRound(terrain, stops, waypoints, weighted) {
   if (!stops.length || stops.length > MAX_STOPS) throw new Error(`a round has 1 to ${MAX_STOPS} stops`);
   const places = [ROVER, ...stops, ROVER];
   const legs = [], wpLegs = [];
   for (let k = 0; k + 1 < places.length; k++) {
     const wps = (waypoints && waypoints[legKey(places[k], places[k + 1])]) || [];
-    legs.push(wps.length ? shapedLeg(terrain, places[k], places[k + 1], wps) : legRoute(terrain, places[k], places[k + 1]));
+    legs.push(wps.length ? shapedLeg(terrain, places[k], places[k + 1], wps, weighted) : legRoute(terrain, places[k], places[k + 1], weighted));
     wpLegs.push(wps.map((w) => ({ x: w.x, z: w.z })));
   }
   const first = stops[0];
