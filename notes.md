@@ -309,6 +309,19 @@ potentielle usecases:
 - RAG in irgendeinem context: im hud kann man etwas angucken, und das rag fragen, welches basierend auf vorher extrahierten informationen antwortet. Beispiel: man guckt einen Fels an, gibt fragt sein hud, ob man mit seinen Anzug diesen schritt schafft. das hud misst nach, und benutzt ein rag, um Anzug Spezifizierungen zu lesen, und antwortet basierend auf den informationen aus beidem. 
 
 
+usage review:
+
+pfeile Icons im Routen Planer / bzw. die option die Reihenfolge einzelner Stops zu ändern fällt fast nicht auf / übersieht man sehr leicht.
+
+Way back to route wird noch nicht calculated oder angezeigt 
+
+Im Mission Planer: wenn man in die Karte reinzoomt (via +/-) wird ein fester punkt fixiert und man kann die Karte nicht bewegen
+
+Candidate Spot im Mission planer ist komplett flasches framing. Es ist eher eine möglichkeit, die Route selbst manuel zu bearbeiten. Keine Forschungsziele, wie es sich gerade ließt
+
+Turn back now message im HUD wird zum falschen Zeitpunkt angezeigt: Test case: Zu lange Strecke geplant. Ich konnte mich nur 2 Schritte vom Rover entfernen, dann wurde mir angezeigt dass ich umkehren soll. Obwohl ich noch über 7H Sauerstoff zur verfügung habe. und es sagt mir "Reserve on Return -7h". Der Point of Return muss wirklich erst dort enforced werden, an dem es knapp für den Astronauten wird / bzw. an dem er wirklich umdrehen muss um noch sicher zum Rover zu kommen. 
+
+Movement Speed ist noch minimal zu langsam und wenn man Sprinted ist noch etwas zu unauffällig / geht unter
 
 # Kek
 git fetch && git checkout spike-3d && cd spike-3d && npm i && npm run dev
