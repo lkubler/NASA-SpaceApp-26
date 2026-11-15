@@ -2,7 +2,7 @@
 
 A map for one excursion on foot on Mars that answers one question at every step: **from where I stand, can I still get home?**
 
-**Live demo: https://lkubler.github.io/NASA-SpaceApp-26/**
+**Live demo: https://lkubler.github.io/NASA-SpaceApp-26/** · [Pitch deck (7 slides, PDF)](demo/presentation/MHUD-pitch.pdf)
 
 Built at the NASA Space Apps Challenge 2026, local event Heilbronn, for the challenge
 [Interplanetary Survival Guide: Martian Map](https://www.spaceappschallenge.org/2026/challenges/interplanetary-survival-guide-martian-map/).
@@ -26,6 +26,10 @@ The four pictures from Plan to Debrief show the same excursion: the farthest sam
 ## How it works
 
 Everything runs in the browser; no route is precomputed.
+
+<a href="docs/images/how.jpg"><img src="docs/images/how.jpg" width="100%" alt="Diagram: Mars terrain, radio contact and astronaut and suit go in; route, effort, consumables and reserve are calculated live; Plan, Go / no-go, Walk and Debrief come out"></a>
+
+<sub>Slide 4 of the pitch deck.</sub>
 
 **Terrain.** The site is a 128 × 128 m square. Its 3D mesh comes from [Access Mars](https://github.com/googlecreativelab/access-mars) (Google Creative Lab with NASA/JPL-Caltech, built from Curiosity camera images). Offline, we turn the mesh into a grid of 256 × 256 cells of 0.5 m, each with a height and a slope.
 
