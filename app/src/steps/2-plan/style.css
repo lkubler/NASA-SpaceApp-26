@@ -269,3 +269,6 @@
 /* many stops and waypoints: the leg list scrolls in its own area, so the totals and "Confirm route" stay in view */
 .step--plan .plan-legs { flex: 0 1 auto; min-height: 4em; overflow-y: auto; overscroll-behavior: contain; }
 .step--plan .plan-cards, .step--plan .plan-totals { flex-shrink: 0; }
+
+/* totals header: the last word keeps its info marker on the same line */
+.step--plan .plan-nowrap { white-space: nowrap; }

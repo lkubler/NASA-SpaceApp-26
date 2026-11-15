@@ -598,7 +598,11 @@ export default {
       // four totals in a 2 x 2 grid, each with the limit it is held against
       const slopeBroken = P && P.steepestDeg > RULES.slopeMaxDeg.value;
       const total = (label, value, sub, tag, tone = null) => {
-        const b = bigNumber({ label, value, tag, tone });
+        const b = bigNumber({ label, value, tone });
+        // the last word and the info marker stay together when the header wraps
+        const cut = label.lastIndexOf(' ');
+        b.querySelector('.bignum__label').replaceChildren(label.slice(0, cut + 1),
+          h('span.plan-nowrap', label.slice(cut + 1), ' ', labelTag(tag)));
         b.append(h('div.plan-limiting', sub));
         return b;
       };
