@@ -31,6 +31,7 @@ const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the su
 const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Suit model (src/core/suit.js), planner (src/core/planner.js)', url: '', where: '' } };
 const STEEP_CUE_TAG = MODEL_TAG(`A low border along the edge of ground steeper than ${RULES.slopeMaxDeg.value}° (closed to the route), shown within about ${D.cueFadeMaxM} m of you. Outline smoothed for display; the warnings use the planner's exact slope test on the 0.5 m walk grid.`);
 const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your eye to the rover antenna), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);
+const SKY_TAG = MODEL_TAG('The day sky: a butterscotch gradient (dusty at the horizon, darker overhead) with one small sun, drawn after the colours of Curiosity\'s daytime sky photos at Gale crater (Sources page). The sun stands at a fixed place, the same direction that lights the rover. Display choice, not a measured sky.');
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
 export function createHud(el) {
@@ -41,7 +42,8 @@ export function createHud(el) {
   const groundMark = h('div.walk-groundmark.mono',
     h('div', h('span.walk-cue.walk-cue--steep'), `Over ${RULES.slopeMaxDeg.value}° `, tag(STEEP_CUE_TAG)),
     h('div', h('span.walk-cue.walk-cue--radio'), 'Radio shadow edge ', tag(RADIO_CUE_TAG)),
-    h('div', 'Ground colour ', tag(GROUND_TAG)));
+    h('div', 'Ground colour ', tag(GROUND_TAG)),
+    h('div', 'Sky ', tag(SKY_TAG)));
 
   // compass
   const compassCv = h('canvas.walk-compass__cv');

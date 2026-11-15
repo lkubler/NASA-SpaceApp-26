@@ -4,10 +4,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { getTerrainScene, sceneToThree, ACCESS_MARS_FOG } from '../../core/terrainScene.js';
+import { getTerrainScene, sceneToThree } from '../../core/terrainScene.js';
 import { RADIO, ROVER, CANDIDATES, radioShadowMask, roverField } from '../../core/index.js';
 import { steepWallLines } from './steepBorder.js';
 import { DISPLAY as D } from './display.js';
+import { createSky, skyFog, sunDirection } from './sky.js';
 
 const ACCENT = 0x4fcbff; // --accent in styles/tokens.css
 
@@ -18,10 +19,13 @@ export function createScene3d(host, t, opts = {}) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   host.append(renderer.domElement);
   const scene = new THREE.Scene();
-  // Sky and horizon: the Access Mars skyline mesh (background.jpg, from Curiosity's images) seen through
-  // the scene's own haze; the haze colour is the sky, as in the original Access Mars scene.
-  scene.background = new THREE.Color(ACCESS_MARS_FOG.color);
-  scene.fog = new THREE.FogExp2(ACCESS_MARS_FOG.color, ACCESS_MARS_FOG.density);
+  // Sky and horizon: the day sky dome (sky.js) behind the Access Mars skyline mesh (background.jpg, from
+  // Curiosity's images); the skyline and the ground fade into the haze, which is the sky's horizon colour
+  const haze = skyFog();
+  scene.background = haze.color;
+  scene.fog = new THREE.FogExp2(haze.color, haze.density);
+  const sky = createSky();
+  scene.add(sky.mesh);
   const cam = new THREE.PerspectiveCamera(D.fovDeg, 1, 0.08, 6000);
   cam.rotation.order = 'YXZ';
   const eye = RADIO.eyeHeightM.value;
@@ -102,6 +106,7 @@ export function createScene3d(host, t, opts = {}) {
     sceneToThree(x, t.heightAt(x, z) + eye, z, cam.position);
     cam.rotation.set(pitch, -yaw, 0);
     cam.updateMatrixWorld();
+    sky.follow(cam);
   }
 
   const _v = new THREE.Vector3();
@@ -141,6 +146,7 @@ export function createScene3d(host, t, opts = {}) {
     disposeTree(box);
     if (sev) disposeTree(sev);
     shadow.geometry.dispose(); shadow.material.dispose();
+    sky.dispose();
     renderer.dispose();
     renderer.domElement.remove();
   }
@@ -191,7 +197,11 @@ function maskEdge(t, inMask, spacing) {
 // shared fade: full up to fadeFull metres from the eye (horizontal), gone at fadeMax
 const FADE_GLSL = `
   uniform float fadeFull, fadeMax;
-  float cueFade(vec3 w) { return 1.0 - smoothstep(fadeFull, fadeMax, distance(w.xz, cameraPosition.xz)); }`;
+  float cueFade(vec3 w) { return 1.0 - smoothstep(fadeFull, fadeMax, distance(w.xz, cameraPosition.xz)); }
+  // the same haze as the terrain (sky.js skyFog): the colour fades into the sky's horizon colour with distance
+  uniform vec3 fogColor; uniform float fogDensity;
+  vec3 hazed(vec3 c, vec3 w) { float d = distance(w, cameraPosition); return mix(c, fogColor, 1.0 - exp(-fogDensity * fogDensity * d * d)); }`;
+const hazeUniforms = () => { const f = skyFog(); return { fogColor: { value: f.color }, fogDensity: { value: f.density } }; };
 
 /**
  * Steep ground: one low translucent wall along the smoothed outline of the closed ground (steepBorder.js):
@@ -228,7 +238,7 @@ function steepWall(t, roundLegs = []) {
     uniforms: {
       color: { value: token('--steep', '#c2643a') }, fadeFull: { value: D.cueFadeFullM }, fadeMax: { value: D.cueFadeMaxM },
       height: { value: H }, lineM: { value: D.steepLineM }, linePx: { value: D.steepLinePx }, fill: { value: D.steepFillAlpha },
-      stripeM: { value: D.steepStripeM }, stripeMS: { value: D.steepStripeMS }, time: { value: 0 },
+      stripeM: { value: D.steepStripeM }, stripeMS: { value: D.steepStripeMS }, time: { value: 0 }, ...hazeUniforms(),
     },
     vertexShader: `
       attribute vec2 wall; varying vec2 vWall; varying vec3 vW;
@@ -262,7 +272,7 @@ function steepWall(t, roundLegs = []) {
         body *= 0.55 + 0.45 * stripe;
         float a = f * max(line, min(1.0, body + glow));
         if (a < 0.005) discard;
-        gl_FragColor = vec4(mix(color, vec3(1.0, 0.82, 0.66), 0.4 * line), a);
+        gl_FragColor = vec4(hazed(mix(color, vec3(1.0, 0.82, 0.66), 0.4 * line), vW), a);
         #include <colorspace_fragment>
       }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
@@ -295,7 +305,7 @@ function radioDots(t) {
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   g.setIndex(new THREE.BufferAttribute(idx, 1));
   const m = new THREE.ShaderMaterial({
-    uniforms: { color: { value: token('--advisory', '#5b8cff') }, fadeFull: { value: D.cueFadeFullM }, fadeMax: { value: D.cueFadeMaxM } },
+    uniforms: { color: { value: token('--advisory', '#5b8cff') }, fadeFull: { value: D.cueFadeFullM }, fadeMax: { value: D.cueFadeMaxM }, ...hazeUniforms() },
     vertexShader: `
       varying vec2 vUv; varying vec3 vW;
       void main() {
@@ -310,7 +320,7 @@ function radioDots(t) {
         float d = length(vUv);
         float a = cueFade(vW) * (1.0 - smoothstep(0.75, 1.0, d));
         if (a < 0.01) discard;
-        gl_FragColor = vec4(color, a);
+        gl_FragColor = vec4(hazed(color, vW), a);
         #include <colorspace_fragment>
       }`,
     transparent: true, depthWrite: false, side: THREE.DoubleSide,
@@ -363,7 +373,7 @@ function band(t, points) {
     uniforms: {
       color: { value: new THREE.Color(ACCENT) }, opacity: { value: 0.62 },
       near: { value: D.bandFadeNearM }, full: { value: D.bandFadeFullM },
-      fogColor: { value: new THREE.Color(ACCESS_MARS_FOG.color) }, fogDensity: { value: ACCESS_MARS_FOG.density },
+      fogColor: { value: skyFog().color }, fogDensity: { value: skyFog().density },
     },
     vertexShader: `
       varying vec2 vUv; varying float vDepth;
@@ -456,9 +466,8 @@ function roverBox() {
  * D.sunAzimuthDeg / D.sunElevationDeg and a warm sky / ground fill (assumption: display choices).
  */
 function roverLights() {
-  const az = (D.sunAzimuthDeg * Math.PI) / 180, el = (D.sunElevationDeg * Math.PI) / 180;
   const sun = new THREE.DirectionalLight(0xfff1e0, D.sunIntensity);
-  sceneToThree(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el), sun.position);
+  sun.position.copy(sunDirection()); // the same direction as the sun disc in the sky (sky.js)
   const fill = new THREE.HemisphereLight(0xf3dcc4, 0x9a6a4c, D.fillIntensity);
   return [sun, fill];
 }
