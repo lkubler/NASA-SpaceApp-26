@@ -3,8 +3,14 @@
 // the shared map lays over it (masks from the core: closedMask, radioShadowMask); nothing is computed here.
 import * as THREE from 'three';
 import { getTerrainScene, setGreyTint } from '../../core/terrainScene.js';
+import { MAP_RES } from '../../ui/mapPanel.js';
 
 let _ground = null;
+
+/** Start the Plan map's ground render early (step 1 calls it on the pick), so the map is there when Plan opens. */
+export function prepareGround(terrain) {
+  return paintGround(terrain, terrain.n * MAP_RES);
+}
 
 /**
  * Orthographic render of the walk square from straight above, north up.

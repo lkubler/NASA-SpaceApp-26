@@ -6,6 +6,7 @@ import { ENVIRONMENT, DEMO } from '../../core/values.js';
 import { REQUESTS } from './requests.js';
 import { loadGale, craterView, VERTICAL_EXAGGERATION } from './crater.js';
 import { planetView } from './planet.js';
+import { prepareGround } from '../2-plan/ground.js';
 
 const PHOTO_BASE = 'data/murray/photos/';
 // opening -> crater transition: globe zoom (ms), crater fly-in (ms), Gale's share of the screen width at the handoff
@@ -334,7 +335,8 @@ export default {
       const r = reqs.find((x) => x.id === id);
       if (r && r.locked) { notYet(id); return; }
       if (!r) return;
-      ctx.getTerrain(); // start loading the Plan map's ground now, so it is there when the dive lands
+      // start loading and painting the Plan map's ground now, so it is there when the dive lands
+      ctx.getTerrain().then(prepareGround).catch(() => {});
       ctx.set({ request: r });
       markChosen();
     }
