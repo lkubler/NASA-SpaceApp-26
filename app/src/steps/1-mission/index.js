@@ -112,7 +112,8 @@ export default {
       intro.prepend(sky, globe);
       // the team's code: a star in the sky that is a link, with its name next to it
       const repo = h('a.m1-repo', { href: REPO_URL, target: '_blank', rel: 'noopener', 'aria-label': 'Our code on GitHub (opens in a new tab)' },
-        h('span.m1-repo__star', { 'aria-hidden': 'true' }), h('span.m1-repo__text.mono', 'Our code on GitHub ↗'));
+        h('span.m1-repo__ring', { 'aria-hidden': 'true' }), h('span.m1-repo__star', { 'aria-hidden': 'true' }),
+        h('span.m1-repo__text', h('span.m1-repo__k.mono', 'Source code'), h('span.m1-repo__v', 'Our code on GitHub ↗')));
       intro.append(skyCredit, repo);
       el.append(intro);
       const planet = planetView(globe, { after: skyFirst });
