@@ -5,7 +5,7 @@ import {
   RULES, WORK, ASTRONAUT, DEMO, ROVER,
   logMove, logPath, reserveFrom, timeLeft, workRate, demoFactor, spotSeconds, walkSeconds, hasRadio,
   radioShadowMask, roverField, spotField, isClosedAt, isClosed, findRoute,
-  stopsOf, initStops, remainingStops, markSampled,
+  stopsOf, initStops, remainingWay, passVia, markSampled,
 } from '../../core/index.js';
 import { DISPLAY as D } from './display.js';
 
@@ -86,7 +86,8 @@ export function createSim(t, route, log) {
   refreshReserve();
 
   /** Reserve on return from here: the remaining stops in plan order (walk and work at each), then home. */
-  function reserveHere() { return reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: log.phase, stops: remainingStops(log) }); }
+  // (and the waypoints of the plan not passed yet, specs/x-waypoints.md; without waypoints: the remaining stops)
+  function reserveHere() { return reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: log.phase, stops: remainingWay(log) }); }
   function refreshReserve() {
     s.reserve = reserveHere();
     s.timeLeft = timeLeft(log.levels);
@@ -180,6 +181,8 @@ export function createSim(t, route, log) {
     s.workW = workW;
     s.x = to.x; s.z = to.z;
     s.radio = hasRadio(t, s.x, s.z);
+    // a waypoint of the plan counts as passed once the crew stands at it, like at a target
+    passVia(log, t, s.x, s.z, D.atTargetM);
     s.reserve = logMove(log, t, { from, to, dtS, workW, radio: s.radio });
     s.timeLeft = timeLeft(log.levels);
     if (Math.hypot(s.x - ROVER.x, s.z - ROVER.z) > D.leftRoverM) s.leftRover = true;

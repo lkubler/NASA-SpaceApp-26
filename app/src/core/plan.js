@@ -4,7 +4,7 @@
 // -> rover, each leg planned by the same findRoute rules; with one stop everything is as before.
 
 import { RULES, WORK, PLANNER } from './values.js';
-import { findRoute, costField, stepCost } from './planner.js';
+import { findRoute, costField, stepCost, isClosed } from './planner.js';
 import { radioShadowMask } from './radio.js';
 import { ROVER, CANDIDATES } from './places.js';
 import { fullLevels, consume, reserveOnReturn, timeLeft, spotSeconds, doseMSv, consumableName } from './suit.js';
@@ -50,23 +50,86 @@ function joinPaths(paths) {
 
 const placeOf = (p) => ({ id: p.id || null, name: p.name || '', x: p.x, z: p.z });
 
+// ---------- waypoints (specs/x-waypoints.md) ----------
+// A waypoint is a point a leg must pass: no sample, no work time. The waypoints of a round are kept per leg,
+// keyed by the leg's ends ('rover>F3', 'F3>F7', 'F7>rover'), so a leg keeps its waypoints when the stops
+// around it are reordered. Each part of a leg (rover or stop -> waypoint -> ... -> stop or rover) is planned
+// by the same findRoute as every leg.
+
+/** Key of the leg from place a to place b ('rover' for the rover). */
+export function legKey(a, b) { return `${(a && a.id) || 'rover'}>${(b && b.id) || 'rover'}`; }
+
+/** Keys of the legs of a round over these stop ids, in order: rover > stop 1 > ... > rover. */
+export function legKeysOf(ids) {
+  const p = ['rover', ...ids, 'rover'];
+  return p.slice(1).map((b, k) => `${p[k]}>${b}`);
+}
+
+/** Can a waypoint stand at x, z? Inside the site and not on ground over the slope rule (the planner's closed cells). */
+export function waypointAllowed(terrain, x, z) {
+  return Number.isFinite(x) && Number.isFinite(z) && terrain.inside(x, z) && !isClosed(terrain, terrain.indexOf(x, z));
+}
+
+/**
+ * The waypoints of the legs of a round over these stop ids only (legs that do not exist are dropped), as
+ * { key: [{x, z}] } with no empty entries; null when none is left.
+ */
+export function waypointsFor(ids, waypoints) {
+  if (!waypoints) return null;
+  const out = {};
+  for (const k of legKeysOf(ids)) if (waypoints[k] && waypoints[k].length) out[k] = waypoints[k].map((w) => ({ x: w.x, z: w.z }));
+  return Object.keys(out).length ? out : null;
+}
+
+// Parts between waypoints, cached per terrain by their two cells (findRoute depends only on the cells), so
+// moving one waypoint plans only the two parts beside it again.
+const _parts = new WeakMap();
+const PARTS_KEPT = 400; // cache size only (no physical value)
+function partRoute(terrain, a, b) {
+  let m = _parts.get(terrain);
+  if (!m) { m = new Map(); _parts.set(terrain, m); }
+  const key = `${terrain.indexOf(a.x, a.z)}>${terrain.indexOf(b.x, b.z)}`;
+  if (!m.has(key)) {
+    if (m.size >= PARTS_KEPT) m.delete(m.keys().next().value);
+    m.set(key, findRoute(terrain, a, b));
+  }
+  return m.get(key);
+}
+
+/** One leg from a to b through the waypoints wps: the parts joined; via = each waypoint with its cell index on the leg. */
+function shapedLeg(terrain, a, b, wps) {
+  const ends = [a, ...wps, b];
+  const parts = [];
+  for (let k = 0; k + 1 < ends.length; k++) parts.push(partRoute(terrain, ends[k], ends[k + 1]));
+  const leg = joinPaths(parts);
+  let n = 0;
+  leg.via = wps.map((w, j) => { n += parts[j].cells.length - (j ? 1 : 0); return { x: w.x, z: w.z, index: n - 1 }; });
+  return leg;
+}
+
 /**
  * A round rover -> stop 1 -> ... -> stop N -> rover (N = 1..MAX_STOPS). Each leg is the fastest route that
  * keeps every rule, or the best one if none does: the same findRoute as for a single spot.
  * @param {{id,name,x,z}[]} stops  in visiting order
+ * @param {null | Object<string, {x,z}[]>} waypoints  per leg key (legKey), the points that leg must pass,
+ *   in order (specs/x-waypoints.md); without any the round is exactly as before
  * @returns {Route} see app/README.md
  */
-export function planRound(terrain, stops) {
+export function planRound(terrain, stops, waypoints = null) {
   if (!stops.length || stops.length > MAX_STOPS) throw new Error(`a round has 1 to ${MAX_STOPS} stops`);
   const places = [ROVER, ...stops, ROVER];
-  const legs = [];
-  for (let k = 0; k + 1 < places.length; k++) legs.push(legRoute(terrain, places[k], places[k + 1]));
+  const legs = [], wpLegs = [];
+  for (let k = 0; k + 1 < places.length; k++) {
+    const wps = (waypoints && waypoints[legKey(places[k], places[k + 1])]) || [];
+    legs.push(wps.length ? shapedLeg(terrain, places[k], places[k + 1], wps) : legRoute(terrain, places[k], places[k + 1]));
+    wpLegs.push(wps.map((w) => ({ x: w.x, z: w.z })));
+  }
   const first = stops[0];
   // stops and legs are the round: the Walk targets each stop in turn along legs[k] and the Debrief compares
   // the whole round. spot / out / back are convenience fields kept for a one-stop route and older readers
   // (Go / no-go's spot name, the Plan map bounds, plan numbers' spotId, tests): spot = the first stop,
   // out = legs[0], back = the remaining legs joined. With one stop, out = legs[0] and back = legs[1] as before.
-  return {
+  const route = {
     spotId: first.id || null,
     spot: placeOf(first),
     out: legs[0],
@@ -75,6 +138,15 @@ export function planRound(terrain, stops) {
     stops: stops.map(placeOf),
     legs,
   };
+  // waypoints per leg index ([[{x, z}], ...], one list per leg), only when the round has any
+  if (wpLegs.some((l) => l.length)) route.waypoints = wpLegs;
+  return route;
+}
+
+/** The waypoints of a route per leg ([] per leg; all empty without waypoints). */
+export function waypointsOf(route) {
+  const n = route ? (route.legs || [route.out, route.back]).length : 0;
+  return Array.from({ length: n }, (_, k) => (route.waypoints && route.waypoints[k]) || []);
 }
 
 /** Round trip rover -> spot -> rover: a round with one stop. */
@@ -167,12 +239,20 @@ export function planNumbers(terrain, route) {
     walk(path.cells, legName, legSums[k], k === 0);
     const endIndex = profile.length - 1;
     const from = k === 0 ? ROVER : stops[k - 1], to = k === last ? ROVER : stops[k];
-    legPlans.push({
+    const lp = {
       index: k, from: { id: from.id || null, name: from.name || '' }, to: { id: to.id || null, name: to.name || '' },
       distanceM: legSums[k].m, seconds: legSums[k].s, energyJ: legSums[k].e,
       startM, endM: sM, startS, endS: tS, startIndex, endIndex,
       keepsRules: path.keepsRules, closedM: path.closedM,
-    });
+    };
+    // a leg with waypoints (specs/x-waypoints.md): where each one lies on the profile, and the parts between
+    // them (rover or stop -> waypoint -> ... -> stop or rover), each with its distance and time
+    if (path.via && path.via.length) {
+      lp.via = path.via.map((w) => { const p = profile[startIndex + w.index]; return { x: w.x, z: w.z, index: startIndex + w.index, sM: p.sM, tS: p.tS }; });
+      const cuts = [startIndex, ...lp.via.map((w) => w.index), endIndex];
+      lp.parts = cuts.slice(1).map((b, j) => ({ distanceM: profile[b].sM - profile[cuts[j]].sM, seconds: profile[b].tS - profile[cuts[j]].tS }));
+    }
+    legPlans.push(lp);
     if (k === last) return;
     preE += legSums[k].e; preS += legSums[k].s;
     // the work at stop k + 1
@@ -325,6 +405,8 @@ function turnBackOnOut(terrain, cells, workAt = new Set(), workE = 0, workS = 0,
 export function reserveFrom(terrain, levels, { x, z, phase, spot, stops }) {
   const home = roverField(terrain);
   const ahead = stops && stops.length ? stops : spot ? [spot] : [];
+  // waypoints ahead (entries with pass: true, specs/x-waypoints.md): passed on the way, no work there
+  if (ahead.some((p) => p.pass)) return reserveVia(terrain, levels, home, x, z, phase === 'out' ? ahead : ahead.filter((p) => p.pass));
   if (phase === 'out' && ahead.length) {
     const s = spotSeconds();
     // walk to the next stop, then from stop to stop, the work at each
@@ -346,6 +428,40 @@ export function reserveFrom(terrain, levels, { x, z, phase, spot, stops }) {
   const h = home.at(x, z);
   const r = reserveOnReturn(levels, { homeEnergyJ: h.energyJ, homeSeconds: h.seconds });
   return { ...r, homeSeconds: h.seconds, homeMetres: h.metres, closedM: h.closedM, timeLeft: timeLeft(levels) };
+}
+
+/**
+ * reserveFrom with waypoints among the places ahead (items with pass: true): the stops (walk and work at
+ * each, at the normal work rate) up to the last stop, then the way home through the waypoints after it
+ * (at the walk-back rate, like the way home of the plan, whose last leg passes them too).
+ */
+function reserveVia(terrain, levels, home, x, z, items) {
+  const s = spotSeconds(), workE = WORK.spotW.value * s;
+  const fieldOf = (p) => spotField(terrain, p.id ? p : { x: p.x, z: p.z });
+  let ls = -1;
+  items.forEach((p, k) => { if (!p.pass) ls = k; });
+  let energyJ = 0, seconds = 0, metres = 0, closedM = 0;
+  let from = { x, z };
+  for (let k = 0; k <= ls; k++) {
+    const leg = fieldOf(items[k]).at(from.x, from.z);
+    const work = k > 0 && !items[k - 1].pass;
+    energyJ = energyJ + (work ? workE : 0) + leg.energyJ; seconds = seconds + (work ? s : 0) + leg.seconds;
+    metres += leg.metres; closedM += leg.closedM;
+    from = items[k];
+  }
+  if (ls >= 0) { energyJ += workE; seconds += s; }
+  let hE = 0, hS = 0, hM = 0, hC = 0;
+  for (let k = ls + 1; k < items.length; k++) {
+    const leg = fieldOf(items[k]).at(from.x, from.z);
+    hE += leg.energyJ; hS += leg.seconds; hM += leg.metres; hC += leg.closedM;
+    from = items[k];
+  }
+  const h = home.at(from.x, from.z);
+  hE += h.energyJ; hS += h.seconds; hM += h.metres; hC += h.closedM;
+  const r = ls >= 0
+    ? reserveOnReturn(levels, { energyJ, seconds, homeEnergyJ: hE, homeSeconds: hS })
+    : reserveOnReturn(levels, { homeEnergyJ: hE, homeSeconds: hS });
+  return { ...r, homeSeconds: seconds + hS, homeMetres: metres + hM, closedM: closedM + hC, timeLeft: timeLeft(levels) };
 }
 
 export { consumableName };
