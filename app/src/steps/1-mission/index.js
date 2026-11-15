@@ -255,7 +255,7 @@ export default {
         h('span.m1-base__beam'), h('span.m1-base__core'),
         h('div.m1-base__label',
           h('span.m1-base__name', 'Base'),
-          h('span.m1-base__where.mono', `${base.name} · ${meta.drive.km} km drive`))));
+          h('span.m1-base__where.mono', base.name))));
     }
 
     // --- missions panel: one mission per site
