@@ -43,6 +43,14 @@ export const DOCS = {
     title: 'NASA NSSDCA, Mars Fact Sheet (surface gravity 3.71 m/s²)',
     url: 'https://nssdc.gsfc.nasa.gov/planetary/factsheet/marsfact.html',
   },
+  OCHMO: {
+    title: 'NASA OCHMO-TB-020 Rev E, Radiation Protection and Mitigation Technical Brief (NASA-STD-3001 Vol. 1)',
+    url: 'https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf',
+  },
+  HIRISE: {
+    title: 'HiRISE elevation model DTEEC_040770_1755_039280_1755_U01 (NASA/JPL/University of Arizona/USGS)',
+    url: 'https://www.uahirise.org/dtm/',
+  },
   RAD: {
     title: 'Hassler et al. 2014, Curiosity RAD surface radiation (SwRI release: 0.67 mSv per day at Gale)',
     url: 'https://www.swri.org/press-release/swri-scientists-publish-first-radiation-measurements-surface-mars',
@@ -114,7 +122,7 @@ export const DATA = [
   {
     name: 'HiRISE elevation model DTEEC_040770_1755_039280_1755_U01 and orthoimage',
     by: 'NASA/JPL/University of Arizona/USGS',
-    use: 'Used in preparation, not shown in the app: to place the walk square in Gale crater and to cross-check the slope grid',
+    use: 'Placed the walk square in Gale crater. In Go / no-go it is a second, independent check of the route: the metres of the route steeper than the slope rule in the 1 m elevation model (slope file of the elevation model; the orthoimage is not shown in the app)',
     licence: 'PDS public data',
     url: 'https://www.uahirise.org/dtm/',
   },

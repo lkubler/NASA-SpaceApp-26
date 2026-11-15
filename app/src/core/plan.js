@@ -6,6 +6,7 @@
 import { RULES, WORK, PLANNER } from './values.js';
 import { findRoute, costField, stepCost, isClosed } from './planner.js';
 import { radioShadowMask } from './radio.js';
+import { timeToShelter } from './datalines.js';
 import { ROVER, CANDIDATES } from './places.js';
 import { fullLevels, consume, reserveOnReturn, timeLeft, spotSeconds, doseMSv, consumableName } from './suit.js';
 
@@ -287,6 +288,7 @@ export function planNumbers(terrain, route) {
   const spotP = profile[spotIndex];
   const end = profile[profile.length - 1];
 
+  const shelter = timeToShelter(terrain, profile, roverField(terrain));
   const checks = [
     {
       id: 'slope', name: 'Slope on foot', unit: '°', planned: steepest.deg, limit: RULES.slopeMaxDeg.value,
@@ -311,6 +313,13 @@ export function planNumbers(terrain, route) {
       plan: RULES.evaPlannedH.value * 3600, limit: RULES.evaLimitH.value * 3600,
       status: totalS > RULES.evaLimitH.value * 3600 ? 'broken' : totalS > RULES.evaPlannedH.value * 3600 ? 'caution' : 'ok',
       where: { sM: end.sM, x: end.x, z: end.z },
+    },
+    {
+      // solar storm (specs/x-datalines.md): the longest way back to the rover from any point of the route
+      id: 'shelter', name: 'Solar storm: time to shelter', unit: 's', planned: shelter.seconds, limit: shelter.limitS,
+      status: shelter.seconds > shelter.limitS ? 'broken' : 'ok',
+      where: shelter.at,
+      text: `${Math.round(shelter.seconds / 60)} min back, limit ${RULES.shelterReturnH.value} h`,
     },
     {
       id: 'radio', name: 'Radio shadow', unit: 's', planned: longest ? longest.seconds : 0, limit: null,

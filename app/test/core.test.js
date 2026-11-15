@@ -150,7 +150,11 @@ describe('radio shadow', () => {
 describe('plan numbers', () => {
   const all = planAllCandidates(t);
   it('all candidates keep every rule with the tuned factor', () => {
-    for (const { candidate, plan } of all) expect(plan.keepsRules, candidate.id).toBe(true);
+    // x-datalines: F7 is more than 2 h from the rover on its way back (solar storm line); no other rule breaks
+    for (const { candidate, plan } of all) {
+      const broken = plan.brokenRules.map((b) => b.id);
+      expect(broken, candidate.id).toEqual(candidate.id === 'F7' ? ['shelter'] : []);
+    }
   });
   it('farthest candidate uses most of the suit, and the plan names the limiting consumable', () => {
     const far = all.reduce((a, b) => (b.plan.distanceM > a.plan.distanceM ? b : a));

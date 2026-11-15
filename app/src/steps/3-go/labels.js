@@ -35,6 +35,16 @@ export const L = {
     label: 'model', src: 'WALK_TERRAIN', where: 'line of sight on the walk grid',
     text: 'Longest stretch of the route without line of sight to the rover at eye height. Geometric line of sight only, no radio physics. Shown in demo time.',
   },
+  shelter: {
+    label: 'model', src: RULES.shelterReturnH.src, where: RULES.shelterReturnH.where,
+    text: `Longest time back to the rover from any point of the route, by the fastest way home. The rover is taken as the shelter (assumption). If a solar storm hits, an excursion is protected when it ends within ${RULES.shelterReturnH.value} ${RULES.shelterReturnH.unit} with access to shielding (real, from the radiation guidance). The radiation shown above is the dose rate Curiosity measured on the surface (${ENVIRONMENT.doseMSvPerDay.value} ${ENVIRONMENT.doseMSvPerDay.unit}); a storm would add to it. Shown in demo time (${demo()}).`,
+  },
+  /** Slope check against HiRISE; noDataM: metres of the route that the elevation model does not cover. */
+  hirise: (noDataM = 0) => ({
+    label: 'model', src: 'HIRISE', where: 'DTEEC_040770_1755_039280_1755_U01',
+    text: `The route is planned on the Access Mars terrain. HiRISE is an independent elevation model of the same ground at ${ENVIRONMENT.hiriseCellM.value} ${ENVIRONMENT.hiriseCellM.unit} spacing, and the two are aligned to about ${ENVIRONMENT.hiriseAlignM.value} ${ENVIRONMENT.hiriseAlignM.unit}. This line counts the metres of the route where the HiRISE slope is steeper than the ${RULES.slopeMaxDeg.value}${RULES.slopeMaxDeg.unit} slope rule. It is a caution, never a broken rule: a few metres can come from the alignment.`
+      + (noDataM > 0.5 ? ` Part of this route (${Math.round(noDataM)} m) has no HiRISE data and is not counted.` : ''),
+  }),
   suit: {
     label: 'simulated', src: 'NONE', where: '',
     text: 'The suit checks are simulated: there is no suit to read. They stand for the checks a crew runs before leaving the rover.',
