@@ -7,6 +7,7 @@ import { REQUESTS } from './requests.js';
 import { loadGale, craterView, VERTICAL_EXAGGERATION } from './crater.js';
 import { planetView } from './planet.js';
 import { prepareGround } from '../2-plan/ground.js';
+import { REPO_URL } from '../../frame/project.js';
 
 const PHOTO_BASE = 'data/murray/photos/';
 // opening -> crater transition: globe zoom (ms), crater fly-in (ms), Gale's share of the screen width at the handoff
@@ -109,7 +110,10 @@ export default {
       });
       const skyFirst = Promise.race([skyLoaded, new Promise((r) => setTimeout(r, SKY_FIRST_MS))]);
       intro.prepend(sky, globe);
-      intro.append(skyCredit);
+      // the team's code: a star in the sky that is a link, with its name next to it
+      const repo = h('a.m1-repo', { href: REPO_URL, target: '_blank', rel: 'noopener', 'aria-label': 'Our code on GitHub (opens in a new tab)' },
+        h('span.m1-repo__star', { 'aria-hidden': 'true' }), h('span.m1-repo__text.mono', 'Our code on GitHub ↗'));
+      intro.append(skyCredit, repo);
       el.append(intro);
       const planet = planetView(globe, { after: skyFirst });
       let planetGone = false;

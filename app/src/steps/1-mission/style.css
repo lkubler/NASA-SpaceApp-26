@@ -109,6 +109,25 @@
 .step--mission .m1-intro__q { color: var(--accent); font-weight: 700; }
 .step--mission .m1-num { color: #fff; }
 .step--mission .m1-intro__action { position: absolute; right: var(--gutter); bottom: var(--gutter); }
+/* the team's code: a star up in the sky, a link; it twinkles and its name brightens on hover */
+.step--mission .m1-repo {
+  position: absolute; left: 62%; top: 17%; display: flex; align-items: center; gap: 2.1em; padding: 0.6em;
+  color: rgba(255, 255, 255, 0.62); text-decoration: none; font-size: var(--fs-tag); letter-spacing: 0.04em;
+  transition: color var(--fade);
+}
+.step--mission .m1-repo__star { position: relative; width: 6px; height: 6px; border-radius: 50%; background: #fff;
+  box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.85), 0 0 18px 6px rgba(79, 203, 255, 0.35); animation: m1-twinkle 2.6s ease-in-out infinite; }
+.step--mission .m1-repo__star::before, .step--mission .m1-repo__star::after {
+  content: ''; position: absolute; left: 50%; top: 50%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  width: 34px; height: 1px; transform: translate(-50%, -50%); transition: width var(--fade);
+}
+.step--mission .m1-repo__star::after { transform: translate(-50%, -50%) rotate(90deg); }
+.step--mission .m1-repo:hover, .step--mission .m1-repo:focus-visible { color: #fff; outline: none; }
+.step--mission .m1-repo:hover .m1-repo__star::before, .step--mission .m1-repo:hover .m1-repo__star::after,
+.step--mission .m1-repo:focus-visible .m1-repo__star::before, .step--mission .m1-repo:focus-visible .m1-repo__star::after { width: 46px; }
+.step--mission .m1-repo:focus-visible .m1-repo__text { text-decoration: underline; }
+@keyframes m1-twinkle { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(0.8); } }
+@media (prefers-reduced-motion: reduce) { .step--mission .m1-repo__star { animation: none; } }
 .step--mission.m1--intro .m1-hero, .step--mission.m1--intro .m1-credit { opacity: 0; }
 
 /* side panel with the requests */
