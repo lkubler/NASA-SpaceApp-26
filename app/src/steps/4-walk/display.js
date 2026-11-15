@@ -108,6 +108,10 @@ export const DISPLAY = {
   patchRightM: 1.5,       // patch centre this far right (east) of the rover's long axis
   patchColor: 0xb4876a,   // the mean colour of the Access Mars ground around the start point
   miniRadiusM: 32,        // minimap: metres from the centre to the rim
+  turnlineStepM: 2,       // turn-back line: reserve is evaluated on a grid this many metres apart
+  turnlineMarginM: 6,     // ... out to this far beyond the minimap rim, so it can scroll between recalculations
+  turnlineEveryMs: 1000,  // ... at most this often (and only when the suit levels or the crew's place changed)
+  turnlineRedoM: 4,       // ... or when the crew has moved this far from the grid centre
   fovDeg: 66,
   bandWidthM: 0.4,        // route band on the ground
   planBandWidthM: 0.3,    // the planned route beside the live route: a thin line (specs/x-liveroute.md) ...

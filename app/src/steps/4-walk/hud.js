@@ -7,6 +7,7 @@ import {
 } from '../../core/index.js';
 import { ALERTS } from './sim.js';
 import { createHoldSet } from './holdset.js';
+import { createTurnline } from './turnline.js';
 import { DISPLAY as D } from './display.js';
 import frameUrl from './helmet-frame.webp';
 import { GROUND_FILL_TAG } from '../../core/groundColor.js';
@@ -35,6 +36,7 @@ const STEEP_CUE_TAG = MODEL_TAG(`A low border along the edge of ground steeper t
 const BEACON_CUE_TAG = MODEL_TAG(`A thin beam of light and a ring on the ground at your current target (the next sample spot, then the rover), visible across the whole site and fading out within about ${D.beaconFadeGoneM} m so it does not cover the spot. Position from the walk grid, drawn for orientation.`);
 const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your eye to the rover antenna), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);
 const SKY_TAG = MODEL_TAG('The day sky: a butterscotch gradient (dusty at the horizon, darker overhead) with one small sun, drawn after the colours of Curiosity\'s daytime sky photos at Gale crater (Sources page). The sun stands at a fixed place, the same direction that lights the rover. Display choice, not a measured sky.');
+const TURN_TAG = MODEL_TAG('The edge of the ground from which you could still walk back to the rover with reserve left. Calculated from the terrain and the suit\'s state now, with the same way home and walk-back factor as the reserve chip, and drawn again as the suit is used. Dimmed ground lies beyond it.');
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
 export function createHud(el) {
@@ -42,10 +44,12 @@ export function createHud(el) {
   const frame = h('img.walk-frame', { src: frameUrl, alt: '', draggable: 'false' });
   // the ground without a clear camera image is filled from the real photo around it (core/groundLook.js)
   // the ground cues near the walker (scene3d.js): steep lines and radio shadow dots, each labelled model
+  const turnRow = h('div', { hidden: true }, h('span.walk-cue.walk-cue--turn'), 'Turn-back line on the small map ', tag(TURN_TAG));
   const groundMark = h('div.walk-groundmark.mono',
     h('div', h('span.walk-cue.walk-cue--steep'), `Over ${RULES.slopeMaxDeg.value}° `, tag(STEEP_CUE_TAG)),
     h('div', h('span.walk-cue.walk-cue--radio'), 'Radio shadow edge ', tag(RADIO_CUE_TAG)),
     h('div', h('span.walk-cue.walk-cue--route'), 'Route from here ', tag(ROUTE_CUE_TAG)),
+    turnRow,
     h('div', h('span.walk-cue.walk-cue--beacon'), 'Target beacon ', tag(BEACON_CUE_TAG)),
     h('div', 'Ground without a clear camera image: filled ', tag(GROUND_FILL_TAG)),
     h('div', 'Sky ', tag(SKY_TAG)));
@@ -138,9 +142,9 @@ export function createHud(el) {
   el.append(marks, aimMark, frame, groundMark, hud, escHint, modal, loading);
 
   // ---------- minimap background (once): shaded relief, closed ground darker ----------
-  let reliefCv = null, terr = null;
+  let reliefCv = null, terr = null, turn = null, turnCv = null;
   function setTerrain(t) {
-    terr = t;
+    terr = t; turn = createTurnline(t);
     const n = t.n, img = new ImageData(n, n);
     for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
       const i = r * n + c;
@@ -210,6 +214,25 @@ export function createHud(el) {
     const [ox, oy] = toPx(t.min, t.max);
     g.imageSmoothingEnabled = true;
     g.drawImage(reliefCv, ox, oy, t.extent * k, t.extent * k);
+    // turn-back line (specs/x-turnline.md): ground beyond it dimmed, the edge as a thin line
+    const tf = turn && turn.update(sim, performance.now());
+    const showTurn = !!(tf && tf.anyInView);
+    if (turnRow.hidden === showTurn) turnRow.hidden = !showTurn;
+    if (tf) {
+      if (!turnCv) turnCv = document.createElement('canvas');
+      if (turnCv.width !== tf.w) { turnCv.width = tf.w; turnCv.height = tf.w; }
+      const tg = turnCv.getContext('2d'), im = tg.createImageData(tf.w, tf.w);
+      for (let j = 0; j < tf.w; j++) for (let i = 0; i < tf.w; i++) {
+        const o = ((tf.w - 1 - j) * tf.w + i) * 4, v = tf.vals[j * tf.w + i];
+        im.data[o] = 18; im.data[o + 1] = 10; im.data[o + 2] = 8; im.data[o + 3] = v < 0 ? 140 : 0;
+      }
+      tg.putImageData(im, 0, 0);
+      const half = (tf.half + 0.5) * tf.step, [tx, ty] = toPx(tf.cx - half, tf.cz + half);
+      g.drawImage(turnCv, tx, ty, 2 * half * k, 2 * half * k);
+      g.strokeStyle = '#ffd37a'; g.lineWidth = 1.5 * dpr; g.lineCap = 'round'; g.beginPath();
+      for (const q of tf.contour) { const [ax, ay] = toPx(q[0], q[1]), [bx, by] = toPx(q[2], q[3]); g.moveTo(ax, ay); g.lineTo(bx, by); }
+      g.stroke();
+    }
     // route: the leg to the current target in cyan dots; a round's other legs faint
     const lg = sim.leg();
     const planned = sim.route.legs || [sim.route.out, sim.route.back];
