@@ -67,6 +67,16 @@ export const DOCS = {
     title: 'McBrayer et al., communication delay at Mars, NTRS 20220013418',
     url: 'https://ntrs.nasa.gov/citations/20220013418',
   },
+  APOLLO15_COMM: {
+    title: 'NASA, Apollo 15 Mission Report, Supplement 6: Postflight Analysis of the EVCS-LM Communications Link, MSC-05161 (1972); predicted and measured terrain shadowing of the suit radio link, suit antenna 1.83 m',
+    url: 'https://ntrs.nasa.gov/api/citations/19720017533/downloads/19720017533.pdf',
+    moon: true,
+  },
+  LSRM: {
+    title: 'Turnbull et al., Lunar Surface Relay-Mobile (LSR-M), NASA Glenn, ASCEND 2023; antennas 2 m on lunar vehicles, 10 m on a relay boom',
+    url: 'https://ntrs.nasa.gov/api/citations/20230012703/downloads/ASCEND-LSR-M%20Paper_final_preSTRIVES.pdf',
+    moon: true,
+  },
   WALK_TERRAIN: {
     title: 'Team research: walk terrain inventory',
     url: 'research/walk-terrain.md',

@@ -289,3 +289,9 @@
 
 /* totals header: the last word keeps its info marker on the same line */
 .step--plan .plan-nowrap { white-space: nowrap; }
+
+/* relay: placing mode and the buttons beside the card */
+.step--plan .plan-relay__remove { margin-left: 0.4em; color: var(--text-2); }
+.step--plan .plan-relay__move.is-on { border-color: #f6c945; color: #f6c945; }
+.step--plan .map.is-placing, .step--plan .map.is-placing * { cursor: crosshair; }
+.step--plan .plan-compare:disabled { opacity: 0.45; cursor: default; }

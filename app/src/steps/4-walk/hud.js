@@ -33,7 +33,7 @@ const FAST_TAG = { label: 'model', text: 'Work rate at the fast pace from the su
 const JUMP_TAG = { label: 'model', text: 'A jump is counted as a normal walk from here to the landing point on the fastest way that keeps every rule: its time, work rate, radio shadow and warnings go into the walk log as if walked.', source: { title: 'Our suit model and route planner', url: '', where: '' } };
 const STEEP_CUE_TAG = MODEL_TAG(`A low border along the edge of ground steeper than ${RULES.slopeMaxDeg.value}° (closed to the route), shown within about ${D.cueFadeMaxM} m of you. Outline smoothed for display; the warnings use the planner's exact slope test on the 0.5 m walk grid.`);
 const BEACON_CUE_TAG = MODEL_TAG(`A thin beam of light and a ring on the ground at your current target (the next sample spot, then the rover), visible across the whole site and fading out within about ${D.beaconFadeGoneM} m so it does not cover the spot. Position from the walk grid, drawn for orientation.`);
-const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your eye to the rover antenna), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);
+const RADIO_CUE_TAG = MODEL_TAG(`Dotted line on the ground at the edge of the radio shadow (no line of sight from your suit antenna to the rover antenna, or to the relay if one is placed), shown within about ${D.cueFadeMaxM} m of you. Geometry on the 0.5 m walk grid, no radio physics.`);
 const SKY_TAG = MODEL_TAG('The day sky: a butterscotch gradient (dusty at the horizon, darker overhead) with one small sun, drawn after the colours of Curiosity\'s daytime sky photos at Gale crater (Sources page). The sun stands at a fixed place, the same direction that lights the rover. Display choice, not a measured sky.');
 const BODY_TAG = { label: 'simulated', text: 'Heart rate, core temperature, suit pressure and CO2 are simulated from the work rate; no sensor data behind them.' };
 
@@ -85,7 +85,7 @@ export function createHud(el) {
     mRow('dose', 'Radiation', tag({ ...ENVIRONMENT.doseMSvPerDay, label: 'model', text: 'Dose so far: Curiosity’s measured dose rate at Gale crater times your time outside. ' + ENVIRONMENT.doseMSvPerDay.text })),
     mRow('temp', 'Outside', tag(ENVIRONMENT.airTempK)),
     mRow('power', 'Power', tag(SUIT.consumables.battery)),
-    mRow('radio', 'Radio to rover', tag({ label: 'model', text: 'Line of sight from your eye to the rover antenna over the terrain grid. Geometric only, no radio physics.', source: { title: 'Our calculation from the walk grid', url: '', where: '' } })),
+    mRow('radio', 'Radio to rover', tag({ label: 'model', text: 'Line of sight from your suit antenna to the rover antenna, or to the relay if one is placed, over the terrain grid. Geometric only, no radio physics.', source: { title: 'Our calculation from the walk grid', url: '', where: '' } })),
     mRow('demo', 'Demo time', tag(DEMO.timeFactor)),
     mRow('plan', 'Plan breaks', null));
   // a rule the plan already broke is carried into the walk (specs/3-go.md): named from the start
@@ -335,7 +335,7 @@ export function createHud(el) {
     mVals.dose.textContent = fmtMSv(log.doseMSv);
     mVals.temp.textContent = `${Math.round(outsideTempC(log.tS))} °C`;
     mVals.power.textContent = `${Math.round(fractions(log.levels).battery * 100)} %`;
-    mVals.radio.textContent = s.radio ? 'Rover · ok' : 'No line of sight';
+    mVals.radio.textContent = s.radio ? 'Contact · ok' : 'No contact';
     mVals.radio.className = 'walk-row__v mono ' + (s.radio ? 'tone-accent' : 'tone-advisory');
     mVals.demo.textContent = `${DEMO.timeFactor.value}${DEMO.timeFactor.unit}`;
 
@@ -425,7 +425,7 @@ export function createHud(el) {
       case 'edge': return ['The mapped terrain ends here.'];
       case 'steepAhead': return [`Ground over ${lim} `, { tag: RULES.slopeMaxDeg }, ` in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '. Closed to the route.'];
       case 'offPath': return [`${Math.round(i.m)} m `, { tag: OFF_TAG }, ' from the planned route. The route shown leads on from here.'];
-      case 'radioAhead': return [`No line of sight to the rover in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '.'];
+      case 'radioAhead': return [`No contact with the rover in ${Math.max(1, Math.round(i.m))} m `, { tag: AHEAD_TAG }, '.'];
       default: return [];
     }
   }

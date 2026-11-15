@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { getTerrainScene, setWalkLook, sceneToThree } from '../../core/terrainScene.js';
-import { RADIO, ROVER, CANDIDATES, radioShadowMask, roverField } from '../../core/index.js';
+import { RADIO, ROVER, CANDIDATES, radioShadowMask, roverField, getRelay } from '../../core/index.js';
 import { steepWallLines } from './steepBorder.js';
 import { createBeacon } from './beacon.js';
 import { DISPLAY as D } from './display.js';
@@ -51,6 +51,9 @@ export function createScene3d(host, t, opts = {}) {
   rover.add(box);
   sceneToThree(ROVER.x, t.heightAt(ROVER.x, ROVER.z), ROVER.z, rover.position);
   scene.add(rover);
+  // the radio relay, if the crew placed one in the Plan: a mast with an antenna head at its place
+  const relayMesh = getRelay() ? relayMast(t, getRelay()) : null;
+  if (relayMesh) scene.add(relayMesh);
   const shadow = contactShadow();
   scene.add(shadow);
   for (const l of roverLights()) scene.add(l);
@@ -163,6 +166,7 @@ export function createScene3d(host, t, opts = {}) {
     for (const c of cues) { c.geometry.dispose(); c.material.dispose(); }
     beacon.dispose();
     disposeTree(box);
+    if (relayMesh) disposeTree(relayMesh);
     if (sev) disposeTree(sev);
     shadow.geometry.dispose(); shadow.material.dispose();
     sky.dispose();
@@ -591,4 +595,23 @@ function placeShadow(mesh, t, x, z, yaw) {
   }
   pos.needsUpdate = true;
   mesh.geometry.computeBoundingSphere();
+}
+
+/** The radio relay: a thin mast as high as the relay antenna, a base and a head, in the relay's yellow. */
+function relayMast(t, relay) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshLambertMaterial({ color: 0xf6c945 });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x3a3a3a });
+  const hgt = RADIO.relayMastM.value;
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, hgt, 8), dark);
+  mast.position.y = hgt / 2;
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.25, 0.5), mat);
+  base.position.y = 0.12;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.28), mat);
+  head.position.y = hgt;
+  const dish = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.12, 12), mat);
+  dish.position.y = hgt + 0.16;
+  g.add(mast, base, head, dish);
+  sceneToThree(relay.x, t.heightAt(relay.x, relay.z), relay.z, g.position);
+  return g;
 }

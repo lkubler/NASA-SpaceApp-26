@@ -3,13 +3,12 @@
 //   - EVA zone: a frame around the spots and points, the ground outside darker
 //   - Rover drive: from the base (Bradbury Landing, north-east, off the map) to the rover, drawn on a
 //     plausible way over the terrain; not counted in time, distance or reserve
-//   - Radio relay: a marker on high ground and a card; not placed by the crew yet
 //   - Walking effort: the route on foot coloured by the slope under it (easy -> hard)
 //   - Legend in three groups, map layers with show / hide
 
 import { h, s, labelTag } from '../../ui/index.js';
 import { findRoute, isClosedAt } from '../../core/planner.js';
-import { ROVER, RULES } from '../../core/index.js';
+import { ROVER, RULES, RADIO } from '../../core/index.js';
 
 // Bradbury Landing seen from Murray Buttes: 5.1 km east, 6.2 km north (Curiosity waypoints, sol 3 and
 // sols 1446-1452; research/data-sites.md), so the rover comes in from the north-east
@@ -18,7 +17,8 @@ const BASE_KM = 8;
 
 export const EXTRA_TAGS = {
   drive: { label: 'simulated', text: `The rover drive from the base at Bradbury Landing (${BASE_KM} km north-east) is drawn on a way over the terrain that keeps the slope rule. It is a picture only: it does not count into time, distance or reserve yet.`, source: { title: 'Curiosity waypoints (MSL_waypoints.json), NASA/JPL-Caltech', url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json' } },
-  relay: { label: 'simulated', text: 'A radio relay that would shrink the radio shadow, shown on high ground where it could stand. Not calculated in this demo.', source: { title: 'The team’s design', url: '' } },
+  relay: { label: 'simulated', text: 'A radio relay the crew sets out, placed by you on open ground where it sees the rover. The device is simulated: a mast with an antenna that repeats the link.', source: { title: 'The team’s design', url: '' } },
+  contact: { label: 'model', text: `Contact: a place has contact if it sees the rover, or sees the relay while the relay sees the rover. Line of sight over the terrain grid, antennas at ${RADIO.roverAntennaM.value} m (rover), ${RADIO.relayMastM.value} m (relay) and ${RADIO.suitAntennaM.value} m (suit). The method, predicting radio shadow from terrain obstacles, was checked against measurements on Apollo 15.`, source: { title: 'Apollo 15 Mission Report, Supplement 6: Postflight analysis of the EVCS-LM communications link (MSC-05161)', url: 'https://ntrs.nasa.gov/api/citations/19720017533/downloads/19720017533.pdf' } },
   zone: { label: 'model', text: 'The area of this excursion: a frame around the candidate spots and the rover, measured on the walk grid.', source: { title: 'Our walk grid (Access Mars Murray Buttes)', url: '' } },
   effort: { label: 'simulated', text: `The route on foot coloured by the slope under each step, from flat (easy) to ${RULES.slopeMaxDeg.value}° (hard). A stand-in for the walking effort, which comes in a later version.`, source: { title: 'Slope grid of the walk terrain', url: '' } },
 };
@@ -27,20 +27,6 @@ export const EXTRA_TAGS = {
 export function zoneOf(points, margin = 8) {
   const xs = points.map((p) => p.x), zs = points.map((p) => p.z);
   return { x0: Math.min(...xs) - margin, x1: Math.max(...xs) + margin, z0: Math.min(...zs) - margin, z1: Math.max(...zs) + margin };
-}
-
-/** Highest open ground inside the zone, clear of the spots and points: where a relay would see most of it (a picture, not a calculation). */
-export function relayPointOf(terrain, zone, keepClear = []) {
-  let best = null;
-  for (let z = zone.z0; z <= zone.z1; z += 1) {
-    for (let x = zone.x0; x <= zone.x1; x += 1) {
-      if (Math.hypot(x - ROVER.x, z - ROVER.z) < 15 || isClosedAt(terrain, x, z)) continue;
-      if (keepClear.some((p) => Math.hypot(x - p.x, z - p.z) < 12)) continue; // not on top of a spot or point
-      const y = terrain.heightAt ? terrain.heightAt(x, z) : terrain.height[terrain.indexOf(x, z)];
-      if (!best || y > best.y) best = { x, z, y };
-    }
-  }
-  return best;
 }
 
 /**
@@ -56,7 +42,7 @@ export function roverDriveOf(terrain, box, inset = 4) {
     const tz = dz > 0 ? (box.z1 - inset - ROVER.z) / dz : dz < 0 ? (box.z0 + inset - ROVER.z) / dz : Infinity;
     const from = { x: ROVER.x + dx * Math.min(tx, tz), z: ROVER.z + dz * Math.min(tx, tz) };
     if (isClosedAt(terrain, from.x, from.z)) continue;
-    const r = findRoute(terrain, from, ROVER);
+    const r = findRoute(terrain, from, ROVER, { weighted: false }); // a drive, not a walk: no contact weight
     if (r.keepsRules) return { from, points: r.points };
     if (!fallback || r.closedM < fallback.closedM) fallback = { from, points: r.points, closedM: r.closedM };
   }
