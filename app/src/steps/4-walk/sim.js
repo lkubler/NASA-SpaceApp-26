@@ -19,6 +19,8 @@ const DEG = Math.PI / 180;
 export const ALERTS = {
   turnBack: { level: 'warning', title: 'Turn back now' },
   steepUnder: { level: 'warning', title: `Ground over ${RULES.slopeMaxDeg.value}° underfoot` },
+  // specs/x-liveroute.md "Turn back now, the moment": a round longer than the suit allows
+  tooLong: { level: 'caution', title: 'This round is longer than the suit allows' },
   edge: { level: 'caution', title: 'Edge of the site' },
   steepAhead: { level: 'caution', title: 'Steep stretch ahead' },
   radioAhead: { level: 'advisory', title: 'Radio shadow ahead' },
@@ -84,6 +86,12 @@ export function createSim(t, route, log) {
   if (log.distanceM === 0 && log.tS === 0) logPath(log, t, startPath, { shadow });
   s.radio = hasRadio(t, s.x, s.z);
   refreshReserve();
+  // a round longer than the suit allows (reserve below zero right at the start, specs/x-liveroute.md): no
+  // "Turn back now" at the rover; the reserve counts the stops that still fit, and "Turn back now" comes
+  // when going on to the next stop would no longer leave a way home with reserve
+  s.tooLong = !log.sample && log.phase === 'out' && s.reserve.seconds < 0;
+  s.fit = null;
+  if (s.tooLong) refreshReserve();
 
   /** Reserve on return from here: the remaining stops in plan order (walk and work at each), then home. */
   // (and the waypoints of the plan not passed yet, specs/x-waypoints.md; without waypoints: the remaining stops)
@@ -91,6 +99,30 @@ export function createSim(t, route, log) {
   function refreshReserve() {
     s.reserve = reserveHere();
     s.timeLeft = timeLeft(log.levels);
+    applyFit();
+  }
+  /** A round too long for the suit, still on the way out: is it? */
+  function fitting() { return s.tooLong && log.phase === 'out' && !log.turnedBack; }
+  /**
+   * The stops that still fit: the most remaining stops, in plan order, after which the way home still leaves
+   * a reserve (with the waypoints of the plan between them); j = 0 when not even the next one does.
+   */
+  function fitHere() {
+    const way = remainingWay(log);
+    const at = [];
+    way.forEach((p, k) => { if (!p.pass) at.push(k); });
+    const orders = at.map((k) => way[k].order);
+    for (let j = at.length; j >= 1; j--) {
+      const r = reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: 'out', stops: way.slice(0, at[j - 1] + 1) });
+      if (r.seconds > 0) return { j, reserve: r, fit: orders.slice(0, j), out: orders.slice(j) };
+    }
+    return { j: 0, reserve: reserveFrom(t, log.levels, { x: s.x, z: s.z, phase: 'back' }), fit: [], out: orders };
+  }
+  /** On a round too long for the suit: the reserve shown counts the stops that still fit and the way home. */
+  function applyFit() {
+    if (!fitting()) { s.fit = null; return; }
+    s.fit = fitHere();
+    s.reserve = s.fit.reserve;
   }
 
   /** Index (in plan order) of the stop the walk heads for now, or -1: the rover. */
@@ -476,12 +508,16 @@ export function createSim(t, route, log) {
     // a round: the reserve for the remaining stops has run out. The warning means "skip the remaining stops":
     // they are skipped at once and the display shows the way home (target rover, band from here); the
     // warning stays until the crew heads home. One stop: as before (the target switches when they head home)
-    if (N > 1 && log.phase === 'out' && s.reserve.seconds <= 0) {
+    applyFit();
+    // a round too long for the suit: "Turn back now" once not even the next stop fits, never at the rover
+    const tooLongTurn = fitting() && s.fit.j === 0 && s.leftRover;
+    if (tooLongTurn || (N > 1 && !fitting() && log.phase === 'out' && s.reserve.seconds <= 0)) {
       const skipped = log.stops.filter((st) => !st.sampled && !st.skipped);
       skipped.forEach((st) => { st.skipped = true; });
       log.turnedBack = { x: s.x, z: s.z, tS: log.tS, reserveS: s.reserve.seconds, skipped: skipped.map((st) => st.id) };
       log.phase = 'back';
       const roundS = s.reserve.seconds;
+      s.fit = null;
       s.reserve = reserveHere();
       s.tb = { on: true, ref: hm, skip: { reserveS: roundS, stops: skipped.map((st) => ({ order: st.order, id: st.id })) } };
     }
@@ -504,6 +540,7 @@ export function createSim(t, route, log) {
         if (hm - s.tb.ref >= D.homeTurnM) s.tb = { on: true, ref: hm };
       }
     } else s.tb = null;
+    if (fitting()) { cur.tooLong = true; info.tooLong = { fit: s.fit.fit, out: s.fit.out }; }
     if (s.tb && s.tb.on) {
       cur.turnBack = true;
       info.turnBack = s.tb.skip

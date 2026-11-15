@@ -316,7 +316,9 @@ export function createHud(el) {
     // reserve chip
     const r = s.reserve;
     resVal.textContent = fmtDuration(r.seconds);
-    resSub.textContent = `limited by ${r.name.toLowerCase()}`;
+    // a round too long for the suit (specs/x-liveroute.md): the reserve counts the stops that fit; name those left out
+    const outN = s.fit && s.fit.out.length ? s.fit.out : null;
+    resSub.textContent = `limited by ${r.name.toLowerCase()}` + (outN ? ` · without ${outN.length === 1 ? 'stop' : 'stops'} ${outN.join(', ')}` : '');
     resLeft.textContent = `${fmtDuration(s.timeLeft.seconds)} left`;
     reserve.classList.toggle('is-warning', r.seconds <= 0);
     resBar.firstChild.style.width = `${Math.max(0, Math.min(100, (100 * r.seconds) / fullTime)).toFixed(1)}%`;
@@ -411,6 +413,13 @@ export function createHud(el) {
       return i.viaSpot
         ? ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, ' if you go on to the spot and back. Head for the rover.']
         : ['Reserve on return ', `${fmtDuration(i.reserveS)} `, { tag: RESERVE_TAG }, '. Head for the rover.'];
+      case 'tooLong': {
+        const list = (n) => (n.length === 1 ? `stop ${n[0]}` : `stops ${n.slice(0, -1).join(', ')} and ${n[n.length - 1]}`);
+        const fit = i.fit.length ? `Reserve on return ${fmtDuration(s.reserve.seconds)} ` : 'No stop fits. Reserve on return ';
+        return i.fit.length
+          ? [fit, { tag: RESERVE_TAG }, ` with ${list(i.fit)}; ${list(i.out)} left out.`]
+          : [fit, `${fmtDuration(s.reserve.seconds)} `, { tag: RESERVE_TAG }, ' on the way home.'];
+      }
       case 'steepUnder': return [`${Math.round(i.slopeDeg)}° here `, { tag: SLOPE_TAG },
         i.offRoute ? ', off the checked route.' : ', on the planned route.', ` Rule broken: slope on foot, at most ${lim} `, { tag: RULES.slopeMaxDeg }, '.'];
       case 'edge': return ['The mapped terrain ends here.'];
