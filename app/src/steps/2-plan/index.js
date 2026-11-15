@@ -83,8 +83,8 @@ export default {
     // too steep (hatched) and radio shadow (dotted) are drawn by the shared map at screen size, so they
     // stay right at every zoom; the ground under them is this step's own render
     // fade: ground, hatching and markers appear together once the ground is painted and the markers drawn
-    // the map stays where it opens (on the EVA zone): no dragging, no reset; + and − still zoom about its centre
-    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true, movable: false, resetButton: false });
+    // the map stays where it opens (on the EVA zone): no dragging, no zooming, no buttons for it
+    const map = mapPanel(terrain, { steep: true, shadow: true, patterns: { steep: hatchPattern, shadow: dotPattern }, patternPx: 0.8, fade: true, movable: false, resetButton: false, zoomButtons: false });
     let groundDone = false, drawnOnce = false;
     const revealWhenReady = () => { if (groundDone && drawnOnce) map.reveal(); };
     const tip = h('div.plan-tip', { hidden: true });
@@ -648,7 +648,7 @@ export default {
           const lead = h(`span.plan-leg-icon.plan-leg-icon--${lg.kind}`);
           let value = '', tag = null;
           if (P && lg.kind === 'foot') { value = `${fmtDistance(lg.distanceM)} · ${fmtDuration(lg.seconds)}`; tag = L.time; }
-          else if (P && lg.kind === 'spot') { value = fmtDuration(lg.seconds); tag = DEMO.spotWorkMin; }
+          else if (P && lg.kind === 'spot') { value = [h('span.plan-stop__k', 'sampling '), fmtDuration(lg.seconds)]; tag = DEMO.spotWorkMin; }
           else if (!P && lg.kind !== 'rover') value = '–';
           if (lg.kind === 'rover') {
             // with waypoints, "Clear" removes them and the stop
