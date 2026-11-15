@@ -22,7 +22,7 @@ const ACCESS_MARS = DATA[0];
 const L = {
   terrain: { label: 'model', text: 'The site from above: the Access Mars 3D terrain of Murray Buttes, reconstructed from rover and orbiter images. It is the same ground you walk on.', source: { title: ACCESS_MARS.name, url: ACCESS_MARS.url } },
   steep: { label: 'model', text: `Ground steeper than ${RULES.slopeMaxDeg.value}° on the slope grid of the same terrain. The suit is built for ${RULES.slopeMaxDeg.value}° at most, so routes do not cross it.`, source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
-  shadow: { label: 'model', text: 'Ground without a straight line of sight to the rover antenna, suit antenna to rover antenna. Geometry only, no radio physics. A caution, not a rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
+  shadow: { label: 'model', text: 'Ground where the suit antenna has no straight line of sight to the rover antenna, nor to the radio relay if one is placed. Geometry only, no radio physics. A caution, not a rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
   spot: { label: 'model', text: 'Position derived from the terrain: a reachable spot at the foot of a butte wall. No Curiosity target lies in this square.', source: { title: DOCS.WALK_TARGETS.title, url: DOCS.WALK_TARGETS.url } },
   point: { label: 'real', text: 'A point of interest of the Access Mars app, with its original text. Not a sample spot.', source: { title: ACCESS_MARS.name, url: ACCESS_MARS.url } },
   distance: { label: 'model', text: 'Length of the route calculated in your browser on the terrain grid: the fastest way that keeps every rule.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
