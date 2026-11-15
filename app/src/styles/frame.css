@@ -82,6 +82,8 @@
 .sources__table th { text-align: left; color: var(--text-2); font-weight: 500; border-bottom: 1px solid var(--line); padding: 0.4em 0.6em 0.4em 0; }
 .sources__table td { border-bottom: 1px solid var(--line); padding: 0.45em 0.6em 0.45em 0; vertical-align: top; }
 .sources__src { color: var(--text-2); max-width: 420px; }
+.sources__label { white-space: nowrap; }
+.sources__kind { margin-left: 0.35em; color: var(--text); }
 .sources__text { font-size: var(--fs-tag); max-width: 380px; margin-top: 0.2em; }
 .sources__docs { padding-left: 1.2em; font-size: var(--fs-small); line-height: 1.8; }
 .sources__ai p { color: var(--text-2); max-width: 70ch; }

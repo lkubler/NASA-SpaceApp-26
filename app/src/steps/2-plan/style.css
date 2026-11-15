@@ -104,14 +104,18 @@
 .step--plan .plan-stop__name { display: flex; align-items: center; gap: 0.45em; min-width: 0; }
 .step--plan .plan-stop__name .marker { font-size: var(--fs-tag); box-shadow: none; }
 .step--plan .plan-stop__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.step--plan .plan-stop__ctl { display: flex; gap: 0.2em; flex: none; }
+.step--plan .plan-stop__ctl { display: flex; gap: 0.3em; flex: none; margin-left: 0.3em; }
+/* up / down / remove read as buttons at rest: filled, framed, white symbol; cyan on hover and focus */
 .step--plan .plan-ctl {
-  width: 1.75em; height: 1.75em; display: inline-grid; place-items: center; border-radius: 6px; padding: 0;
-  border: 1px solid var(--line-strong); background: transparent; color: var(--text); font: 600 var(--fs-small)/1 var(--font-mono); cursor: pointer;
+  width: 2em; height: 2em; display: inline-grid; place-items: center; border-radius: 7px; padding: 0;
+  border: 1px solid var(--text-3); background: var(--surface-2); color: var(--text); font: 700 var(--fs-text)/1 var(--font-mono); cursor: pointer;
+  transition: border-color var(--fade), color var(--fade), background var(--fade);
 }
-.step--plan .plan-ctl:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.step--plan .plan-ctl:hover:not(:disabled), .step--plan .plan-ctl:focus-visible:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--surface); box-shadow: 0 0 0 1px var(--accent-glow); }
 .step--plan .plan-ctl:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.step--plan .plan-ctl:disabled { opacity: 0.25; cursor: default; }
+.step--plan .plan-ctl:disabled { opacity: 0.3; cursor: default; background: transparent; border-color: var(--line); }
+.step--plan .plan-ctl[data-ctl$="-x"] { font-size: calc(var(--fs-text) * 1.3); }
+.step--plan .plan-ctl[data-ctl$="-x"]:hover, .step--plan .plan-ctl[data-ctl$="-x"]:focus-visible { border-color: var(--warning); color: var(--warning); box-shadow: none; outline-color: var(--warning); }
 .step--plan .plan-legs.is-round .row:not(.plan-stop) .row__lead { width: 2.4em; }
 .step--plan .plan-clear .textlink { font-size: var(--fs-small); color: var(--text-2); }
 .step--plan .plan-clear .textlink:hover { color: var(--text); }
@@ -120,7 +124,7 @@
 /* a round with several stops on a short screen: list and alerts tighten so the totals stay in view */
 @media (max-height: 800px) {
   .step--plan .plan-legs.is-round .row { padding: 0.08em 0; }
-  .step--plan .plan-legs.is-round .plan-ctl { width: 1.6em; height: 1.6em; }
+  .step--plan .plan-legs.is-round .plan-ctl { width: 1.8em; height: 1.8em; }
   .step--plan .plan-round { padding-top: 0.55em; padding-bottom: 0.55em; }
   .step--plan .plan-cards .alert { padding: 0.45em 0.9em; }
   .step--plan .plan-cards .alert__title { font-size: var(--fs-text); }
@@ -265,3 +269,6 @@
 /* many stops and waypoints: the leg list scrolls in its own area, so the totals and "Confirm route" stay in view */
 .step--plan .plan-legs { flex: 0 1 auto; min-height: 4em; overflow-y: auto; overscroll-behavior: contain; }
 .step--plan .plan-cards, .step--plan .plan-totals { flex-shrink: 0; }
+
+/* totals header: the last word keeps its info marker on the same line */
+.step--plan .plan-nowrap { white-space: nowrap; }
