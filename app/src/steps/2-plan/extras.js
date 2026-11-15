@@ -14,9 +14,10 @@ import { ROVER, RULES, RADIO } from '../../core/index.js';
 // sols 1446-1452; research/data-sites.md), so the rover comes in from the north-east
 const BASE_BEARING_DEG = 39;
 const BASE_KM = 8;
+const CURIOSITY_DRIVE_KM = 10.1; // Curiosity's drive, sol 3 to 1452 (public/data/gale/gale_hrsc.json drive.km)
 
 export const EXTRA_TAGS = {
-  drive: { label: 'simulated', text: `The rover drive from the base at Bradbury Landing (${BASE_KM} km north-east) is drawn on a way over the terrain that keeps the slope rule. It is a picture only: it does not count into time, distance or reserve yet.`, source: { title: 'Curiosity waypoints, NASA/JPL-Caltech', url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json' } },
+  drive: { label: 'simulated', text: `The base at Bradbury Landing, Curiosity's landing site, is ${BASE_KM} km north-east in a straight line; Curiosity drove ${CURIOSITY_DRIVE_KM} km to get here. The rover drive is drawn over terrain that keeps the slope rule. A picture only: it does not count into time, distance or reserve yet.`, source: { title: 'Curiosity waypoints, NASA/JPL-Caltech', url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json' } },
   relay: { label: 'simulated', text: 'A radio relay the crew sets out, placed by you on open ground where it sees the rover. The device is simulated: a mast with an antenna that repeats the link.', source: { title: 'The team’s design', url: '' } },
   contact: { label: 'model', text: `Contact: a place has contact if it sees the rover, or sees the relay while the relay sees the rover. Line of sight over the terrain grid, antennas at ${RADIO.roverAntennaM.value} m (rover), ${RADIO.relayMastM.value} m (relay, an assumption) and ${RADIO.suitAntennaM.value} m (suit). The method, predicting radio shadow from terrain obstacles, was checked against measurements on Apollo 15.`, source: { title: 'Apollo 15 Mission Report, Supplement 6: Postflight analysis of the EVCS-LM communications link (MSC-05161)', url: 'https://ntrs.nasa.gov/api/citations/19720017533/downloads/19720017533.pdf' } },
   zone: { label: 'model', text: 'The area of this excursion: a frame around the candidate spots and the rover, measured on the walk grid.', source: { title: 'Our walk grid (Access Mars Murray Buttes)', url: '' } },
