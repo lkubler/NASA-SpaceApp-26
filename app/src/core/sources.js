@@ -106,7 +106,7 @@ export const DATA = [
   {
     name: 'Access Mars 3D terrain, Murray Buttes',
     by: 'Google Creative Lab with NASA/JPL-Caltech; built from Curiosity Mastcam and Navcam images (NASA/JPL-Caltech/MSSS)',
-    use: 'The terrain you plan on and walk through; the 0.5 m height and slope grids; the sky image; the four Access Mars points and their photos',
+    use: 'The terrain you plan on and walk through; the 0.5 m height and slope grids; the skyline image; the four Access Mars points and their texts',
     licence: 'Apache-2.0 (code and scene); imagery NASA/JPL-Caltech',
     url: 'https://github.com/googlecreativelab/access-mars',
     note: GROUND_NOTE + ' ' + GROUND_FILL_NOTE,
@@ -114,21 +114,21 @@ export const DATA = [
   {
     name: 'HiRISE elevation model DTEEC_040770_1755_039280_1755_U01 and orthoimage',
     by: 'NASA/JPL/University of Arizona/USGS',
-    use: 'Position and orientation of the walk square in Gale crater; check of the slope grid',
+    use: 'Used in preparation, not shown in the app: to place the walk square in Gale crater and to cross-check the slope grid',
     licence: 'PDS public data',
     url: 'https://www.uahirise.org/dtm/',
   },
   {
     name: 'Curiosity waypoints',
     by: 'NASA/JPL-Caltech',
-    use: 'Curiosity’s drive path near Murray Buttes; in step 1 the landing site (Bradbury Landing, where we place the base: assumption) and the drive from there to Murray Buttes',
+    use: 'In step 1: the positions of Murray Buttes, Marias Pass and Pahrump Hills, the landing site (Bradbury Landing, where we place the base: assumption) and Curiosity’s drive from there to Murray Buttes',
     licence: 'NASA public data',
     url: 'https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json',
   },
   {
-    name: 'Curiosity photos (Mastcam, MAHLI, Navcam)',
-    by: 'NASA/JPL-Caltech/MSSS (Mastcam, MAHLI); NASA/JPL-Caltech (Navcam)',
-    use: 'Shown in the requests, at the sample spot and in the report: “Sloping buttes and cross-bedded sandstone” (PIA21042, Mastcam, sol 1454, NASA/JPL-Caltech/MSSS); “Layered outcrop at Quela” (Navcam, sol 1455, NASA/JPL-Caltech); “Quela drill hole at the foot of a butte” (MAHLI, sol 1464, NASA/JPL-Caltech/MSSS). Raw frames from the Curiosity raw image archive, with their file ids',
+    name: 'Curiosity photos (Mastcam, MAHLI)',
+    by: 'NASA/JPL-Caltech/MSSS',
+    use: 'Shown in the requests, at the sample spot and in the report: “Sloping buttes and cross-bedded sandstone” (PIA21042, Mastcam, sol 1454, NASA/JPL-Caltech/MSSS); in the report when no photo was shown at the spot: “Quela drill hole at the foot of a butte” (MAHLI, sol 1464, NASA/JPL-Caltech/MSSS). Raw frames from the Curiosity raw image archive, with their file ids',
     licence: 'JPL Image Use Policy',
     url: 'https://www.jpl.nasa.gov/imagepolicy',
   },
@@ -149,7 +149,7 @@ export const DATA = [
   {
     name: 'MOLA elevation of Gale crater (MEGDR, 128 pixels per degree, MEGT00N090HB)',
     by: 'NASA/GSFC MOLA Science Team, Mars Global Surveyor; NASA PDS Geosciences Node',
-    use: 'Reference for placing the HRSC Gale crater model on the map and converting its heights to metres (fit correlation 0.999)',
+    use: 'Used in preparation, not shown in the app: to place the HRSC Gale crater model on the map and convert its heights to metres (fit correlation 0.999)',
     licence: 'NASA PDS, public domain',
     url: 'https://pds-geosciences.wustl.edu/mgs/mgs-m-mola-5-megdr-l3-v1/mgsl_300x/meg128/megt00n090hb.img',
   },
@@ -218,10 +218,11 @@ export const TOOLS = [
   { name: 'Draco decoder (2017 build from Access Mars)', use: 'Decodes the compressed terrain mesh', licence: 'Apache-2.0', url: 'https://github.com/google/draco' },
   { name: 'Space Grotesk, Inter, JetBrains Mono (via Fontsource)', use: 'Typefaces', licence: 'SIL Open Font License 1.1', url: 'https://fontsource.org' },
   { name: 'Python with numpy, Pillow, DracoPy', use: 'Offline data preparation', licence: 'BSD / HPND / Apache-2.0', url: 'https://numpy.org' },
-  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4: an AI-generated green-screen image made by the team; the green was keyed out and “AI-generated image” written into the image pixels by our script', licence: 'Generated for this project; no agency branding', url: '' },
+  { name: 'Helmet frame image (AI-generated)', use: 'The visor frame in step 4: an AI-generated image made by the team with ChatGPT; background removed; visible “AI-generated image” mark', licence: 'Generated for this project; no agency branding', url: '' },
   { name: 'Rover egress film (labelled AI-generated)', use: 'The intro film before the walk: the team’s film, rendered with Python/pyrender scripts from a Space Exploration Vehicle rover 3D model on placeholder terrain; cut at the fade to black and marked “AI-generated” in the pixels with FFmpeg', licence: 'Made for this project; no agency branding', url: '' },
   { name: 'glTF Transform and meshoptimizer', use: 'Shrinking the rover model offline (texture resize, mesh simplification, meshopt compression) and decoding it in the app', licence: 'MIT', url: 'https://gltf-transform.dev' },
   { name: 'FFmpeg', use: 'Cutting and re-encoding the intro film (offline)', licence: 'GPL / LGPL', url: 'https://ffmpeg.org' },
+  { name: 'ChatGPT (OpenAI)', use: 'Generating the helmet frame image', licence: 'AI tool; output noted in the project description', url: 'https://chatgpt.com' },
   { name: 'Claude Code (Anthropic)', use: 'AI coding agent: research notes, app code, data preparation scripts and unit tests, written under the team’s specs', licence: 'AI tool; output noted in the project description', url: 'https://www.anthropic.com/claude-code' },
 ];
 
@@ -229,5 +230,5 @@ export const AI_NOTE = [
   'The idea, its direction and every product decision come from the team.',
   'AI coding agents (Claude Code) did research, wrote the app code, the data preparation scripts and the unit tests under the team’s specs. Code and data written with AI help are noted here and in the project description.',
   'The intro film before the walk was rendered by scripts that an AI coding agent wrote, from a rover 3D model; it carries a visible “AI-generated” mark in every frame.',
-  'The helmet frame image is AI-generated and carries a visible “AI-generated image” mark. No agency logos or mission identifiers appear in generated content.',
+  'The helmet frame image was generated with ChatGPT and carries a visible “AI-generated image” mark. No agency logos or mission identifiers appear in generated content.',
 ];
