@@ -50,6 +50,8 @@ describe('turn-back line', () => {
     expect(near === null || !near.anyInView).toBe(true);
     sim.log.levels = fullLevels();
     expect(tl.update(sim, 5100)).toBe(null); // within the refresh time: the old answer
-    expect(tl.update(sim, 7000)).not.toBe(null); // full levels: ground beyond the line in view
+    const low = fullLevels(); for (const k of Object.keys(low)) low[k] *= 0.3; // suit drawn down: ground beyond the line
+    sim.log.levels = low;
+    expect(tl.update(sim, 7000)).not.toBe(null); // after the refresh time: calculated again
   });
 });
