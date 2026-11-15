@@ -20,6 +20,10 @@ function fmtValue(e) {
   return `${v}${e.unit ? ' ' + e.unit : ''}`;
 }
 
+// the label kind as a word beside its marker (the marker alone shows it only on hover)
+const KINDS = ['real', 'model', 'simulated', 'assumption'];
+const labelWord = (e) => (KINDS.includes(e.label) ? e.label : 'assumption');
+
 export function sourcesPage(onClose) {
   const link = (url, text) => (/^https?:/.test(url) ? h('a', { href: url, target: '_blank', rel: 'noopener' }, text) : h('span', text));
   const values = listValues();
@@ -46,7 +50,7 @@ export function sourcesPage(onClose) {
           h('td.muted', GROUP_NAMES[group] || group),
           h('td', h('div', entry.name || key), entry.text ? h('div.muted.sources__text', entry.text) : null),
           h('td.mono', fmtValue(entry)),
-          h('td', labelTag(entry)),
+          h('td.sources__label', labelTag(entry), h('span.sources__kind', labelWord(entry))),
           h('td.sources__src', (DOCS[entry.src] || DOCS.NONE).title, entry.where ? h('span.muted', ', ' + entry.where) : null),
         )))),
 
