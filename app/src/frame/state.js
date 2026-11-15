@@ -7,6 +7,7 @@
 //   requestsDone: string[],        // ids of finished requests (step 5 adds one)
 //   candidates: CandidatePlan[],   // [{ candidate, route, plan }] from core planAllCandidates (step 2)
 //   stops: string[],               // chosen stops in visiting order, 0 to 3 ids, e.g. ['F3', 'F7'] (step 2)
+//   waypoints: { [legKey]: {x,z}[] }, // points a leg must pass, per leg 'rover>F3' (step 2, specs/x-waypoints.md)
 //   spotId: null | string,         // the FIRST stop, e.g. 'F3' (step 2); = stops[0]
 //   route: null | Route,           // the round over all stops, core planRound (step 2); see README
 //   plan: null | PlanNumbers,      // core planNumbers(route) (step 2; read by 3 and 5)
@@ -16,7 +17,7 @@
 const listeners = new Set();
 
 export function initialState() {
-  return { step: 1, request: null, requestsDone: [], candidates: [], stops: [], spotId: null, route: null, plan: null, walk: null };
+  return { step: 1, request: null, requestsDone: [], candidates: [], stops: [], waypoints: {}, spotId: null, route: null, plan: null, walk: null };
 }
 
 export const state = initialState();

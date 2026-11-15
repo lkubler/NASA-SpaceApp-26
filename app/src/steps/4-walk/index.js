@@ -48,10 +48,13 @@ export default {
     hud.setPlanBroken(ctx.state.plan && ctx.state.plan.brokenRules);
     // cost fields to the rover and to every stop: built once here, read every step
     roverField(t); for (const st of stopsOf(route)) spotField(t, st);
+    // and to every waypoint of the plan (specs/x-waypoints.md: the reserve on return passes them)
+    for (const wps of route.waypoints || []) for (const w of wps) spotField(t, w);
     const sim = createSim(t, route, log);
     // the steep border keeps its corridors open along the legs of a round too (steepBorder.js); one stop:
     // its legs are the candidate routes already kept open, the border as before
-    const roundLegs = route.legs && route.legs.length > 2 ? route.legs.map((l) => l.cells) : [];
+    // a route shaped by waypoints is no candidate route: its legs are kept open too
+    const roundLegs = route.legs && (route.legs.length > 2 || route.waypoints) ? route.legs.map((l) => l.cells) : [];
     const v3 = createScene3d(view, t, { keepOpen: roundLegs });
     disposers.push(() => v3.dispose());
     // the route band: the leg to the current target only (the next stop, then the rover); it switches
