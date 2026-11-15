@@ -105,6 +105,7 @@
 .step--mission .m1-intro__text { max-width: 34em; }
 .step--mission .m1-intro__line { font-family: var(--font-display); font-weight: 500; font-size: clamp(22px, 3.6vh, 40px); line-height: 1.25; margin: 0 0 0.7em; letter-spacing: -0.01em; }
 .step--mission .m1-intro__line .vlabel { vertical-align: middle; }
+.step--mission .m1-nowrap { white-space: nowrap; }
 .step--mission .m1-intro__q { color: var(--accent); font-weight: 700; }
 .step--mission .m1-num { color: #fff; }
 .step--mission .m1-intro__action { position: absolute; right: var(--gutter); bottom: var(--gutter); }

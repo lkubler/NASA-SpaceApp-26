@@ -92,10 +92,10 @@ export default {
       const begin = pillButton({ text: 'Begin', arrow: true, onClick: () => closeOpening() });
       const intro = h('div.m1-intro',
         h('div.m1-intro__text',
-          h('p.m1-intro__line', 'A crew is on Mars, on its own: a signal to Earth takes ',
-            h('span.m1-num', `${ENVIRONMENT.signalDelayMinMin.value} to ${ENVIRONMENT.signalDelayMaxMin.value} minutes`),
-            ' each way ', labelTag(ENVIRONMENT.signalDelayMaxMin), '.'),
-          h('p.m1-intro__line.m1-intro__q', 'Before every step outside, one question: can I still get home?')),
+          h('p.m1-intro__line', 'On Mars, help is ',
+            h('span.m1-nowrap', h('span.m1-num', `${ENVIRONMENT.signalDelayMaxMin.value} minutes`),
+              ' away. ', labelTag(ENVIRONMENT.signalDelayMaxMin))),
+          h('p.m1-intro__line.m1-intro__q', "No one on Earth can tell you in time whether you'll make it back. M.H.U.D. can.")),
         h('div.m1-intro__action', begin));
       const globe = h('div.m1-globe', { 'aria-hidden': 'true' });
       const skyCredit = h('div.m1-intro__credit.mono', h('span.m1-credit__k', 'Sources'), 'Mars: NASA/JPL-Caltech 3D model ',
