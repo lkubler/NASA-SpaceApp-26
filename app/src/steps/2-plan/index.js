@@ -467,8 +467,8 @@ export default {
 
     /** The list of a round with several stops: every leg with distance and time, every stop with up / down / remove. */
     function stopList(P, ids) {
-      const ctl = (sym, label, onClick, disabled, key) => {
-        const b = h('button.plan-ctl', { type: 'button', 'aria-label': label, title: label, 'data-ctl': key }, sym);
+      const ctl = (sym, label, onClick, disabled, key, aria = label) => {
+        const b = h('button.plan-ctl', { type: 'button', 'aria-label': aria, title: label, 'data-ctl': key }, sym);
         b.disabled = disabled;
         b.addEventListener('click', (e) => { e.stopPropagation(); onClick(); });
         return b;
@@ -497,9 +497,9 @@ export default {
             h('span.row__label.plan-stop__name', marker(numberOf(id), { selected: true }), h('span.plan-stop__text', lg.name)),
             h('span.row__value.mono', fmtDuration(lg.seconds), ' ', labelTag(DEMO.spotWorkMin)),
             h('span.plan-stop__ctl',
-              ctl('↑', `Move ${numberOf(id)} earlier`, keep(`${id}-up`, () => move(k, -1)), k === 0, `${id}-up`),
-              ctl('↓', `Move ${numberOf(id)} later`, keep(`${id}-down`, () => move(k, 1)), k === ids.length - 1, `${id}-down`),
-              ctl('×', `Remove ${numberOf(id)} from the route`, keep('x', () => setStops(ids.filter((x) => x !== id))), false, `${id}-x`))));
+              ctl('↑', 'Move earlier', keep(`${id}-up`, () => move(k, -1)), k === 0, `${id}-up`, `Move earlier: ${numberOf(id)}`),
+              ctl('↓', 'Move later', keep(`${id}-down`, () => move(k, 1)), k === ids.length - 1, `${id}-down`, `Move later: ${numberOf(id)}`),
+              ctl('×', 'Remove stop', keep('x', () => setStops(ids.filter((x) => x !== id))), false, `${id}-x`, `Remove stop: ${numberOf(id)}`))));
         }
       });
       return out;
