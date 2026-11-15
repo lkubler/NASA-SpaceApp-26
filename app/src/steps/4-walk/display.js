@@ -110,6 +110,8 @@ export const DISPLAY = {
   miniRadiusM: 32,        // minimap: metres from the centre to the rim
   fovDeg: 66,
   bandWidthM: 0.4,        // route band on the ground
+  planBandWidthM: 0.15,   // the planned route beside the live route: a thin line (specs/x-liveroute.md) ...
+  planBandOpacity: 0.3,   // ... and faint
   bandFadeNearM: 2.2,     // the band fades in from this far in front of the eye ...
   bandFadeFullM: 6,       // ... to full strength here, so it stays a calm, even band
   // ground cues (specs/feedback-1.md, Walk: display); all assumption: display choices, not measurements

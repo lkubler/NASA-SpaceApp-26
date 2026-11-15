@@ -12,6 +12,7 @@ import { DISPLAY as D } from './display.js';
 import { createSky, skyFog, sunDirection } from './sky.js';
 
 const ACCENT = 0x4fcbff; // --accent in styles/tokens.css
+const WARNING = 0xff4d4f; // --warning in styles/tokens.css
 
 /** opts.keepOpen: cell lists of the planned round's legs; the steep border keeps its corridors open along them too. */
 export function createScene3d(host, t, opts = {}) {
@@ -80,10 +81,20 @@ export function createScene3d(host, t, opts = {}) {
     return ts;
   }
 
-  /** Cyan band on the ground along scene points [{x,z}]. */
-  function setBand(key, points, visible = true) {
-    if (!bands[key]) { bands[key] = band(t, points); scene.add(bands[key]); }
+  /**
+   * Band on the ground along scene points [{x,z}]: cyan; style 'warn' in the warning colour (no rule-keeping
+   * way from here), 'faint' thin and faint (the planned route beside the live route, specs/x-liveroute.md).
+   */
+  function setBand(key, points, visible = true, style = '') {
+    if (!bands[key]) { bands[key] = band(t, points, style); scene.add(bands[key]); }
     bands[key].visible = visible;
+  }
+  /** Remove a band for good (a live route replaced by the next one). */
+  function dropBand(key) {
+    const b = bands[key];
+    if (!b) return;
+    scene.remove(b); b.geometry.dispose(); b.material.dispose();
+    delete bands[key];
   }
 
   /**
@@ -159,7 +170,7 @@ export function createScene3d(host, t, opts = {}) {
     renderer.domElement.remove();
   }
 
-  return { renderer, scene, cam, loadTerrain, setBand, placeRover, setPose, project, viewDir, render, dispose, resize, cues, beacon };
+  return { renderer, scene, cam, loadTerrain, setBand, dropBand, placeRover, setPose, project, viewDir, render, dispose, resize, cues, beacon };
 }
 
 // ---------- ground cues: edge of the closed area (steep) and of the radio shadow ----------
@@ -353,10 +364,10 @@ function smooth(points, k = 3) {
   return out;
 }
 
-function band(t, points) {
+function band(t, points, style = '') {
   const p = smooth(points, 4);
   const pos = [], uv = [], idx = [];
-  const w = D.bandWidthM / 2, lift = 0.07;
+  const w = (style === 'faint' ? D.planBandWidthM : D.bandWidthM) / 2, lift = style === 'faint' ? 0.06 : 0.07;
   let along = 0;
   for (let i = 0; i < p.length; i++) {
     const a = p[Math.max(0, i - 1)], b = p[Math.min(p.length - 1, i + 1)];
@@ -379,7 +390,7 @@ function band(t, points) {
   // into the haze far away, like the terrain
   const m = new THREE.ShaderMaterial({
     uniforms: {
-      color: { value: new THREE.Color(ACCENT) }, opacity: { value: 0.62 },
+      color: { value: new THREE.Color(style === 'warn' ? WARNING : ACCENT) }, opacity: { value: style === 'faint' ? D.planBandOpacity : 0.62 },
       near: { value: D.bandFadeNearM }, full: { value: D.bandFadeFullM },
       fogColor: { value: skyFog().color }, fogDensity: { value: skyFog().density },
     },

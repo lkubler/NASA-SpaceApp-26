@@ -145,7 +145,7 @@ describe('walk on a round', () => {
     expect(log.stops.filter((s) => s.sampled).length).toBe(2);
   }, 60000);
 
-  it('one stop: turn back as before (the target switches when the crew heads home, no stop is marked skipped)', () => {
+  it('one stop: turn back as before (the target switches to the rover at once, no stop is marked skipped)', () => {
     const route = planRound(t, [C('F7')]);
     const log = newWalkLog();
     const sim = createSim(t, route, log);
@@ -155,7 +155,9 @@ describe('walk on a round', () => {
     while (!sim.s.active.turnBack && guard++ < 400000 && !log.ended) sim.step(D.tickS, { f: 0, r: 0, turn: 0, pitch: 0 });
     expect(sim.s.active.turnBack).toBe(true);
     expect(sim.s.alertInfo.turnBack.viaSpot).toBe(true);
-    expect(sim.target().kind).toBe('spot');
+    // specs/x-liveroute.md (team clarification): the display shows the way back to the rover at once
+    expect(sim.target().kind).toBe('rover');
+    expect(sim.leg().kind).toBe('rover');
     expect(log.turnedBack).toBe(null);
     expect(log.stops[0].skipped).toBe(false);
   }, 60000);
