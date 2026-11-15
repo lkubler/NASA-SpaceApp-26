@@ -29,6 +29,8 @@ const L = {
   time: { label: 'model', text: `Suit time: the real walking time at the planning pace × ${DEMO.timeFactor.value} (demo time), plus the fixed work at the spot.`, source: sourceOf(ASTRONAUT.paceMS), moon: true },
   reserve: { label: 'model', moon: true, text: `Time left in the suit when back at the rover, if the crew walks the plan. The way home counts at a ${Math.round((RULES.walkBackRateFactor.value - 1) * 100)} % higher work rate. Set by the consumable that runs out first.`, source: sourceOf(SUIT.designW) },
   slope: { label: 'model', text: 'Steepest ground on the route, from the slope grid of the terrain.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
+  calc: { label: 'model', moon: true, source: sourceOf(ASTRONAUT.paceMS),
+    text: `Real walking time at the planning pace of ${Math.round(ASTRONAUT.paceMS.value * 3.6)} km/h, × ${DEMO.timeFactor.value} (demo time factor) = suit time. The demo runs ${DEMO.timeFactor.value}× faster, so a short walk counts like a real excursion.` },
   waypoint: { label: 'model', text: 'A point you set that the route must pass. No sample and no work there; the legs on either side are planned again by the same rules.', source: { title: DOCS.WALK_TERRAIN.title, url: DOCS.WALK_TERRAIN.url } },
 };
 
@@ -607,12 +609,12 @@ export default {
       const tone = lp && !lp.keepsRules ? 'warning' : null;
       const F = demoFactor();
       // the time as its calculation: real walking time (shown suit time / factor) × demo factor = suit time, e.g.
-      // "14 m · 25 s × 76 = 32 min"; the pace and the factor each carry their label (display only)
+      // "14 m   25 s × 76 = 32 min"; the calculation small and grey, one label at the end explains both parts
       // a part shorter than 1 m or 1 min reads "< 1 m" / "< 1 min", not "0 m · 0 min", without the calculation
       const foot = (m, sec) => row('On foot', sec < 60
         ? `${m < 1 ? '< 1 m' : fmtDistance(m)} · < 1 min`
-        : [`${fmtDistance(m)} `, h('span.plan-calc', '· ', fmtRealTime(sec / F), labelTag(ASTRONAUT.paceMS), ` × ${F}`, labelTag(DEMO.timeFactor), ' = '), fmtDuration(sec)],
-      { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tone });
+        : [h('span.plan-dist', fmtDistance(m)), h('span.plan-calc', `${fmtRealTime(sec / F)} × ${F} =`), h('span.plan-time', fmtDuration(sec))],
+      { lead: h('span.plan-leg-icon.plan-leg-icon--foot'), tone, tag: L.calc });
       if (!lp || !lp.parts) return [foot(lg.distanceM, lg.seconds)];
       const out = [];
       lp.parts.forEach((pt, j) => {
