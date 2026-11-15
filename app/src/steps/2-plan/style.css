@@ -214,7 +214,6 @@
 /* leg icons for the drive and the handover */
 .step--plan .plan-leg-icon--handover { width: 0.75em; height: 0.75em; border-radius: 50%; border: 1.5px solid #fff; }
 .step--plan .plan-leg-icon--drive { width: 2px; height: 1.1em; background: #ececec; margin: 0 0.35em; }
-.step--plan .plan-leg-icon--relay { width: 0.75em; height: 0.75em; background: #f6c945; }
 
 /* the panel holds card, relay, legs and the four totals without scrolling */
 .step--plan .plan-totals .bignum__value { font-size: clamp(20px, 3vh, 34px); }

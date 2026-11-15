@@ -515,7 +515,7 @@ export default {
       const out = [];
       P.legs.forEach((lg, i) => {
         if (lg.kind === 'rover' && i === 0) {
-          out.push(row('Handover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }), relayRow());
+          out.push(row('Handover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }));
         } else if (lg.kind === 'rover') {
           // the way to clear sits at the end of the list, on the last row
           out.push(h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--handover')), h('span.row__label', 'Back at the rover'),
@@ -622,8 +622,6 @@ export default {
       row('Base', 'Bradbury Landing · 8 km', { lead: h('span.plan-leg-icon.plan-leg-icon--rover') }),
       row('Rover', h('span.muted', 'drive, not counted'), { lead: h('span.plan-leg-icon.plan-leg-icon--drive'), tag: EXTRA_TAGS.drive }),
     ];
-    /** The relay in the list: placed or not. */
-    const relayRow = () => row('Relay', h('span.muted', getRelay() ? 'placed' : 'not placed'), { lead: h('span.plan-leg-icon.plan-leg-icon--relay'), tag: EXTRA_TAGS.relay });
 
     function renderPanel() {
       const ids = stopIds();
@@ -681,7 +679,6 @@ export default {
             legs.append(wpsSet
               ? h('div.row', h('span.row__lead', h('span.plan-leg-icon.plan-leg-icon--handover')), h('span.row__label', 'Back at the rover'), clearLink())
               : row(i === 0 ? 'Handover' : 'Back at the rover', '', { lead: h('span.plan-leg-icon.plan-leg-icon--handover') }));
-            if (i === 0) legs.append(relayRow());
             return;
           }
           if (P && lg.kind === 'foot') { legs.append(...footRows(lg, P.legPlans[(i - 1) / 2], tag)); return; }
