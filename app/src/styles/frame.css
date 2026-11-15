@@ -131,6 +131,13 @@
 .step--in.step--zoom { --t-in: 80ms; animation: fade-in 300ms ease-out var(--t-in) backwards; }
 .step--in.step--zoom [data-enter] { animation-name: enter-fade; }
 @keyframes crater-zoom { from { transform: none; } to { transform: scale(1.08); } }
+/* after the dive onto Murray Buttes (Plan this mission): the crater keeps zooming at speed while it fades, and
+   the Plan map grows in from the same point, so one motion carries over the page change */
+.step--out.step--zoom.m1--diving .m1-view { animation: crater-dive 340ms cubic-bezier(0.5, 0, 1, 1) both; }
+.step--out.step--zoom.m1--diving { animation: fade-out 320ms cubic-bezier(0.4, 0, 1, 1) both; }
+.step--in.step--zoom .split__map { animation: plan-grow 370ms cubic-bezier(0, 0, 0.2, 1) 40ms backwards; /* ends before the shell drops step--in (440 ms) */ transform-origin: 50% 50%; }
+@keyframes crater-dive { from { transform: none; } to { transform: scale(2.2); } }
+@keyframes plan-grow { from { opacity: 0; transform: scale(0.45); } to { opacity: 1; transform: none; } }
 @keyframes step-out-fwd { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(-16px); } }
 @keyframes step-out-back { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(16px); } }
 @keyframes step-in-fwd { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }

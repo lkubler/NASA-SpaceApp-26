@@ -11,6 +11,8 @@ const PHOTO_BASE = 'data/murray/photos/';
 // opening -> crater transition: globe zoom (ms), crater fly-in (ms), Gale's share of the screen width at the handoff
 const ZOOM_MS = 2600, FLY_MS = 3400, HANDOFF_FILL = 0.11; // speeds meet at the handoff (planet.js, crater.js)
 const SETTLE_AT = 0.72;       // share of the flight after which the panel and markers start to come in
+const DIVE_MS = 700;          // Mission -> Plan: the dive onto Murray Buttes before the page changes
+const PLAN_LEGEND_PX = 150;   // height of the legend under the Plan map, for where the map's centre will be
 const SETTLE_SHIFT_MS = 1900; // the scene's slide to the left after the flight, slow to match the camera
 const DELAY = ENVIRONMENT.signalDelayNowMin;
 
@@ -260,7 +262,7 @@ export default {
     function buildPanel(credits) {
       const sentAt = (ctx.state.request && ctx.state.request.sentAt) || Date.now() - DELAY.value * 60000;
       reqs = REQUESTS.map((r) => toRequest(r, credits, sentAt));
-      btn = pillButton({ text: 'Plan this mission', arrow: true, onClick: () => ctx.next(), disabled: !ctx.state.request });
+      btn = pillButton({ text: 'Plan this mission', arrow: true, onClick: () => goPlan(), disabled: !ctx.state.request });
       const list = h('div.m1-reqs', { role: 'radiogroup', 'aria-label': 'Missions from Earth' });
       for (const r of reqs) {
         const c = requestCard(r);
@@ -311,6 +313,7 @@ export default {
     function pickMission(id) {
       const r = reqs.find((x) => x.id === id);
       if (!r || r.locked) return;
+      ctx.getTerrain(); // start loading the Plan map's ground now, so it is there when the dive lands
       ctx.set({ request: r });
       markChosen();
     }
@@ -324,6 +327,32 @@ export default {
       const chosen = reqs.find((x) => x.id === id);
       for (const [sid, m] of siteEls) m.classList.toggle('is-selected', !!chosen && chosen.site === sid);
       if (btn) btn.disabled = !id;
+    }
+
+    /**
+     * Mission -> Plan: the panel, headline and markers fade while the camera dives fast onto Murray Buttes,
+     * ending where the Plan map's centre will be; then the page changes (frame/shell.js 'zoom') and the Plan
+     * map grows in from there, so the motion carries over. Reduced motion or no crater: the page changes at once.
+     */
+    let diving = false;
+    async function goPlan() {
+      if (diving || !ctx.state.request) return;
+      if (!view || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { ctx.next(); return; }
+      diving = true;
+      ctx.getTerrain(); // the Plan map's ground loads during the dive (cached; already asked for on the pick)
+      el.classList.add('m1--diving');
+      await view.diveTo({ dur: DIVE_MS, at: planMapCentre() });
+      if (alive) ctx.next();
+    }
+    /** Where the Plan map's centre will be, as fractions of the screen: measured on an invisible copy of its layout. */
+    function planMapCentre() {
+      const probe = h('div.step.step--plan', { style: 'visibility:hidden;pointer-events:none;animation:none', 'aria-hidden': 'true' },
+        h('div.split', h('section.split__map', h('div.map', { style: 'flex:1 1 auto' }), h('div', { style: `height:${PLAN_LEGEND_PX}px;flex:none` })), h('aside.split__side')));
+      el.parentElement.append(probe);
+      const r = probe.querySelector('.map').getBoundingClientRect(), o = el.getBoundingClientRect();
+      probe.remove();
+      if (!r.width || !o.width) return { x: 0.3, y: 0.42 };
+      return { x: (r.left + r.width / 2 - o.left) / o.width, y: (r.top + r.height / 2 - o.top) / o.height };
     }
 
     /** The panel opens once the crater is in place; the scene slides left so the sites sit in the free half. */

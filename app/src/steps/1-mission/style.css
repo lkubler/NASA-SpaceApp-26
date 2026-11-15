@@ -227,3 +227,7 @@ body:has(.step--mission.m1--intro) .stepbar { opacity: 0; pointer-events: none; 
 @media (prefers-reduced-motion: reduce) {
   .step--mission .m1-panel.is-gliding .m1-req, .step--mission .m1-panel.is-gliding .m1-panel__action { transform: none; }
 }
+
+/* Mission -> Plan: everything but the ground fades fast while the camera dives onto Murray Buttes */
+.step--mission.m1--diving .m1-panel, .step--mission.m1--diving .m1-hero, .step--mission.m1--diving .m1-credit,
+.step--mission.m1--diving .m1-overlay { opacity: 0; transform: none; pointer-events: none; transition: opacity 260ms ease-in; }
