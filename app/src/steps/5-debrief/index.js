@@ -481,7 +481,7 @@ function reportCard(ctx, { sample, walk, outcome, sampled = null }) {
     h('div.dbf__loopreq', h('span.muted', 'Request '), req.title),
     h('p.dbf__looptext', sample
       ? `${doneWord}. Your report reaches Earth in `
-      : 'Not done this time. Earth will hear it in ', h('span.dbf__nowrap', `${delay.value} min.`))) : null;
+      : 'Not done this time. Earth will hear it in ', h('span.dbf__nowrap', `${delay.value} min. `, labelTag(delay)))) : null;
 
   return h(sample ? 'div.dbf__report' : 'div.dbf__report.dbf__report--empty',
     h('div.dbf__sec', 'Report to Earth'),

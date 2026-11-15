@@ -226,7 +226,10 @@
 @media (max-height: 800px) {
   .step--plan .plan-totals { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 0.9em; }
   .step--plan .plan-totals .bignum__value { font-size: clamp(18px, 3vh, 26px); }
-  .step--plan .plan-totals .bignum__label, .step--plan .plan-limiting { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .step--plan .plan-limiting { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* a header may take two lines, so its words and its marker stay visible; the four values stay on one baseline */
+  .step--plan .plan-totals { align-items: end; }
+  .step--plan .plan-totals .bignum__label { white-space: normal; line-height: 1.2; }
 }
 
 /* the base is never drawn: a note in the map corner says where the rover comes from */

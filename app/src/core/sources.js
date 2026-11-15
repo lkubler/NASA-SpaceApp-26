@@ -67,6 +67,30 @@ export const DOCS = {
     title: 'Team research: sample candidates in the walk square',
     url: 'research/walk-targets.md',
   },
+  PIA21043: {
+    title: 'NASA, PIA21043 "Farewell to Murray Buttes" caption (mission text: cross-bedded sandstone)',
+    url: 'https://science.nasa.gov/resource/farewell-to-murray-buttes-image-3/',
+  },
+  BANHAM: {
+    title: 'Banham et al. 2021, JGR Planets, doi 10.1029/2020JE006554 (mission text: cross-bedded sandstone)',
+    url: '',
+  },
+  JPL_MARIAS: {
+    title: 'NASA JPL, "NASA Mars Rover Moves Onward After Marias Pass Studies" (19 Aug 2015) (mission text: high-silica rock)',
+    url: '',
+  },
+  JPL_MINERAL: {
+    title: 'NASA JPL, "NASA Scientists Discover Unexpected Mineral on Mars" (2016) (mission text: high-silica rock)',
+    url: 'https://www.jpl.nasa.gov/news/nasa-scientists-discover-unexpected-mineral-on-mars/',
+  },
+  JPL_LAKES: {
+    title: 'NASA JPL, "NASA’s Curiosity Rover Team Confirms Ancient Lakes on Mars" (8 Oct 2015) (mission text: lake mudstone)',
+    url: 'https://www.jpl.nasa.gov/news/nasas-curiosity-rover-team-confirms-ancient-lakes-on-mars/',
+  },
+  PIA19039: {
+    title: 'NASA, PIA19039 Pahrump Hills walkabout (mission text: lake mudstone)',
+    url: '',
+  },
   NONE: {
     title: 'No source: placeholder chosen by the team for the demo',
     url: '',
