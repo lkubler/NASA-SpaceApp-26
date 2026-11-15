@@ -88,8 +88,8 @@ export function composeGround(ctx, relief, ground) {
 export function hatchPattern(ctx) {
   const c = document.createElement('canvas'); c.width = c.height = 10;
   const g = c.getContext('2d');
-  g.fillStyle = 'rgba(120, 50, 20, 0.30)'; g.fillRect(0, 0, 10, 10);
-  g.strokeStyle = 'rgba(245, 160, 110, 0.95)'; g.lineWidth = 1.6;
+  g.fillStyle = 'rgba(150, 30, 30, 0.12)'; g.fillRect(0, 0, 10, 10);
+  g.strokeStyle = 'rgba(232, 84, 72, 0.95)'; g.lineWidth = 1.6;
   g.beginPath(); g.moveTo(-2, 12); g.lineTo(12, -2); g.moveTo(-2, 2); g.lineTo(2, -2); g.moveTo(8, 12); g.lineTo(12, 8); g.stroke();
   return ctx.createPattern(c, 'repeat');
 }
@@ -97,7 +97,7 @@ export function hatchPattern(ctx) {
 export function dotPattern(ctx) {
   const c = document.createElement('canvas'); c.width = c.height = 8;
   const g = c.getContext('2d');
-  g.fillStyle = 'rgba(0, 0, 0, 0.22)'; g.fillRect(0, 0, 8, 8);
-  g.fillStyle = 'rgba(255, 255, 255, 0.85)'; g.beginPath(); g.arc(4, 4, 1.15, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(0, 0, 0, 0.16)'; g.fillRect(0, 0, 8, 8);
+  g.fillStyle = 'rgba(240, 160, 70, 0.95)'; g.beginPath(); g.arc(4, 4, 1.15, 0, Math.PI * 2); g.fill();
   return ctx.createPattern(c, 'repeat');
 }

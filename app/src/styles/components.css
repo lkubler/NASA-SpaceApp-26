@@ -143,6 +143,7 @@ button.check:hover .check__text { text-decoration: underline; text-underline-off
 /* map pan / zoom (feedback-1, Maps): drag to move, small + / − / reset buttons bottom right */
 .map { touch-action: none; user-select: none; }
 .map__svg, .map__canvas { cursor: grab; }
+.map--fixed .map__svg, .map--fixed .map__canvas { cursor: default; }
 .map.is-dragging, .map.is-dragging .map__svg, .map.is-dragging .map__svg * { cursor: grabbing !important; }
 .map__zoom { position: absolute; right: 3.5%; bottom: 4%; display: flex; flex-direction: column; gap: 4px; z-index: 2; }
 .map__btn {
