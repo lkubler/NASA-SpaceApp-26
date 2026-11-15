@@ -11,7 +11,7 @@
 
 import {
   newWalkLog, logMove, stepCost, workRate, consume, doseMSv, spotSeconds, timeLeft, reserveFrom,
-  radioShadowMask, RULES, WORK, ROVER, simulateWalk, initStops, markSampled, roverField,
+  radioShadowMask, RULES, WORK, ROVER, simulateWalk, initStops, markSampled, roverField, passVia,
 } from '../../core/index.js';
 
 export const OUTCOMES = ['home', 'broken', 'lost', 'turned', 'none'];
@@ -44,6 +44,7 @@ function walker(terrain, route) {
       const st = stepCost(terrain, a, b);
       const pa = terrain.pointOf(a), pb = terrain.pointOf(b);
       const radio = shadow[b] === 0;
+      passVia(log, terrain, pb.x, pb.z); // a waypoint of the plan is passed in its cell (specs/x-waypoints.md)
       const r = logMove(log, terrain, { from: pa, to: pb, dtS: st.seconds, workW: workRate(st.slopeDeg), radio });
       if (!radio && !inShadow) log.warnings.push({ id: 'radio-shadow', level: 'advisory', text: 'Radio shadow: no line of sight to the rover', x: pb.x, z: pb.z, tS: log.tS });
       inShadow = !radio;

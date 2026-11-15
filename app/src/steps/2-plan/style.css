@@ -239,3 +239,22 @@
 
 .step--plan .plan-totals .bignum__value { font-size: clamp(20px, 2.7vh, 30px); }
 .step--plan .plan-goal { margin-bottom: -0.55em; }
+
+/* movable waypoints (specs/x-waypoints.md) */
+.step--plan .map-path--wphit { stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: grab; }
+.step--plan .map.is-wp-dragging, .step--plan .map.is-wp-dragging * { cursor: grabbing !important; }
+.step--plan .map-path--wppreview { stroke: #fff; stroke-width: 1.2; stroke-dasharray: 4 3; opacity: 0.9; pointer-events: none; }
+.step--plan .map-path--wppreview.is-refused { stroke: var(--warning); opacity: 1; }
+.step--plan .plan-wp { cursor: grab; }
+.step--plan .plan-wp circle { fill: #fff; stroke: #000; stroke-width: 0.8; r: 2.4; }
+.step--plan .plan-wp circle.plan-wp__hit { fill: transparent; stroke: none; r: 6; }
+.step--plan .plan-wp:hover circle:not(.plan-wp__hit), .step--plan .plan-wp.is-selected > circle:not(.plan-wp__hit) { stroke: var(--accent); stroke-width: 1.2; }
+.step--plan .plan-wp--ghost { pointer-events: none; }
+.step--plan .plan-wp--ghost.is-refused circle { fill: var(--warning); }
+.step--plan .plan-wp__x { cursor: pointer; }
+.step--plan .plan-wp .plan-wp__x circle { fill: rgba(8, 8, 9, 0.9); stroke: #fff; stroke-width: 0.6; r: 3.6; }
+.step--plan .plan-wp__x path { stroke: #fff; stroke-width: 0.8; stroke-linecap: round; fill: none; }
+.step--plan .plan-wp .plan-wp__x:hover circle { fill: var(--warning); }
+.step--plan .plan-sw--waypoint { width: 0.55em; height: 0.55em; border-radius: 50%; background: #fff; border: 1px solid #000; margin: 0 0.37em; }
+.step--plan .plan-leg-icon--via { width: 0.45em; height: 0.45em; border-radius: 50%; background: #fff; margin-left: 0.15em; }
+.step--plan .plan-legs .row.plan-via { padding: 0.05em 0; font-size: var(--fs-tag); }

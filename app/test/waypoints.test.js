@@ -6,6 +6,8 @@ import {
   CANDIDATES, ROVER, RULES, planRoute, planRound, planNumbers, findRoute, isClosed, legKey, legKeysOf, waypointAllowed,
   waypointsFor, waypointsOf, simulateWalk, newWalkLog, initStops, remainingWay, remainingStops, passVia, reserveFrom, fullLevels,
 } from '../src/core/index.js';
+import { createSim } from '../src/steps/4-walk/sim.js';
+import { DISPLAY as D } from '../src/steps/4-walk/display.js';
 
 const t = nodeTerrain();
 const C = (id) => CANDIDATES.find((c) => c.id === id);
@@ -124,5 +126,42 @@ describe('waypoints', () => {
     initStops(log, route);
     expect(log.via).toBeUndefined();
     expect(remainingWay(log)).toEqual(remainingStops(log));
+  });
+
+  it('a waypoint on open ground cut off by steep ground: the route breaks the slope rule, named in the checks', () => {
+    const F3 = C('F3');
+    expect(waypointAllowed(t, -8, -30)).toBe(true);
+    const plan = planNumbers(t, planRound(t, [F3], { 'rover>F3': [{ x: -8, z: -30 }] }));
+    expect(plan.keepsRules).toBe(false);
+    expect(plan.brokenRules.map((b) => b.name)).toContain('Slope on foot');
+  });
+
+  it('the Walk: the band is the shaped leg, "off the path" measures to it, the waypoint is passed and is no target', () => {
+    const F3 = C('F3');
+    const w = { x: -14, z: -12 };
+    const route = planRound(t, [F3], { 'rover>F3': [w] });
+    const log = newWalkLog();
+    const sim = createSim(t, route, log);
+    expect(sim.leg().points).toBe(route.legs[0].points);
+    const P = route.legs[0].points;
+    let off = 0;
+    for (const p of P.slice(1)) {
+      for (let g = 0; g < 400; g++) {
+        const dx = p.x - sim.s.x, dz = p.z - sim.s.z;
+        if (Math.hypot(dx, dz) < 0.1 || sim.stopHere() === 0) break;
+        sim.s.yaw = Math.atan2(dx, dz);
+        sim.step(D.tickS, { f: 1, r: 0, turn: 0, pitch: 0 });
+        if (sim.s.active.offPath) off++;
+        expect(sim.target().kind).toBe('spot'); // the target stays the stop
+      }
+      if (sim.stopHere() === 0) break;
+    }
+    expect(off).toBe(0);
+    expect(log.via[0].passed).toBe(true);
+    expect(sim.stopHere()).toBe(0);
+    // the direct route to F3 would have been "off the path" at the waypoint
+    const direct = planRoute(t, F3).legs[0].points;
+    const dmin = Math.min(...direct.map((p) => Math.hypot(p.x - w.x, p.z - w.z)));
+    expect(dmin).toBeGreaterThan(D.offPathM);
   });
 });

@@ -79,6 +79,9 @@ Test hook: `window.__walk` (`advance`, `hold`, `info`).
 - `&spot=F7` picks the spot in step 2 (default F3). Example: `?step=5&spot=F7`.
 - `&stops=F3,F7,F1` picks a round of up to three stops in that order (wins over `spot`). Example: `?step=3&stops=F3,F7,F1`.
   Plain `?step=2` opens Plan with no stop chosen.
+- `&waypoints=0:-14,-12;1:10,-14` adds waypoints (`specs/x-waypoints.md`): `leg:x,z` in scene metres, legs counted
+  from 0 (rover -> stop 1), several per leg in the order given; a point on closed ground or outside the site is dropped.
+  Example: `?step=4&stops=F1,F3&waypoints=0:6,-8;2:-12,-10`. Back to Plan with "Edit route" on Go / no-go.
 - `?step=2&broken=1` adds a test point up the east butte wall as spot 07 (`steps/3-go/dev/broken.js`): no route
   keeps the slope rule, so the Plan map shows the red broken stretch above the spot markers.
 - `?step=4&broken=1` starts the Walk (and, ended, the Debrief) on that broken route: the rule broken in the plan is carried along.
@@ -94,6 +97,7 @@ Test hook: `window.__walk` (`advance`, `hold`, `info`).
   requestsDone: string[],               // finished request ids (step 5 adds one)
   candidates: [{ candidate, route, plan }],   // planAllCandidates (step 2)
   stops: string[],                      // chosen stop ids in visiting order, 0..3 (step 2), e.g. ['F3','F7','F1']
+  waypoints: { [legKey]: [{x,z}] },     // points a leg must pass, per leg 'rover>F3' / 'F3>F7' / 'F7>rover' (step 2)
   spotId: null | 'F1'..'F7',            // = stops[0] (the first stop; kept for older readers)
   route: null | Route,                  // planRound(t, stops) (step 2)
   plan: null | PlanNumbers,             // planNumbers(t, route) (step 2; read by 3 and 5)
@@ -117,6 +121,9 @@ Route = planRound(t, stops) {
   out,                             // = legs[0]
   back }                           // = legs[1..N] joined into one path (junction cells not doubled)
                                    // one stop: out = legs[0], back = legs[1], as before
+  waypoints?: [[{x,z}]] }          // only with waypoints (planRound(t, stops, waypoints)): per leg index; a leg with
+                                   // waypoints is its parts joined and has via: [{ x, z, index }] (cell index on the leg)
+                                   // legPlans[k] then has via [{x,z,index,sM,tS}] and parts [{distanceM, seconds}]
 PlanNumbers = planNumbers(t, route): all old fields, over the whole round
   (distanceM, timeS, walkS, spotS = one stop's work, reserveS, checks, brokenRules, keepsRules, radio shadow,
    steepest slope, farthest distance, turnBack, profile, energyJ, radiationMSv, ...), plus
